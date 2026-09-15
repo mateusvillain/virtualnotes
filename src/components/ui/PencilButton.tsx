@@ -2,7 +2,9 @@
 
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 interface PencilButtonProps {
   /** O modo lápis está ligado agora. */
@@ -49,10 +51,15 @@ function PencilIcon() {
  */
 export function PencilButton({ active, onToggle }: PencilButtonProps) {
   const ui = useUi();
+  const isMac = useIsMac();
 
   return (
     <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip label={ui.pencil.action} align="start">
+      <Tooltip
+        label={ui.pencil.action}
+        shortcut={shortcutLabel(SHORTCUTS.pencil, isMac)}
+        align="start"
+      >
         <button
           type="button"
           // O fundo do estado ligado é o mesmo que o `hover` já usa: o botão fica com a
@@ -60,6 +67,7 @@ export function PencilButton({ active, onToggle }: PencilButtonProps) {
           className={`${iconButtonClass} ${active ? "bg-canvas text-ink" : ""}`}
           onClick={onToggle}
           aria-label={ui.pencil.action}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.pencil)}
           aria-pressed={active}
         >
           <PencilIcon />

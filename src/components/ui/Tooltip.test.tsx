@@ -106,7 +106,8 @@ describe("Tooltip", () => {
     // O `aria-label` do botão já diz isso; a caixa é ajuda visual, e abri-la não pode
     // acrescentar nada ao que o leitor de tela lê.
     expect(button.getAttribute("aria-label")).toBe(nameBefore);
-    expect(screen.queryByText("Salvar quadro", { ignore: "[aria-hidden=true]" })).toBeNull();
+    const dica = screen.getByText("Salvar quadro");
+    expect(dica.closest("[aria-hidden='true']")).not.toBeNull();
   });
 
   it("não engole o clique do botão", async () => {
@@ -128,6 +129,41 @@ describe("Tooltip", () => {
 
     // O botão já agiu; manter a dica na tela só atrapalharia a leitura do resultado.
     await waitFor(() => expect(screen.queryByText("Salvar quadro")).toBeNull());
+  });
+
+  it("mostra o atalho ao lado do nome, quando há um", async () => {
+    const onClick = vi.fn();
+    render(
+      <Tooltip label="Salvar quadro" shortcut="⌘S">
+        <button type="button" onClick={onClick} aria-label="Salvar quadro" />
+      </Tooltip>,
+    );
+
+    await userEvent.tab();
+
+    expect(await screen.findByText("⌘S")).toBeDefined();
+  });
+
+  it("não mostra atalho nenhum nos botões que não têm um", async () => {
+    const { button } = renderTooltip();
+
+    await userEvent.tab();
+    await screen.findByText("Salvar quadro");
+
+    expect(button.parentElement?.textContent).toBe("Salvar quadro");
+  });
+
+  it("não anuncia o atalho ao leitor de tela: ele mora na mesma caixa aria-hidden do nome", async () => {
+    render(
+      <Tooltip label="Salvar quadro" shortcut="⌘S">
+        <button type="button" aria-label="Salvar quadro" />
+      </Tooltip>,
+    );
+
+    await userEvent.tab();
+    const atalho = await screen.findByText("⌘S");
+
+    expect(atalho.closest("[aria-hidden='true']")).not.toBeNull();
   });
 
   it("não engole os handlers que o próprio botão já tinha", async () => {

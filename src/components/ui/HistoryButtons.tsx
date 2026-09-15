@@ -2,7 +2,9 @@
 
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 interface HistoryButtonsProps {
   /** Há passo guardado para desfazer. */
@@ -56,27 +58,30 @@ function UndoIcon({ flipped = false }: { flipped?: boolean }) {
  */
 export function HistoryButtons({ canUndo, canRedo, onUndo, onRedo }: HistoryButtonsProps) {
   const ui = useUi();
+  const isMac = useIsMac();
 
   return (
     <div className="flex items-center rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip label={ui.history.undo}>
+      <Tooltip label={ui.history.undo} shortcut={shortcutLabel(SHORTCUTS.undo, isMac)}>
         <button
           type="button"
           className={iconButtonClass}
           onClick={onUndo}
           disabled={!canUndo}
           aria-label={ui.history.undo}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.undo)}
         >
           <UndoIcon />
         </button>
       </Tooltip>
-      <Tooltip label={ui.history.redo}>
+      <Tooltip label={ui.history.redo} shortcut={shortcutLabel(SHORTCUTS.redo, isMac)}>
         <button
           type="button"
           className={iconButtonClass}
           onClick={onRedo}
           disabled={!canRedo}
           aria-label={ui.history.redo}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.redo)}
         >
           <UndoIcon flipped />
         </button>

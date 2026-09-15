@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import type { ShareApi } from "@/lib/board/useShareBoard";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
 import type { UiCopy } from "@/lib/i18n/ui";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 /** Quanto tempo o botão de copiar confirma a cópia antes de voltar ao normal. */
 const COPIED_FEEDBACK_MS = 2000;
@@ -77,6 +79,7 @@ function announcement(status: ShareApi["state"]["status"], ui: UiCopy): string {
  */
 export function ShareButton({ state, share, dismiss }: ShareApi) {
   const ui = useUi();
+  const isMac = useIsMac();
   /**
    * Qual link foi copiado, e não "se copiou".
    *
@@ -126,7 +129,7 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
       </p>
 
       <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-        <Tooltip label={ui.save.action} align="end">
+        <Tooltip label={ui.save.action} shortcut={shortcutLabel(SHORTCUTS.save, isMac)} align="end">
           <button
             ref={shareRef}
             type="button"
@@ -136,6 +139,7 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
             // acionar o botão pelo teclado, e o clique já está barrado acima.
             aria-busy={sharing}
             aria-label={ui.save.action}
+            aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.save)}
           >
             <SaveIcon />
           </button>

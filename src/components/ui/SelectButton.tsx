@@ -2,7 +2,9 @@
 
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 interface SelectButtonProps {
   /** A ferramenta de seleção é a ativa agora. */
@@ -54,10 +56,15 @@ function SelectIcon() {
  */
 export function SelectButton({ active, onSelect }: SelectButtonProps) {
   const ui = useUi();
+  const isMac = useIsMac();
 
   return (
     <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip label={ui.select.action} align="start">
+      <Tooltip
+        label={ui.select.action}
+        shortcut={shortcutLabel(SHORTCUTS.select, isMac)}
+        align="start"
+      >
         <button
           type="button"
           // O fundo do estado ativo é o mesmo que o `hover` já usa: o botão fica com a
@@ -65,6 +72,7 @@ export function SelectButton({ active, onSelect }: SelectButtonProps) {
           className={`${iconButtonClass} ${active ? "bg-canvas text-ink" : ""}`}
           onClick={onSelect}
           aria-label={ui.select.action}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.select)}
           aria-pressed={active}
         >
           <SelectIcon />

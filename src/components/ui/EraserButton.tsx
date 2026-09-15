@@ -2,7 +2,9 @@
 
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 interface EraserButtonProps {
   /** O modo borracha está ligado agora. */
@@ -45,15 +47,21 @@ function EraserIcon() {
  */
 export function EraserButton({ active, onToggle }: EraserButtonProps) {
   const ui = useUi();
+  const isMac = useIsMac();
 
   return (
     <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip label={ui.eraser.action} align="start">
+      <Tooltip
+        label={ui.eraser.action}
+        shortcut={shortcutLabel(SHORTCUTS.eraser, isMac)}
+        align="start"
+      >
         <button
           type="button"
           className={`${iconButtonClass} ${active ? "bg-canvas text-ink" : ""}`}
           onClick={onToggle}
           aria-label={ui.eraser.action}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.eraser)}
           aria-pressed={active}
         >
           <EraserIcon />

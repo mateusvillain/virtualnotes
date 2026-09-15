@@ -2,7 +2,9 @@
 
 import { iconButtonClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
 interface NoteButtonProps {
   /** O modo de colocação está armado agora. */
@@ -54,10 +56,15 @@ function NoteIcon() {
  */
 export function NoteButton({ active, onToggle }: NoteButtonProps) {
   const ui = useUi();
+  const isMac = useIsMac();
 
   return (
     <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip label={ui.note.action} align="start">
+      <Tooltip
+        label={ui.note.action}
+        shortcut={shortcutLabel(SHORTCUTS.note, isMac)}
+        align="start"
+      >
         <button
           type="button"
           // O fundo do estado armado é o mesmo que o `hover` já usa: o botão fica com a
@@ -65,6 +72,7 @@ export function NoteButton({ active, onToggle }: NoteButtonProps) {
           className={`${iconButtonClass} ${active ? "bg-canvas text-ink" : ""}`}
           onClick={onToggle}
           aria-label={ui.note.action}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.note)}
           aria-pressed={active}
         >
           <NoteIcon />
