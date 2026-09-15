@@ -218,6 +218,25 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
    */
   const showOnboarding = !hasContent && !taught;
 
+  /**
+   * Começar um quadro novo destrava a apresentação de novo.
+   *
+   * `taught` sozinho travava para sempre dentro da sessão: uma vez ensinada, a apresentação
+   * não voltava nem trocando de quadro inteiro. Mas um board novo é, para quem olha, tão
+   * vazio quanto o primeiro — e é aí que as instruções voltam a fazer sentido, mesmo que o
+   * quadro anterior já as tivesse dispensado.
+   *
+   * `setMode("select")` junto, e não só o reset do board: `mode` é estado deste componente,
+   * não da store, e uma ferramenta deixada ligada (o lápis, por exemplo) destravaria
+   * `taught` nesse mesmo render — a condição logo abaixo olha `pencil`/`erasing`/`placing` —
+   * e a apresentação nunca chegaria a aparecer.
+   */
+  const startNewBoard = useCallback(() => {
+    board.resetBoard();
+    setMode("select");
+    setTaught(false);
+  }, [board]);
+
   useKeyboardShortcuts({
     onDelete: board.deleteSelection,
     onPlaceNote: togglePlacing,
@@ -236,11 +255,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     <AppShell
       leadingActions={
         <div className="flex flex-col items-start gap-2">
-          <NewBoardButton
-            hasContent={hasContent}
-            onNewBoard={board.resetBoard}
-            share={share.share}
-          />
+          <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
           {/*
             A pilha de ferramentas, da mais usada para a menos: selecionar, criar nota,
             rabiscar. A seleção no topo porque é a ferramenta de partida — o estado em que o
