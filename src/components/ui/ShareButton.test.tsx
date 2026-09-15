@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ShareButton } from "./ShareButton";
 import type { ShareApi, ShareState } from "@/lib/board/useShareBoard";
 import { UI } from "@/lib/i18n/ui";
+import { ariaKeyShortcuts, SHORTCUTS } from "@/lib/shortcuts";
 
 function renderButton(state: ShareState, overrides: Partial<ShareApi> = {}) {
   const api: ShareApi = { state, share: vi.fn(), dismiss: vi.fn(), ...overrides };
@@ -58,6 +59,20 @@ describe("ShareButton", () => {
     expect(button.getAttribute("aria-busy")).toBe("true");
     await userEvent.click(button);
     expect(api.share).not.toHaveBeenCalled();
+  });
+
+  it("anuncia o atalho de salvar por aria-keyshortcuts", () => {
+    renderButton({ status: "idle" });
+
+    const button = screen.getByRole("button", { name: UI.en.save.action });
+    expect(button.getAttribute("aria-keyshortcuts")).toBe(ariaKeyShortcuts(SHORTCUTS.save));
+  });
+
+  it("não dá atalho ao botão de fechar o link", () => {
+    renderButton({ status: "shared", url: "https://site/board/abc" });
+
+    const button = screen.getByRole("button", { name: UI.en.save.closeLink });
+    expect(button.getAttribute("aria-keyshortcuts")).toBeNull();
   });
 
   it("explica o que fazer quando o board é grande demais, sem sugerir insistir", () => {

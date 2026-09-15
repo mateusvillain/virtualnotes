@@ -30,6 +30,17 @@ interface TooltipProps {
    * leitor de tela passam a dizer coisas diferentes sobre o mesmo botão.
    */
   label: string;
+  /**
+   * O atalho de teclado, já na forma escrita (`⌘S`, `Ctrl+Shift+Z`, `V`).
+   *
+   * Resolvida por quem chama, e não calculada aqui: só o gatilho sabe se a ação tem atalho,
+   * e é ele que já lê `useIsMac` para decidir entre `⌘` e `Ctrl`. Ausente nos botões sem um
+   * (novo quadro, zoom, fechar o link), que continuam mostrando só o nome.
+   *
+   * Some da mesma caixa `aria-hidden` do nome: o leitor de tela já anuncia o atalho pelo
+   * `aria-keyshortcuts` do próprio botão, e repeti-lo aqui só duplicaria o anúncio.
+   */
+  shortcut?: string;
   /** De que lado do gatilho a caixa aparece. */
   side?: "top" | "bottom";
   /**
@@ -60,7 +71,13 @@ interface TooltipProps {
  * descrevê-lo de novo faria a mesma frase ser lida duas vezes. É ajuda visual, e a versão
  * sonora dela já existe.
  */
-export function Tooltip({ label, side = "bottom", align = "center", children }: TooltipProps) {
+export function Tooltip({
+  label,
+  shortcut,
+  side = "bottom",
+  align = "center",
+  children,
+}: TooltipProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -129,11 +146,12 @@ export function Tooltip({ label, side = "bottom", align = "center", children }: 
           // tela. (`role="presentation"` não serviria: `span` não tem role implícito, e
           // `presentation` não remove o conteúdo de texto.)
           aria-hidden="true"
-          className={`pointer-events-none absolute z-40 whitespace-nowrap rounded-control border border-border bg-surface px-2 py-1 text-xs text-ink shadow-control ${
+          className={`pointer-events-none absolute z-40 flex items-center gap-2 whitespace-nowrap rounded-control border border-border bg-surface px-2 py-1 text-xs text-ink shadow-control ${
             side === "bottom" ? "top-full mt-2" : "bottom-full mb-2"
           } ${ALIGNMENT[align]}`}
         >
-          {label}
+          <span>{label}</span>
+          {shortcut ? <span className="text-ink-muted">{shortcut}</span> : null}
         </span>
       ) : null}
     </span>
