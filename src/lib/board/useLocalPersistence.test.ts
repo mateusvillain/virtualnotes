@@ -85,7 +85,9 @@ describe("useLocalPersistence", () => {
     store.replaceBoard(createEmptyBoard());
     await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
 
-    expect((await loadBoard())?.notes[0]?.text).toBe("trabalho de ontem");
+    // `waitFor`, como os vizinhos: adiantar os timers dispara o debounce, mas a gravação no
+    // IndexedDB termina numa transação assíncrona que os timers falsos não controlam (#78).
+    await waitFor(async () => expect((await loadBoard())?.notes[0]?.text).toBe("trabalho de ontem"));
   });
 
   it("junta o board salvo com o que o usuário criou enquanto a leitura corria", async () => {
@@ -184,7 +186,7 @@ describe("useLocalPersistence", () => {
     await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
 
     await waitFor(() => expect(store.getBoard().notes).toEqual([]));
-    expect((await loadBoard())?.notes).toEqual([]);
+    await waitFor(async () => expect((await loadBoard())?.notes).toEqual([]));
   });
 
   it("segue funcionando sem IndexedDB, só sem autosave", async () => {
