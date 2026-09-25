@@ -1522,6 +1522,42 @@ describe("Whiteboard — apresentação do quadro vazio", () => {
     expect(apresentacao()).toBeNull();
   });
 
+  /**
+   * "Não volta quando o quadro fica vazio de novo" (acima) é sobre apagar dentro do **mesmo**
+   * quadro. Este caso é o oposto: um quadro **novo** é, para quem olha, tão vazio quanto o
+   * primeiro, e a apresentação precisa voltar — mesmo que a anterior já tivesse sido
+   * dispensada.
+   */
+  it("volta quando um novo quadro é criado", async () => {
+    const user = userEvent.setup();
+    stubMatchMedia(false);
+    render(<Whiteboard />);
+    criaPostIt(400, 400);
+    expect(apresentacao()).toBeNull();
+
+    await user.click(screen.getByLabelText(UI.en.newBoard.action));
+    await user.click(screen.getByRole("button", { name: UI.en.newBoard.startWithoutSaving }));
+
+    expect(postIts()).toEqual([]);
+    expect(apresentacao()).not.toBeNull();
+  });
+
+  /**
+   * O quadro vazio não pergunta nada antes de recomeçar (não há trabalho para proteger), e é
+   * justamente esse caminho mais curto que não pode ficar de fora.
+   */
+  it("volta mesmo quando o quadro já estava vazio", async () => {
+    const user = userEvent.setup();
+    stubMatchMedia(false);
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    expect(apresentacao()).toBeNull();
+
+    await user.click(screen.getByLabelText(UI.en.newBoard.action));
+
+    expect(apresentacao()).not.toBeNull();
+  });
+
   it("não aparece num board que já vem com post-its", () => {
     stubMatchMedia(false);
 
