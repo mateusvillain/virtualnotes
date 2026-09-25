@@ -6,6 +6,13 @@ import { createBoardStore } from "./store";
 import { SCHEMA_VERSION, createEmptyBoard, type Board } from "./types";
 import { SAVE_DEBOUNCE_MS, useLocalPersistence } from "./useLocalPersistence";
 
+// `loadBoard` passa direto para o original; o espião só existe para um caso poder segurar a
+// leitura do hook e afirmar sobre o intervalo em que ela ainda não voltou.
+vi.mock("./localStore", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./localStore")>();
+  return { ...original, loadBoard: vi.fn(original.loadBoard) };
+});
+
 const originalIndexedDB = globalThis.indexedDB;
 
 function boardWith(text: string): Board {
@@ -75,17 +82,26 @@ describe("useLocalPersistence", () => {
     await waitFor(async () => expect((await loadBoard())?.notes[0]?.text).toBe("anot"));
   });
 
-  it("não grava o board vazio do primeiro render por cima do salvo", async () => {
+  it("não grava nada enquanto a leitura do board salvo não volta", async () => {
     await saveBoard(boardWith("trabalho de ontem"));
     const store = createBoardStore();
+    // A leitura do hook fica presa até o teste soltar. Sem isso, a asserção abaixo correria
+    // contra o banco: quando a leitura volta primeiro, o quadro vazio passa a ser um descarte
+    // legítimo (#58) e é gravado — foi essa corrida que deixou o caso instável (#78).
+    let releaseRead!: () => void;
+    const pendingRead = loadBoard().then(
+      (board) => new Promise<Board | null>((resolve) => (releaseRead = () => resolve(board))),
+    );
+    vi.mocked(loadBoard).mockReturnValueOnce(pendingRead);
 
     renderHook(() => useLocalPersistence(store));
     // Uma publicação da store enquanto a leitura ainda corre: sem o guard de restauração,
     // isto agendaria a gravação do board vazio por cima do que está salvo.
     store.replaceBoard(createEmptyBoard());
-    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS * 2);
 
     expect((await loadBoard())?.notes[0]?.text).toBe("trabalho de ontem");
+    releaseRead();
   });
 
   it("junta o board salvo com o que o usuário criou enquanto a leitura corria", async () => {
@@ -184,7 +200,7 @@ describe("useLocalPersistence", () => {
     await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
 
     await waitFor(() => expect(store.getBoard().notes).toEqual([]));
-    expect((await loadBoard())?.notes).toEqual([]);
+    await waitFor(async () => expect((await loadBoard())?.notes).toEqual([]));
   });
 
   it("segue funcionando sem IndexedDB, só sem autosave", async () => {
