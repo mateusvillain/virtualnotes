@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { IDENTITY_VIEWPORT } from "@/lib/canvas/coords";
+import { STROKE_TOOL_HIGHLIGHTER, type StrokeTool } from "@/lib/board/types";
 import { stubPointerCapture } from "@/test-utils/pointer";
 import { Viewport } from "./Viewport";
 
@@ -528,5 +529,49 @@ describe("Viewport — clique no fundo", () => {
     fireEvent.pointerUp(conteudo, { pointerId: 1 });
 
     expect(onBackgroundClick).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A prévia do traço em curso nasce na mesma altura em que o traço vai ficar (#116): o
+ * marca-texto por baixo de toda a tinta do board, o resto por cima dela.
+ */
+describe("Viewport — altura da prévia do traço", () => {
+  function desenhaCom(drawingTool?: StrokeTool): HTMLElement[] {
+    render(
+      <Viewport
+        viewport={IDENTITY_VIEWPORT}
+        pan={vi.fn()}
+        zoomBy={vi.fn()}
+        pencil
+        drawingTool={drawingTool}
+      >
+        <span data-testid="tinta-do-board">tinta</span>
+      </Viewport>,
+    );
+    const surface = screen.getByTestId("viewport-surface");
+    stubPointerCapture(surface);
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 80, clientY: 40 });
+
+    const camada = screen.getByTestId("viewport-layer");
+    return [...camada.children].filter((child): child is HTMLElement =>
+      ["stroke-preview", "tinta-do-board"].includes(child.getAttribute("data-testid") ?? ""),
+    );
+  }
+
+  it("o lápis desenha a prévia depois do board", () => {
+    const ordem = desenhaCom().map((child) => child.getAttribute("data-testid"));
+
+    expect(ordem).toEqual(["tinta-do-board", "stroke-preview"]);
+  });
+
+  it("o marca-texto desenha a prévia antes do board, por baixo da tinta", () => {
+    const ordem = desenhaCom(STROKE_TOOL_HIGHLIGHTER).map((child) =>
+      child.getAttribute("data-testid"),
+    );
+
+    expect(ordem).toEqual(["stroke-preview", "tinta-do-board"]);
   });
 });

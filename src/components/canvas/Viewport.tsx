@@ -22,7 +22,13 @@ import {
 import { pinchChange, pinchSnapshot, type PinchSnapshot } from "@/lib/canvas/pinch";
 import { cancelPointerGesture, releaseCapture } from "@/lib/canvas/pointer-capture";
 import { useSpaceHeld } from "@/lib/canvas/useSpaceHeld";
-import { STROKE_COLOR_BLACK, type StrokeColor } from "@/lib/board/types";
+import {
+  STROKE_COLOR_BLACK,
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
+  type StrokeColor,
+  type StrokeTool,
+} from "@/lib/board/types";
 import { EraserCursor } from "./EraserCursor";
 import { NotePlacementPreview } from "./NotePlacement";
 import { SelectionBox } from "./SelectionBox";
@@ -62,6 +68,11 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
   pencil?: boolean;
   /** Cor do lápis (#69), para o traço em curso nascer com ela, e não preto por padrão. */
   pencilColor?: StrokeColor;
+  /**
+   * Ferramenta do traço em curso (#116). Decide a espessura e a opacidade da prévia, e em
+   * que altura ela é desenhada: o marca-texto por baixo da tinta, como vai ficar ao soltar.
+   */
+  drawingTool?: StrokeTool;
   /** Modo borracha ligado: arrastar ou tocar apaga o traço que encostar (#98). */
   erasing?: boolean;
   /** Modo de colocação ligado: uma nota translúcida segue o cursor e o clique a fixa (#73). */
@@ -177,6 +188,7 @@ export function Viewport({
   onSelectionRect,
   pencil = false,
   pencilColor = STROKE_COLOR_BLACK,
+  drawingTool = STROKE_TOOL_PENCIL,
   erasing = false,
   placing = false,
   onPlaceNote,
@@ -871,6 +883,9 @@ export function Viewport({
             ? "cursor-crosshair"
             : "cursor-default";
 
+  const highlighting = drawingTool === STROKE_TOOL_HIGHLIGHTER;
+  const preview = <StrokePreview points={drawing} color={pencilColor} tool={drawingTool} />;
+
   return (
     <div
       ref={surfaceRef}
@@ -924,8 +939,14 @@ export function Viewport({
         }}
         data-testid="viewport-layer"
       >
+        {/*
+          A prévia do marca-texto vem antes do board, e não depois: o traço gravado fica
+          por baixo de toda a tinta (#116), e uma prévia por cima dos rabiscos pularia de
+          camada no instante em que o ponteiro fosse solto.
+        */}
+        {highlighting ? preview : null}
         {children}
-        <StrokePreview points={drawing} color={pencilColor} />
+        {highlighting ? null : preview}
         {/*
           Depois dos post-its, e não antes: a nota que está sendo colocada vai nascer na
           frente de todas (a store a cria no topo do z), e uma prévia desenhada por baixo

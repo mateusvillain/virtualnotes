@@ -18,7 +18,31 @@ import {
   type Rect,
   type Size,
 } from "@/lib/canvas/coords";
-import type { Stroke } from "./types";
+import { STROKE_TOOL_HIGHLIGHTER, type Stroke, type StrokeTool } from "./types";
+
+/**
+ * Espessura do traço de lápis, em unidades de canvas.
+ *
+ * Escala com o zoom, como todo conteúdo do canvas: uma linha que mantivesse a espessura na
+ * tela engrossaria em relação ao desenho ao afastar, e o rabisco deixaria de ser parte do
+ * quadro para virar sobreposição. Mora aqui, e não no componente que desenha, porque a
+ * espessura passou a ter leitores geométricos: o alvo de clique e a borracha de cada
+ * ferramenta perguntam quanto de tinta há em volta da linha (#116).
+ */
+export const STROKE_WIDTH = 2;
+
+/**
+ * Espessura do marca-texto, em unidades de canvas (#116).
+ *
+ * Oito vezes a do lápis: larga o bastante para cobrir uma linha de texto de nota numa
+ * passada só, que é o gesto de destacar. Valor de partida, ajustável em revisão.
+ */
+export const HIGHLIGHTER_WIDTH = 16;
+
+/** A espessura da tinta de uma ferramenta, em unidades de canvas. */
+export function strokeInkWidth(tool: StrokeTool): number {
+  return tool === STROKE_TOOL_HIGHLIGHTER ? HIGHLIGHTER_WIDTH : STROKE_WIDTH;
+}
 
 /**
  * Uma lista achatada de coordenadas, despachada aos pares.
