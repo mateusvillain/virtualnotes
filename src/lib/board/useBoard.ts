@@ -23,6 +23,7 @@ import {
   flattenPoints,
   pointsFromFlat,
   scaleStrokePoints,
+  eraserHitWidth,
   splitPolylineBySegment,
   strokeBounds,
   strokePoints,
@@ -37,6 +38,7 @@ import {
   NOTE_SIZE,
   STROKE_TOOL_PENCIL,
   createEmptyBoard,
+  strokeTool,
   type Board,
   type Note,
   type NoteColor,
@@ -840,7 +842,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
         let changed = false;
         const result: Point[][] = [];
         for (const piece of pieces) {
-          const split = splitPolylineBySegment(piece, a, b);
+          const split = splitPolylineBySegment(piece, a, b, eraserHitWidth(strokeTool(stroke)));
           if (split === null) {
             result.push(piece);
             continue;

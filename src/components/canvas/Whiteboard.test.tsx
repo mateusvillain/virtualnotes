@@ -4511,3 +4511,65 @@ describe("Whiteboard — marca-texto (#117)", () => {
     expect(surface.className).not.toContain("cursor-pencil");
   });
 });
+
+describe("Whiteboard — alvo do marca-texto (#118)", () => {
+  function desenhaCom(tecla: string, de: [number, number], ate: [number, number]): void {
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.keyDown(document, { key: tecla });
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: de[0], clientY: de[1] });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.keyDown(document, { key: "v" });
+  }
+
+  function grupos(): HTMLElement[] {
+    return screen.queryAllByTestId("stroke-group");
+  }
+
+  function parte(grupo: HTMLElement, testId: string): Element {
+    return defined(grupo.querySelector(`[data-testid="${testId}"]`) ?? undefined, testId);
+  }
+
+  it("o alvo de clique cobre a tinta larga, com a mesma folga do lápis", () => {
+    render(<Whiteboard />);
+    desenhaCom("p", [100, 100], [300, 100]);
+    desenhaCom("h", [100, 200], [300, 200]);
+
+    // O destaque é pintado primeiro (#116), então vem antes no documento.
+    const [destaque, lapis] = grupos().map((grupo) => {
+      const tinta = Number(parte(grupo, "stroke").getAttribute("stroke-width"));
+      const alvo = Number(parte(grupo, "stroke-hit").getAttribute("stroke-width"));
+      return { tinta, alvo };
+    });
+
+    expect(destaque!.tinta).toBe(HIGHLIGHTER_WIDTH);
+    expect(destaque!.alvo).toBeGreaterThan(destaque!.tinta);
+    expect(destaque!.alvo - destaque!.tinta).toBe(lapis!.alvo - lapis!.tinta);
+  });
+
+  it("onde o rabisco passa por cima do destaque, o clique é do rabisco", () => {
+    render(<Whiteboard />);
+    // O lápis primeiro: mesmo com z menor, ele é pintado — e alvejado — por cima.
+    desenhaCom("p", [100, 100], [300, 100]);
+    desenhaCom("h", [100, 100], [300, 100]);
+
+    const ordem = grupos().map((grupo) => parte(grupo, "stroke").getAttribute("stroke-width"));
+    expect(ordem).toEqual([String(HIGHLIGHTER_WIDTH), String(STROKE_WIDTH)]);
+  });
+
+  it("a moldura envolve a tinta, e não só a linha do meio", () => {
+    render(<Whiteboard />);
+    desenhaCom("h", [100, 200], [300, 200]);
+
+    fireEvent.pointerDown(parte(defined(grupos()[0], "o destaque"), "stroke-hit"), {
+      pointerId: 5,
+      button: 0,
+    });
+
+    const caixa = screen.getByTestId("stroke-frame");
+    const sobra = (HIGHLIGHTER_WIDTH - STROKE_WIDTH) / 2;
+    expect(Number.parseFloat(caixa.style.top)).toBe(200 - sobra);
+    expect(Number.parseFloat(caixa.style.height)).toBe(sobra * 2);
+  });
+});

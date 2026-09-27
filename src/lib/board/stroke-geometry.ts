@@ -18,7 +18,7 @@ import {
   type Rect,
   type Size,
 } from "@/lib/canvas/coords";
-import { STROKE_TOOL_HIGHLIGHTER, type Stroke, type StrokeTool } from "./types";
+import { STROKE_TOOL_HIGHLIGHTER, strokeTool, type Stroke, type StrokeTool } from "./types";
 
 /**
  * Espessura do traço de lápis, em unidades de canvas.
@@ -42,6 +42,18 @@ export const HIGHLIGHTER_WIDTH = 16;
 /** A espessura da tinta de uma ferramenta, em unidades de canvas. */
 export function strokeInkWidth(tool: StrokeTool): number {
   return tool === STROKE_TOOL_HIGHLIGHTER ? HIGHLIGHTER_WIDTH : STROKE_WIDTH;
+}
+
+/**
+ * Quanto a tinta de uma ferramenta passa do traço do lápis, de cada lado da linha (#118).
+ *
+ * Os alvos — o clique, o retângulo de seleção, a borracha — foram calibrados para o lápis, e
+ * o que muda com uma tinta mais larga é só essa sobra: somá-la ao alvo dá ao marca-texto a
+ * mesma folga que o lápis sempre teve, medida a partir da **borda** visível, e deixa o lápis
+ * exatamente como estava (a sobra dele é zero).
+ */
+export function inkOverhang(tool: StrokeTool): number {
+  return (strokeInkWidth(tool) - STROKE_WIDTH) / 2;
 }
 
 /**
@@ -111,12 +123,32 @@ export function strokeBounds(stroke: Stroke): Rect | null {
  */
 export function strokeIntersectsRect(stroke: Stroke, rect: Rect): boolean {
   const points = strokePoints(stroke);
+  // A tinta larga (#118) conta: um retângulo que só encosta na borda do marca-texto toca o
+  // que a pessoa vê, mesmo sem chegar à linha do meio.
+  const overhang = inkOverhang(strokeTool(stroke));
+  if (overhang > 0) rect = inflate(rect, overhang);
 
   for (let index = 0; index + 1 < points.length; index += 1) {
     if (segmentIntersectsRect(points[index]!, points[index + 1]!, rect)) return true;
   }
 
   return false;
+}
+
+/** `rect` alargado por `by` de cada lado. */
+function inflate(rect: Rect, by: number): Rect {
+  return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
+
+/**
+ * A caixa da **tinta** de um traço: {@link strokeBounds} alargada pela sobra da ferramenta
+ * (#118). É o que a moldura de seleção emoldura — sem isso, a caixa de um marca-texto
+ * horizontal teria altura zero e cortaria a tinta ao meio.
+ */
+export function strokeInkBounds(stroke: Stroke): Rect | null {
+  const bounds = strokeBounds(stroke);
+  const overhang = inkOverhang(strokeTool(stroke));
+  return bounds === null || overhang === 0 ? bounds : inflate(bounds, overhang);
 }
 
 /**
@@ -137,6 +169,16 @@ export const STROKE_MIN_SIZE = 4;
  * toque, onde o dedo cobre a linha sem nunca coincidir com ela pixel a pixel.
  */
 export const ERASER_HIT_WIDTH = 16;
+
+/**
+ * A largura do alvo da borracha para a tinta de uma ferramenta (#118): a de sempre, mais a
+ * sobra da tinta dos dois lados. A borracha corta pela linha do meio do traço, e sem isso
+ * teria de passar pelo meio de um marca-texto para apagá-lo — encostar na borda, que é o
+ * que se vê, não bastaria.
+ */
+export function eraserHitWidth(tool: StrokeTool): number {
+  return ERASER_HIT_WIDTH + inkOverhang(tool) * 2;
+}
 
 /** O retângulo do alvo da borracha: a caixa de `a` a `b`, alargada por `hitWidth`. */
 function eraserRect(a: Point, b: Point, hitWidth: number): Rect {

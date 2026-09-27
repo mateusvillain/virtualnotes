@@ -1438,6 +1438,44 @@ describe("useBoard — borracha (#98)", () => {
  * O que `useBoard` recria a partir de um traço existente — duplicar, colar e o que sobra da
  * borracha — leva a ferramenta do original (#110).
  */
+describe("useBoard — borracha no marca-texto (#118)", () => {
+  /** Um destaque horizontal na linha y = 0, com a tinta indo de y = -8 a y = 8. */
+  const comDestaque: Board = {
+    version: SCHEMA_VERSION,
+    notes: [],
+    strokes: [
+      { id: "mt", color: 0, tool: STROKE_TOOL_HIGHLIGHTER, points: [0, 0, 200, 0], z: 1 },
+      { id: "lapis", color: 6, points: [0, 100, 200, 100], z: 2 },
+    ],
+  };
+
+  function passa(y: number) {
+    const hook = renderHook(() => useBoard({ initialBoard: comDestaque, autosave: false }));
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x: 100, y }, { x: 100, y }));
+    act(() => hook.result.current.endErasing());
+    return hook.result.current.strokes;
+  }
+
+  it("apaga o destaque encostando só na borda visível dele", () => {
+    // Longe demais da linha do meio para o alvo do lápis (raio 8), mas dentro da tinta.
+    const restantes = passa(14);
+
+    expect(restantes.filter((s) => s.tool === STROKE_TOOL_HIGHLIGHTER)).toHaveLength(2);
+    expect(restantes.map((s) => s.id)).not.toContain("mt");
+  });
+
+  it("não alcança além da borda do destaque", () => {
+    expect(passa(30).map((s) => s.id)).toContain("mt");
+  });
+
+  it("o lápis continua com o alcance de antes", () => {
+    // Mesma distância da linha do meio que apagou o destaque acima: o lápis sobrevive.
+    expect(passa(100 + 14).map((s) => s.id)).toContain("lapis");
+    expect(passa(100 + 6).map((s) => s.id)).not.toContain("lapis");
+  });
+});
+
 describe("useBoard — ferramenta do traço (#110)", () => {
   const comMarcaTexto: Board = {
     version: SCHEMA_VERSION,

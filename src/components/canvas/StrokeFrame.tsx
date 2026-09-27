@@ -5,7 +5,8 @@ import { ResizeHandle } from "@/components/postit/ResizeHandle";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
 import type { Stroke } from "@/lib/board/types";
-import { strokeBounds } from "@/lib/board/stroke-geometry";
+import { inkOverhang, strokeBounds } from "@/lib/board/stroke-geometry";
+import { strokeTool } from "@/lib/board/types";
 
 interface StrokeFrameProps {
   stroke: Stroke;
@@ -63,11 +64,15 @@ export function StrokeFrame({
   // board vindo de um link editado à mão pode.
   if (bounds === null) return null;
 
+  // Em volta da tinta, e não só dos pontos (#118): a linha do meio de um marca-texto
+  // horizontal tem altura zero, e a caixa dos pontos cortaria o destaque ao meio. A sobra
+  // entra também no tamanho em curso, que o redimensionamento mede pelos pontos.
+  const overhang = inkOverhang(strokeTool(stroke));
   const style: CSSProperties = {
-    left: bounds.x,
-    top: bounds.y,
-    width: resizing?.size.w ?? bounds.w,
-    height: resizing?.size.h ?? bounds.h,
+    left: bounds.x - overhang,
+    top: bounds.y - overhang,
+    width: (resizing?.size.w ?? bounds.w) + overhang * 2,
+    height: (resizing?.size.h ?? bounds.h) + overhang * 2,
     // Como no post-it: o arraste move por transform, e a posição só muda ao soltar.
     transform: offset === null ? undefined : `translate(${offset.x}px, ${offset.y}px)`,
   };

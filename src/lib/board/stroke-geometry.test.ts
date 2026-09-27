@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Rect } from "@/lib/canvas/coords";
 import {
   ERASER_HIT_WIDTH,
+  HIGHLIGHTER_WIDTH,
   STROKE_MIN_SIZE,
+  STROKE_WIDTH,
+  eraserHitWidth,
+  inkOverhang,
+  strokeInkBounds,
   scaleStrokePoints,
   strokeBounds,
   strokeIntersectsRect,
@@ -10,7 +15,7 @@ import {
   strokePoints,
   translateStrokePoints,
 } from "./stroke-geometry";
-import type { Stroke } from "./types";
+import { STROKE_TOOL_HIGHLIGHTER, STROKE_TOOL_PENCIL, type Stroke } from "./types";
 
 function stroke(points: number[]): Stroke {
   return { id: "trc123", color: 6, points, z: 1 };
@@ -216,5 +221,49 @@ describe("scaleStrokePoints", () => {
 
     expect(esticado).toEqual([0, 50, 200, 50]);
     expect(esticado.every((value) => Number.isFinite(value))).toBe(true);
+  });
+});
+
+/**
+ * O marca-texto é largo (#116), e os alvos precisam acertar a tinta que se vê, e não só a
+ * linha do meio (#118). O lápis, com sobra zero, não muda em nada.
+ */
+describe("tinta larga do marca-texto (#118)", () => {
+  const sobra = (HIGHLIGHTER_WIDTH - STROKE_WIDTH) / 2;
+
+  function destaque(points: number[]): Stroke {
+    return { ...stroke(points), tool: STROKE_TOOL_HIGHLIGHTER };
+  }
+
+  it("a sobra do lápis é zero; a do marca-texto é o que passa dele de cada lado", () => {
+    expect(inkOverhang(STROKE_TOOL_PENCIL)).toBe(0);
+    expect(inkOverhang(STROKE_TOOL_HIGHLIGHTER)).toBe(sobra);
+  });
+
+  it("a borracha do lápis continua do mesmo tamanho, e a do marca-texto cresce pela sobra", () => {
+    expect(eraserHitWidth(STROKE_TOOL_PENCIL)).toBe(ERASER_HIT_WIDTH);
+    expect(eraserHitWidth(STROKE_TOOL_HIGHLIGHTER)).toBe(ERASER_HIT_WIDTH + sobra * 2);
+  });
+
+  it("o retângulo que só encosta na borda do destaque o toca", () => {
+    // Linha do meio em y = 0; a borda visível vai até y = 8.
+    const borda = rect(0, sobra, 10, 2);
+
+    expect(strokeIntersectsRect(destaque([0, 0, 100, 0]), borda)).toBe(true);
+    expect(strokeIntersectsRect(stroke([0, 0, 100, 0]), borda)).toBe(false);
+  });
+
+  it("o retângulo além da borda não toca", () => {
+    expect(strokeIntersectsRect(destaque([0, 0, 100, 0]), rect(0, sobra + 2, 10, 2))).toBe(false);
+  });
+
+  it("a caixa da tinta envolve o destaque inteiro, mesmo numa linha reta", () => {
+    expect(strokeInkBounds(destaque([0, 0, 100, 0]))).toEqual(
+      rect(-sobra, -sobra, 100 + sobra * 2, sobra * 2),
+    );
+  });
+
+  it("a caixa da tinta do lápis é a mesma caixa dos pontos", () => {
+    expect(strokeInkBounds(stroke([0, 0, 100, 50]))).toEqual(strokeBounds(stroke([0, 0, 100, 50])));
   });
 });
