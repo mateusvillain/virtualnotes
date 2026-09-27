@@ -85,42 +85,48 @@ describe("interface do quadro em cada idioma", () => {
    * o atalho ao lado, e o `aria-keyshortcuts` do botão que o anuncia para quem usa leitor de
    * tela.
    */
-  it.each(LOCALES)("mostra o atalho de cada ação, no Mac e fora dele — %s", async (locale) => {
-    const ui = UI[locale];
-    const acoes = [
-      { name: ui.select.action, shortcut: SHORTCUTS.select },
-      { name: ui.note.action, shortcut: SHORTCUTS.note },
-      { name: ui.pencil.action, shortcut: SHORTCUTS.pencil },
-      { name: ui.eraser.action, shortcut: SHORTCUTS.eraser },
-      { name: ui.history.undo, shortcut: SHORTCUTS.undo },
-      { name: ui.history.redo, shortcut: SHORTCUTS.redo },
-      { name: ui.save.action, shortcut: SHORTCUTS.save },
-    ];
+  it.each(LOCALES)(
+    "mostra o atalho de cada ação, no Mac e fora dele — %s",
+    async (locale) => {
+      const ui = UI[locale];
+      const acoes = [
+        { name: ui.select.action, shortcut: SHORTCUTS.select },
+        { name: ui.note.action, shortcut: SHORTCUTS.note },
+        { name: ui.pencil.action, shortcut: SHORTCUTS.pencil },
+        { name: ui.eraser.action, shortcut: SHORTCUTS.eraser },
+        { name: ui.history.undo, shortcut: SHORTCUTS.undo },
+        { name: ui.history.redo, shortcut: SHORTCUTS.redo },
+        { name: ui.save.action, shortcut: SHORTCUTS.save },
+      ];
 
-    for (const mac of [true, false]) {
-      aparelho({ mac });
-      stubMatchMedia(false);
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      const { unmount } = render(
-        <LocaleProvider locale={locale}>
-          <Whiteboard />
-        </LocaleProvider>,
-      );
+      for (const mac of [true, false]) {
+        aparelho({ mac });
+        stubMatchMedia(false);
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const { unmount } = render(
+          <LocaleProvider locale={locale}>
+            <Whiteboard />
+          </LocaleProvider>,
+        );
 
-      for (const { name, shortcut } of acoes) {
-        const button = screen.getByRole("button", { name });
-        expect(button.getAttribute("aria-keyshortcuts")).toBe(ariaKeyShortcuts(shortcut));
+        for (const { name, shortcut } of acoes) {
+          const button = screen.getByRole("button", { name });
+          expect(button.getAttribute("aria-keyshortcuts")).toBe(ariaKeyShortcuts(shortcut));
 
-        await userEvent.hover(button);
-        await vi.advanceTimersByTimeAsync(TOOLTIP_DELAY_MS);
-        expect(await screen.findByText(shortcutLabel(shortcut, mac))).toBeDefined();
-        await userEvent.unhover(button);
+          await userEvent.hover(button);
+          await vi.advanceTimersByTimeAsync(TOOLTIP_DELAY_MS);
+          expect(await screen.findByText(shortcutLabel(shortcut, mac))).toBeDefined();
+          await userEvent.unhover(button);
+        }
+
+        vi.useRealTimers();
+        unmount();
       }
-
-      vi.useRealTimers();
-      unmount();
-    }
-  });
+      // Duas montagens do quadro inteiro e um hover por ação: sozinho leva ~3,5 s, e no suíte
+      // paralelo, disputando CPU, beirava os 5 s padrão — e estourava de vez em quando.
+    },
+    20_000,
+  );
 
   /**
    * Novo quadro e zoom não têm atalho hoje — o botão de fechar o link também não, coberto à

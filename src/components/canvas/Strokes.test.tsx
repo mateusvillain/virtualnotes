@@ -1,7 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { StrokePreview, Strokes, polylinePoints } from "./Strokes";
-import { STROKE_COLORS, type Stroke } from "@/lib/board/types";
+import {
+  HIGHLIGHTER_OPACITY,
+  HighlighterPreviewContext,
+  StrokePreview,
+  Strokes,
+  polylinePoints,
+} from "./Strokes";
+import { HIGHLIGHTER_WIDTH, STROKE_WIDTH } from "@/lib/board/stroke-geometry";
+import {
+  STROKE_COLORS,
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
+  type Stroke,
+} from "@/lib/board/types";
 
 function stroke(overrides: Partial<Stroke> = {}): Stroke {
   return { id: "s1", color: 6, points: [0, 0, 10, 10], z: 1, ...overrides };
@@ -90,7 +102,124 @@ describe("Strokes", () => {
   });
 });
 
+describe("Strokes — marca-texto (#116)", () => {
+  function tintas(): Element[] {
+    return screen.queryAllByTestId("stroke");
+  }
+
+  it("pinta o marca-texto largo e translúcido", () => {
+    render(<Strokes strokes={[stroke({ tool: STROKE_TOOL_HIGHLIGHTER })]} />);
+
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(tintas()[0]?.getAttribute("opacity")).toBe(String(HIGHLIGHTER_OPACITY));
+  });
+
+  it("não muda o lápis: fino e opaco", () => {
+    render(<Strokes strokes={[stroke()]} />);
+
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH));
+    expect(tintas()[0]?.hasAttribute("opacity")).toBe(false);
+  });
+
+  it("a caneta tinteiro ainda sai como lápis, até ganhar a pena (#113)", () => {
+    render(<Strokes strokes={[stroke({ tool: STROKE_TOOL_FOUNTAIN })]} />);
+
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH));
+  });
+
+  /**
+   * A opacidade vai no elemento, e não na cor: composto como uma camada só, o marca-texto
+   * que cruza a si mesmo não escurece no cruzamento.
+   */
+  it("aplica a opacidade à linha inteira, e não à cor", () => {
+    render(<Strokes strokes={[stroke({ tool: STROKE_TOOL_HIGHLIGHTER, color: 0 })]} />);
+
+    expect(tintas()[0]?.getAttribute("stroke")).toBe("var(--color-note-yellow)");
+    expect(tintas()[0]?.getAttribute("stroke-opacity")).toBeNull();
+  });
+
+  it("fica atrás dos outros traços, qualquer que seja o z", () => {
+    render(
+      <Strokes
+        strokes={[
+          stroke({ id: "lapis", z: 1, points: [1, 1, 2, 2] }),
+          stroke({ id: "destaque", z: 9, tool: STROKE_TOOL_HIGHLIGHTER, points: [3, 3, 4, 4] }),
+          stroke({ id: "caneta", z: 5, tool: STROKE_TOOL_FOUNTAIN, points: [5, 5, 6, 6] }),
+        ]}
+      />,
+    );
+
+    expect(desenhados()).toEqual(["3,3 4,4", "1,1 2,2", "5,5 6,6"]);
+  });
+
+  it("desenha a prévia do marca-texto entre os destaques e o resto da tinta", () => {
+    render(
+      <HighlighterPreviewContext.Provider
+        value={{
+          points: [
+            { x: 7, y: 7 },
+            { x: 8, y: 8 },
+          ],
+          color: 0,
+          tool: STROKE_TOOL_HIGHLIGHTER,
+        }}
+      >
+        <Strokes
+          strokes={[
+            stroke({ id: "lapis", z: 1, points: [1, 1, 2, 2] }),
+            stroke({ id: "destaque", z: 9, tool: STROKE_TOOL_HIGHLIGHTER, points: [3, 3, 4, 4] }),
+          ]}
+        />
+      </HighlighterPreviewContext.Provider>,
+    );
+
+    const linhas = [...screen.getByTestId("strokes").querySelectorAll("polyline")]
+      .filter((linha) => linha.getAttribute("stroke") !== "transparent")
+      .map((linha) => linha.getAttribute("points"));
+    expect(linhas).toEqual(["3,3 4,4", "7,7 8,8", "1,1 2,2"]);
+    const previa = screen.getByTestId("stroke-preview").querySelector("polyline");
+    expect(previa?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(previa?.getAttribute("opacity")).toBe(String(HIGHLIGHTER_OPACITY));
+  });
+
+  it("sem gesto em curso, não há prévia na camada de tinta", () => {
+    render(<Strokes strokes={[stroke()]} />);
+
+    expect(screen.queryByTestId("stroke-preview")).toBeNull();
+  });
+
+  it("entre marca-textos, o z continua valendo", () => {
+    render(
+      <Strokes
+        strokes={[
+          stroke({ id: "cima", z: 9, tool: STROKE_TOOL_HIGHLIGHTER, points: [1, 1, 2, 2] }),
+          stroke({ id: "baixo", z: 2, tool: STROKE_TOOL_HIGHLIGHTER, points: [3, 3, 4, 4] }),
+        ]}
+      />,
+    );
+
+    expect(desenhados()).toEqual(["3,3 4,4", "1,1 2,2"]);
+  });
+});
+
 describe("StrokePreview", () => {
+  it("pinta a prévia do marca-texto como o traço gravado (#116)", () => {
+    render(
+      <StrokePreview
+        points={[
+          { x: 0, y: 0 },
+          { x: 10, y: 5 },
+        ]}
+        color={0}
+        tool={STROKE_TOOL_HIGHLIGHTER}
+      />,
+    );
+
+    const linha = screen.getByTestId("stroke-preview").querySelector("polyline");
+    expect(linha?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(linha?.getAttribute("opacity")).toBe(String(HIGHLIGHTER_OPACITY));
+  });
+
   it("desenha o traço em curso a partir dos pontos do gesto", () => {
     render(
       <StrokePreview

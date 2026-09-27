@@ -1,25 +1,40 @@
 "use client";
 
 import { strokeColor } from "@/lib/theme/note-colors";
-import type { Stroke, StrokeColor } from "@/lib/board/types";
-import { useRef, type PointerEvent, type ReactNode } from "react";
+import {
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
+  strokeTool,
+  type Stroke,
+  type StrokeColor,
+  type StrokeTool,
+} from "@/lib/board/types";
+import { STROKE_WIDTH, strokeInkWidth } from "@/lib/board/stroke-geometry";
+import { createContext, useContext, useRef, type PointerEvent, type ReactNode } from "react";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
 
 /**
- * Espessura do traço, em unidades de canvas.
+ * Opacidade da tinta do marca-texto (#116).
  *
- * Escala com o zoom, como todo conteúdo do canvas: uma linha que mantivesse a espessura na
- * tela engrossaria em relação ao desenho ao afastar, e o rabisco deixaria de ser parte do
- * quadro para virar sobreposição. Espessura variável é escolha de outra issue; aqui ela é
- * uma só, e fica declarada num lugar que a paleta e o preview compartilham.
+ * Aplicada ao traço inteiro, e não à cor: um elemento com `opacity` é composto como uma
+ * camada só, então o ponto em que o marca-texto cruza a si mesmo não escurece — é a mesma
+ * tinta, uma vez. Dois traços diferentes sobrepostos escurecem, como dois riscos de
+ * marca-texto de verdade. Valor de partida, ajustável em revisão.
  */
-export const STROKE_WIDTH = 2;
+export const HIGHLIGHTER_OPACITY = 0.35;
+
+/** Como a tinta de uma ferramenta é pintada: a espessura e a opacidade. */
+function inkStyle(tool: StrokeTool): { width: number; opacity?: number } {
+  return tool === STROKE_TOOL_HIGHLIGHTER
+    ? { width: strokeInkWidth(tool), opacity: HIGHLIGHTER_OPACITY }
+    : { width: strokeInkWidth(tool) };
+}
 
 /**
  * Largura do alvo de clique do traço, em unidades de canvas.
  *
- * Seis vezes a tinta. Uma linha de 2 unidades exigiria acerto exato do ponteiro, e errar um
+ * Seis vezes a tinta do lápis. Uma linha de 2 unidades exigiria acerto exato do ponteiro, e errar um
  * rabisco por um pixel é o tipo de coisa que faz a pessoa concluir que traço não é
  * selecionável (#70). O alvo acompanha a forma do traço, e não a caixa dele: um risco na
  * diagonal tem caixa enorme e tinta nenhuma nos cantos, e um alvo retangular roubaria
@@ -101,12 +116,15 @@ function InkLine({
   points,
   color,
   width = STROKE_WIDTH,
+  opacity,
   testId,
 }: {
   points: readonly number[];
   color: string;
   /** Espessura em unidades de canvas. O halo e o alvo de clique são a mesma linha, mais grossa. */
   width?: number;
+  /** Opacidade da linha inteira — só o marca-texto usa (#116). */
+  opacity?: number;
   testId?: string;
 }) {
   return (
@@ -115,6 +133,7 @@ function InkLine({
       fill="none"
       stroke={color}
       strokeWidth={width}
+      opacity={opacity}
       strokeLinecap="round"
       strokeLinejoin="round"
       data-testid={testId}
@@ -238,7 +257,12 @@ function StrokeShape({
       data-resizing={resizing !== null}
       transform={partes.length === 0 ? undefined : partes.join(" ")}
     >
-      <InkLine points={stroke.points} color={strokeColor(stroke.color)} testId="stroke" />
+      <InkLine
+        points={stroke.points}
+        color={strokeColor(stroke.color)}
+        {...inkStyle(strokeTool(stroke))}
+        testId="stroke"
+      />
       <polyline
         points={polylinePoints(stroke.points)}
         fill="none"
@@ -259,6 +283,10 @@ function StrokeShape({
       />
     </g>
   );
+}
+
+function isHighlighter(stroke: Stroke): boolean {
+  return strokeTool(stroke) === STROKE_TOOL_HIGHLIGHTER;
 }
 
 /**
@@ -284,28 +312,73 @@ export function Strokes({
   resizing = null,
 }: StrokesProps) {
   // Ordenado por `z` na hora de desenhar, e não guardado ordenado: a ordem da lista é do
-  // board, e é o `z` que diz quem fica por cima.
-  const porZ = [...strokes].sort((a, b) => a.z - b.z);
+  // board, e é o `z` que diz quem fica por cima. O marca-texto vem antes de tudo, qualquer
+  // que seja o `z` (#116): destaca o que está no quadro sem cobrir — nem os rabiscos, que
+  // ficam por cima dele, nem os post-its, que já ficam por cima da camada inteira.
+  const porZ = [...strokes].sort(
+    (a, b) => Number(isHighlighter(b)) - Number(isHighlighter(a)) || a.z - b.z,
+  );
+  const destaques = porZ.filter(isHighlighter).length;
+
+  const shape = (stroke: Stroke) => (
+    <StrokeShape
+      key={stroke.id}
+      stroke={stroke}
+      selected={selection?.has(stroke.id) ?? false}
+      onSelect={onSelect}
+      // Arrastar move a seleção inteira junto: o gesto começa num traço, mas o
+      // deslocamento vale para todos os que estavam marcados.
+      offset={selection?.has(stroke.id) === true ? offset : null}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+      resizing={resizing?.id === stroke.id ? resizing : null}
+    />
+  );
 
   return (
     <InkLayer testId="strokes">
-      {porZ.map((stroke) => (
-        <StrokeShape
-          key={stroke.id}
-          stroke={stroke}
-          selected={selection?.has(stroke.id) ?? false}
-          onSelect={onSelect}
-          // Arrastar move a seleção inteira junto: o gesto começa num traço, mas o
-          // deslocamento vale para todos os que estavam marcados.
-          offset={selection?.has(stroke.id) === true ? offset : null}
-          onDragStart={onDragStart}
-          onDragMove={onDragMove}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragCancel}
-          resizing={resizing?.id === stroke.id ? resizing : null}
-        />
-      ))}
+      {porZ.slice(0, destaques).map(shape)}
+      <HighlighterPreviewSlot />
+      {porZ.slice(destaques).map(shape)}
     </InkLayer>
+  );
+}
+
+/** O traço em curso, como o `Viewport` o conhece. */
+export interface DrawingPreview {
+  points: readonly Point[];
+  color: StrokeColor;
+  tool: StrokeTool;
+}
+
+/**
+ * A prévia do marca-texto em curso, passada do `Viewport` para a camada de tinta (#116).
+ *
+ * O marca-texto gravado fica acima dos outros marca-textos (o traço novo nasce no topo do
+ * `z`) e abaixo de todo o resto da tinta. Nenhuma camada fora desta cabe nesse vão: por
+ * baixo do board a prévia ficaria sob os destaques que já existem, e por cima dele, sobre os
+ * rabiscos — e ao soltar o ponteiro o traço trocaria de altura na frente de quem desenha.
+ * Então quem sabe do gesto (o `Viewport`) entrega a prévia, e quem sabe da pilha a desenha.
+ *
+ * Contexto, e não prop: o `Viewport` recebe o board como `children` já montado, e a prévia
+ * muda a cada movimento do ponteiro — só o slot que a lê re-renderiza, não a pilha inteira.
+ */
+export const HighlighterPreviewContext = createContext<DrawingPreview | null>(null);
+
+function HighlighterPreviewSlot() {
+  const preview = useContext(HighlighterPreviewContext);
+  if (preview === null || preview.points.length < 2) return null;
+
+  return (
+    <g data-testid="stroke-preview">
+      <InkLine
+        points={preview.points.flatMap((point) => [point.x, point.y])}
+        color={strokeColor(preview.color)}
+        {...inkStyle(preview.tool)}
+      />
+    </g>
   );
 }
 
@@ -314,6 +387,8 @@ interface StrokePreviewProps {
   points: readonly Point[] | null;
   /** Cor do lápis no instante do gesto (#69) — a mesma que `addStroke` vai gravar. */
   color: StrokeColor;
+  /** A ferramenta do gesto (#116): a prévia pinta com a mesma espessura e opacidade. */
+  tool?: StrokeTool;
 }
 
 /**
@@ -332,12 +407,16 @@ interface StrokePreviewProps {
  * "trocava" de cor de repente ao soltar o ponteiro — o mesmo bug que a prévia existe para
  * evitar (ver o comentário acima sobre não piscar de lugar).
  */
-export function StrokePreview({ points, color }: StrokePreviewProps) {
+export function StrokePreview({ points, color, tool = STROKE_TOOL_PENCIL }: StrokePreviewProps) {
   if (points === null || points.length < 2) return null;
 
   return (
     <InkLayer testId="stroke-preview">
-      <InkLine points={points.flatMap((point) => [point.x, point.y])} color={strokeColor(color)} />
+      <InkLine
+        points={points.flatMap((point) => [point.x, point.y])}
+        color={strokeColor(color)}
+        {...inkStyle(tool)}
+      />
     </InkLayer>
   );
 }

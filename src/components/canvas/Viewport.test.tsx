@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { IDENTITY_VIEWPORT } from "@/lib/canvas/coords";
+import { STROKE_TOOL_HIGHLIGHTER, type Stroke, type StrokeTool } from "@/lib/board/types";
 import { stubPointerCapture } from "@/test-utils/pointer";
+import { Strokes } from "./Strokes";
 import { Viewport } from "./Viewport";
 
 /**
@@ -528,5 +530,55 @@ describe("Viewport — clique no fundo", () => {
     fireEvent.pointerUp(conteudo, { pointerId: 1 });
 
     expect(onBackgroundClick).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A prévia do traço em curso nasce na mesma altura em que o traço vai ficar (#116): o lápis
+ * por cima de toda a tinta, o marca-texto entre os marca-textos e o resto dos traços.
+ */
+describe("Viewport — altura da prévia do traço", () => {
+  const board = [
+    { id: "destaque", color: 0, tool: STROKE_TOOL_HIGHLIGHTER, points: [0, 0, 50, 0], z: 1 },
+    { id: "lapis", color: 6, points: [0, 10, 50, 10], z: 2 },
+  ] satisfies Stroke[];
+
+  /** Os ids na ordem em que são pintados, com a prévia marcada como `"prévia"`. */
+  function desenhaCom(drawingTool?: StrokeTool): string[] {
+    render(
+      <Viewport
+        viewport={IDENTITY_VIEWPORT}
+        pan={vi.fn()}
+        zoomBy={vi.fn()}
+        pencil
+        drawingTool={drawingTool}
+      >
+        <Strokes strokes={board} />
+      </Viewport>,
+    );
+    const surface = screen.getByTestId("viewport-surface");
+    stubPointerCapture(surface);
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 80, clientY: 40 });
+
+    const camada = screen.getByTestId("viewport-layer");
+    return [
+      ...camada.querySelectorAll("[data-testid='stroke-group'], [data-testid='stroke-preview']"),
+    ].map((element) => element.getAttribute("data-stroke-id") ?? "prévia");
+  }
+
+  it("o lápis desenha a prévia por cima de toda a tinta", () => {
+    expect(desenhaCom()).toEqual(["destaque", "lapis", "prévia"]);
+  });
+
+  it("o marca-texto desenha a prévia sobre os destaques e sob o resto da tinta", () => {
+    expect(desenhaCom(STROKE_TOOL_HIGHLIGHTER)).toEqual(["destaque", "prévia", "lapis"]);
+  });
+
+  it("uma prévia só: o marca-texto não repete a prévia fora da camada de tinta", () => {
+    desenhaCom(STROKE_TOOL_HIGHLIGHTER);
+
+    expect(screen.getAllByTestId("stroke-preview")).toHaveLength(1);
   });
 });

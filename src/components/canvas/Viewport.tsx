@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -22,11 +23,17 @@ import {
 import { pinchChange, pinchSnapshot, type PinchSnapshot } from "@/lib/canvas/pinch";
 import { cancelPointerGesture, releaseCapture } from "@/lib/canvas/pointer-capture";
 import { useSpaceHeld } from "@/lib/canvas/useSpaceHeld";
-import { STROKE_COLOR_BLACK, type StrokeColor } from "@/lib/board/types";
+import {
+  STROKE_COLOR_BLACK,
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
+  type StrokeColor,
+  type StrokeTool,
+} from "@/lib/board/types";
 import { EraserCursor } from "./EraserCursor";
 import { NotePlacementPreview } from "./NotePlacement";
 import { SelectionBox } from "./SelectionBox";
-import { StrokePreview } from "./Strokes";
+import { HighlighterPreviewContext, StrokePreview, type DrawingPreview } from "./Strokes";
 import type { ViewportApi } from "@/lib/canvas/useViewport";
 
 /**
@@ -62,6 +69,11 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
   pencil?: boolean;
   /** Cor do lápis (#69), para o traço em curso nascer com ela, e não preto por padrão. */
   pencilColor?: StrokeColor;
+  /**
+   * Ferramenta do traço em curso (#116). Decide a espessura e a opacidade da prévia, e em
+   * que altura ela é desenhada: o marca-texto por baixo da tinta, como vai ficar ao soltar.
+   */
+  drawingTool?: StrokeTool;
   /** Modo borracha ligado: arrastar ou tocar apaga o traço que encostar (#98). */
   erasing?: boolean;
   /** Modo de colocação ligado: uma nota translúcida segue o cursor e o clique a fixa (#73). */
@@ -177,6 +189,7 @@ export function Viewport({
   onSelectionRect,
   pencil = false,
   pencilColor = STROKE_COLOR_BLACK,
+  drawingTool = STROKE_TOOL_PENCIL,
   erasing = false,
   placing = false,
   onPlaceNote,
@@ -871,6 +884,15 @@ export function Viewport({
             ? "cursor-crosshair"
             : "cursor-default";
 
+  const highlighting = drawingTool === STROKE_TOOL_HIGHLIGHTER;
+  const highlighterPreview = useMemo<DrawingPreview | null>(
+    () =>
+      highlighting && drawing !== null
+        ? { points: drawing, color: pencilColor, tool: drawingTool }
+        : null,
+    [drawing, drawingTool, highlighting, pencilColor],
+  );
+
   return (
     <div
       ref={surfaceRef}
@@ -924,8 +946,18 @@ export function Viewport({
         }}
         data-testid="viewport-layer"
       >
-        {children}
-        <StrokePreview points={drawing} color={pencilColor} />
+        {/*
+          A prévia do marca-texto não é desenhada aqui, e sim dentro da camada de tinta,
+          entre os marca-textos e o resto dos traços (#116): é a altura em que o traço vai
+          ficar, e fora dela ele pularia de camada no instante em que o ponteiro fosse solto.
+          O Provider fica sempre montado — trocá-lo de lugar remontaria o board inteiro.
+        */}
+        <HighlighterPreviewContext.Provider value={highlighterPreview}>
+          {children}
+        </HighlighterPreviewContext.Provider>
+        {highlighting ? null : (
+          <StrokePreview points={drawing} color={pencilColor} tool={drawingTool} />
+        )}
         {/*
           Depois dos post-its, e não antes: a nota que está sendo colocada vai nascer na
           frente de todas (a store a cria no topo do z), e uma prévia desenhada por baixo
