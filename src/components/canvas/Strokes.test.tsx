@@ -7,7 +7,14 @@ import {
   Strokes,
   polylinePoints,
 } from "./Strokes";
-import { HIGHLIGHTER_WIDTH, STROKE_WIDTH } from "@/lib/board/stroke-geometry";
+import {
+  HIGHLIGHTER_WIDTH,
+  STROKE_WIDTH,
+  fountainOutline,
+  polygonPath,
+  scaleStrokePoints,
+} from "@/lib/board/stroke-geometry";
+import { simplify } from "@/lib/canvas/simplify";
 import {
   STROKE_COLORS,
   STROKE_TOOL_FOUNTAIN,
@@ -121,12 +128,6 @@ describe("Strokes — marca-texto (#116)", () => {
     expect(tintas()[0]?.hasAttribute("opacity")).toBe(false);
   });
 
-  it("a caneta tinteiro ainda sai como lápis, até ganhar a pena (#113)", () => {
-    render(<Strokes strokes={[stroke({ tool: STROKE_TOOL_FOUNTAIN })]} />);
-
-    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH));
-  });
-
   /**
    * A opacidade vai no elemento, e não na cor: composto como uma camada só, o marca-texto
    * que cruza a si mesmo não escurece no cruzamento.
@@ -149,7 +150,9 @@ describe("Strokes — marca-texto (#116)", () => {
       />,
     );
 
-    expect(desenhados()).toEqual(["3,3 4,4", "1,1 2,2", "5,5 6,6"]);
+    expect(
+      screen.getAllByTestId("stroke-group").map((group) => group.getAttribute("data-stroke-id")),
+    ).toEqual(["destaque", "lapis", "caneta"]);
   });
 
   it("desenha a prévia do marca-texto entre os destaques e o resto da tinta", () => {
@@ -267,5 +270,144 @@ describe("StrokePreview", () => {
     expect(
       screen.getByTestId("stroke-preview").querySelector("polyline")?.getAttribute("stroke"),
     ).toBe("var(--color-note-blue)");
+  });
+});
+
+describe("Strokes — caneta tinteiro (#113)", () => {
+  const caneta = stroke({ tool: STROKE_TOOL_FOUNTAIN, points: [0, 0, 40, 40, 80, 0] });
+
+  it("pinta a caneta tinteiro como forma preenchida, no contorno da pena", () => {
+    render(<Strokes strokes={[caneta]} />);
+
+    const tinta = screen.getByTestId("stroke");
+    expect(tinta.tagName).toBe("path");
+    expect(tinta.getAttribute("d")).toBe(polygonPath(fountainOutline(caneta.points)));
+    expect(tinta.getAttribute("fill")).toBe("var(--color-ink)");
+    expect(tinta.hasAttribute("stroke-width")).toBe(false);
+  });
+
+  it("pinta na cor do traço", () => {
+    render(<Strokes strokes={[{ ...caneta, color: 3 }]} />);
+
+    expect(screen.getByTestId("stroke").getAttribute("fill")).toBe("var(--color-note-blue)");
+  });
+
+  it("não muda o lápis, que continua linha", () => {
+    render(<Strokes strokes={[stroke(), caneta]} />);
+
+    const [lapis] = screen.getAllByTestId("stroke");
+    expect(lapis?.tagName).toBe("polyline");
+    expect(lapis?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH));
+  });
+
+  it("mantém o alvo de clique como linha pelos pontos", () => {
+    render(<Strokes strokes={[caneta]} />);
+
+    expect(screen.getByTestId("stroke-hit").getAttribute("points")).toBe(
+      polylinePoints(caneta.points),
+    );
+  });
+
+  /**
+   * A escala do SVG esticaria a tinta junto: a pena sairia grossa num eixo e fina no outro
+   * enquanto se redimensiona, e voltaria ao normal ao soltar.
+   */
+  it("redimensiona pelos pontos, sem esticar a pena", () => {
+    const from = { x: 0, y: 0, w: 80, h: 40 };
+    // Fator fracionário: os pontos em curso saem inteiros, como `endResize` vai gravar.
+    const size = { w: 123, h: 40 };
+    render(<Strokes strokes={[caneta]} resizing={{ id: caneta.id, from, size }} />);
+
+    const escalados = scaleStrokePoints(caneta, from, size).map(Math.round);
+    expect(screen.getByTestId("stroke").getAttribute("d")).toBe(
+      polygonPath(fountainOutline(escalados)),
+    );
+    expect(screen.getByTestId("stroke-hit").getAttribute("points")).toBe(polylinePoints(escalados));
+    expect(screen.getByTestId("stroke-group").getAttribute("transform") ?? "").not.toContain(
+      "scale",
+    );
+  });
+
+  it("move pela translação, como os outros traços", () => {
+    render(<Strokes strokes={[caneta]} selection={new Set([caneta.id])} offset={{ x: 5, y: 7 }} />);
+
+    expect(screen.getByTestId("stroke-group").getAttribute("transform")).toBe("translate(5 7)");
+  });
+
+  it("o lápis continua redimensionando pela escala", () => {
+    const lapis = stroke({ points: [0, 0, 80, 40] });
+    render(
+      <Strokes
+        strokes={[lapis]}
+        resizing={{ id: lapis.id, from: { x: 0, y: 0, w: 80, h: 40 }, size: { w: 160, h: 40 } }}
+      />,
+    );
+
+    expect(screen.getByTestId("stroke-group").getAttribute("transform")).toContain("scale(2 1)");
+    expect(screen.getByTestId("stroke").getAttribute("points")).toBe("0,0 80,40");
+  });
+});
+
+describe("StrokePreview — caneta tinteiro (#113)", () => {
+  /** Um risco com o tremor do ponteiro: pontos crus, a menos de uma unidade da reta. */
+  const gesto = [
+    { x: 0, y: 0 },
+    { x: 10, y: 0.4 },
+    { x: 20, y: -0.3 },
+    { x: 30, y: 0.2 },
+    { x: 40, y: 0 },
+  ];
+
+  it("pinta a prévia com o mesmo contorno que o traço vai ter ao ser gravado", () => {
+    render(<StrokePreview points={gesto} color={6} tool={STROKE_TOOL_FOUNTAIN} />);
+
+    const gravado = simplify(gesto).flatMap((point) => [Math.round(point.x), Math.round(point.y)]);
+    const previa = screen.getByTestId("stroke-preview").querySelector("path");
+    expect(previa?.getAttribute("d")).toBe(polygonPath(fountainOutline(gravado)));
+    expect(previa?.getAttribute("fill")).toBe("var(--color-ink)");
+  });
+
+  it("é igual ao traço gravado com os mesmos pontos", () => {
+    const pontos = [
+      { x: 0, y: 0 },
+      { x: 40, y: 40 },
+      { x: 80, y: 0 },
+    ];
+    const { unmount } = render(
+      <StrokePreview points={pontos} color={6} tool={STROKE_TOOL_FOUNTAIN} />,
+    );
+    const previa = screen.getByTestId("stroke-preview").querySelector("path")?.getAttribute("d");
+    unmount();
+
+    render(
+      <Strokes
+        strokes={[
+          stroke({ tool: STROKE_TOOL_FOUNTAIN, points: pontos.flatMap((p) => [p.x, p.y]) }),
+        ]}
+      />,
+    );
+    expect(screen.getByTestId("stroke").getAttribute("d")).toBe(previa);
+  });
+
+  /** A gravação arredonda os pontos; a prévia com frações mudaria de cara ao soltar. */
+  it("pinta a prévia com os pontos inteiros que a gravação vai guardar", () => {
+    const pontos = [
+      { x: 0.4, y: 0.3 },
+      { x: 40.6, y: 39.7 },
+      { x: 80.2, y: 0.4 },
+    ];
+    render(<StrokePreview points={pontos} color={6} tool={STROKE_TOOL_FOUNTAIN} />);
+
+    expect(screen.getByTestId("stroke-preview").querySelector("path")?.getAttribute("d")).toBe(
+      polygonPath(fountainOutline([0, 0, 41, 40, 80, 0])),
+    );
+  });
+
+  it("não simplifica a prévia do lápis", () => {
+    render(<StrokePreview points={gesto} color={6} />);
+
+    expect(
+      screen.getByTestId("stroke-preview").querySelector("polyline")?.getAttribute("points"),
+    ).toBe("0,0 10,0.4 20,-0.3 30,0.2 40,0");
   });
 });
