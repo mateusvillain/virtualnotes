@@ -3,7 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defined } from "@/test-utils/defined";
 import { stubMatchMedia } from "@/test-utils/matchMedia";
-import { NOTE_COLORS, NOTE_SIZE, SCHEMA_VERSION, STROKE_COLORS } from "@/lib/board/types";
+import { HIGHLIGHTER_WIDTH, STROKE_WIDTH } from "@/lib/board/stroke-geometry";
+import {
+  DEFAULT_HIGHLIGHTER_COLOR,
+  NOTE_COLORS,
+  NOTE_SIZE,
+  SCHEMA_VERSION,
+  STROKE_COLORS,
+  STROKE_COLOR_BLACK,
+} from "@/lib/board/types";
 import { MAX_SCALE, MIN_SCALE, scaleAsPercent } from "@/lib/canvas/coords";
 import { strokeColor } from "@/lib/theme/note-colors";
 import { Whiteboard } from "./Whiteboard";
@@ -4329,5 +4337,177 @@ describe("Whiteboard — cor do lápis (#69)", () => {
     rabisca([100, 100], [300, 100]);
 
     expect(coresDosTracos()).toEqual([strokeColor(2)]);
+  });
+});
+
+describe("Whiteboard — marca-texto (#117)", () => {
+  function botao(): HTMLElement {
+    return screen.getByRole("button", { name: UI.en.highlighter.action });
+  }
+
+  function ligaMarcaTexto(): void {
+    fireEvent.keyDown(document, { key: "h" });
+  }
+
+  function rabisca(de: [number, number], ate: [number, number]): void {
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: de[0], clientY: de[1] });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+  }
+
+  function tintas(): HTMLElement[] {
+    return screen.queryAllByTestId("stroke");
+  }
+
+  function paleta(): HTMLElement | null {
+    return screen.queryByTestId("highlighter-color-picker");
+  }
+
+  it("H liga e desliga o modo, e o botão anuncia o estado", () => {
+    render(<Whiteboard />);
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+
+    ligaMarcaTexto();
+    expect(botao().getAttribute("aria-pressed")).toBe("true");
+
+    ligaMarcaTexto();
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("o botão faz o mesmo que a tecla", () => {
+    render(<Whiteboard />);
+
+    fireEvent.click(botao());
+
+    expect(botao().getAttribute("aria-pressed")).toBe("true");
+    expect(paleta()).not.toBeNull();
+  });
+
+  it("Esc e V voltam para a seleção", () => {
+    render(<Whiteboard />);
+
+    ligaMarcaTexto();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+
+    ligaMarcaTexto();
+    fireEvent.keyDown(document, { key: "v" });
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("é exclusivo: ligar o marca-texto desliga o lápis, e o contrário", () => {
+    render(<Whiteboard />);
+    const lapis = screen.getByRole("button", { name: UI.en.pencil.action });
+
+    fireEvent.keyDown(document, { key: "p" });
+    ligaMarcaTexto();
+    expect(lapis.getAttribute("aria-pressed")).toBe("false");
+    expect(botao().getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByTestId("pencil-color-picker")).toBeNull();
+
+    fireEvent.keyDown(document, { key: "p" });
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+    expect(paleta()).toBeNull();
+  });
+
+  it("a paleta abre no amarelo", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+
+    const marcada = within(defined(paleta() ?? undefined, "a paleta do marca-texto")).getByRole(
+      "radio",
+      { checked: true },
+    );
+    expect(marcada.getAttribute("aria-label")).toBe(
+      UI.en.note.colors[NOTE_COLORS[DEFAULT_HIGHLIGHTER_COLOR]!],
+    );
+  });
+
+  it("desenha largo e translúcido, em amarelo", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+
+    rabisca([100, 100], [300, 100]);
+
+    expect(tintas()).toHaveLength(1);
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(tintas()[0]?.getAttribute("stroke")).toBe(strokeColor(DEFAULT_HIGHLIGHTER_COLOR));
+  });
+
+  it("trocar a cor do marca-texto não muda a do lápis", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+    const verde = within(defined(paleta() ?? undefined, "a paleta")).getByRole("radio", {
+      name: UI.en.note.colors.green,
+    });
+    fireEvent.click(verde);
+    rabisca([100, 100], [300, 100]);
+
+    fireEvent.keyDown(document, { key: "p" });
+    rabisca([100, 200], [300, 200]);
+
+    const [destaque, lapis] = tintas();
+    expect(destaque?.getAttribute("stroke")).toBe(strokeColor(2));
+    expect(lapis?.getAttribute("stroke")).toBe(strokeColor(STROKE_COLOR_BLACK));
+    expect(lapis?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH));
+  });
+
+  it("desenha com um dedo no toque", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+    const surface = screen.getByTestId("viewport-surface");
+    const toque = { pointerId: 1, pointerType: "touch" };
+
+    fireEvent.pointerDown(surface, { ...toque, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { ...toque, clientX: 200, clientY: 60 });
+    fireEvent.pointerUp(surface, { ...toque, clientX: 200, clientY: 60 });
+
+    expect(tintas()).toHaveLength(1);
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+  });
+
+  it("a prévia do gesto nasce dentro da camada de tinta, como o traço vai ficar", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+
+    const previa = screen.getByTestId("stroke-preview");
+    expect(previa.closest("[data-testid='strokes']")).not.toBeNull();
+    expect(previa.querySelector("polyline")?.getAttribute("stroke-width")).toBe(
+      String(HIGHLIGHTER_WIDTH),
+    );
+
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    expect(screen.queryByTestId("stroke-preview")).toBeNull();
+  });
+
+  it("trocar de modo no meio do traço não muda a ferramenta dele", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 120, clientY: 55 });
+    fireEvent.keyDown(document, { key: "p" });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+
+    expect(tintas()).toHaveLength(1);
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(tintas()[0]?.getAttribute("stroke")).toBe(strokeColor(DEFAULT_HIGHLIGHTER_COLOR));
+  });
+
+  it("mostra o cursor do marca-texto, e não o do lápis", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+
+    const surface = screen.getByTestId("viewport-surface");
+    expect(surface.className).toContain("cursor-highlighter");
+    expect(surface.className).not.toContain("cursor-pencil");
   });
 });
