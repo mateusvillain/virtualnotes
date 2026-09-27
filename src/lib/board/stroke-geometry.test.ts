@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { Rect } from "@/lib/canvas/coords";
+import type { Point, Rect } from "@/lib/canvas/coords";
 import {
   ERASER_HIT_WIDTH,
+  FOUNTAIN_MAX_WIDTH,
+  FOUNTAIN_MIN_WIDTH,
+  FOUNTAIN_NIB_ANGLE,
   HIGHLIGHTER_WIDTH,
   STROKE_MIN_SIZE,
   STROKE_WIDTH,
   eraserHitWidth,
+  fountainOutline,
+  fountainWidth,
   inkOverhang,
+  polygonPath,
   scaleStrokePoints,
   strokeBounds,
   strokeInkBounds,
@@ -271,5 +277,156 @@ describe("tinta larga do marca-texto (#118)", () => {
 
   it("a caixa da tinta do lápis é a mesma caixa dos pontos", () => {
     expect(strokeInkBounds(stroke([0, 0, 100, 50]))).toEqual(strokeBounds(stroke([0, 0, 100, 50])));
+  });
+});
+
+describe("fountainWidth", () => {
+  it("é o fio quando o movimento corre paralelo à pena (↗ e ↙)", () => {
+    expect(fountainWidth({ x: 1, y: -1 })).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+    expect(fountainWidth({ x: -1, y: 1 })).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+  });
+
+  it("é a pena inteira quando o movimento corre perpendicular a ela (↘ e ↖)", () => {
+    expect(fountainWidth({ x: 1, y: 1 })).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+    expect(fountainWidth({ x: -1, y: -1 })).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+  });
+
+  /** A 45° da pena, horizontal e vertical ficam no mesmo meio-termo. */
+  it("dá a mesma espessura intermediária na horizontal e na vertical", () => {
+    const meio =
+      FOUNTAIN_MIN_WIDTH + (FOUNTAIN_MAX_WIDTH - FOUNTAIN_MIN_WIDTH) * Math.sin(FOUNTAIN_NIB_ANGLE);
+
+    expect(fountainWidth({ x: 10, y: 0 })).toBeCloseTo(meio);
+    expect(fountainWidth({ x: 0, y: 10 })).toBeCloseTo(meio);
+  });
+
+  it("não depende do comprimento do movimento", () => {
+    expect(fountainWidth({ x: 3, y: 3 })).toBeCloseTo(fountainWidth({ x: 300, y: 300 }));
+  });
+
+  it("fica no fio para um movimento nulo, sem dividir por zero", () => {
+    expect(fountainWidth({ x: 0, y: 0 })).toBe(FOUNTAIN_MIN_WIDTH);
+  });
+});
+
+describe("fountainOutline", () => {
+  /** Distância entre as duas bordas no vértice `index` do traço. */
+  function larguraEm(outline: Point[], index: number): number {
+    const a = outline[index]!;
+    const b = outline[outline.length - 1 - index]!;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  it("contorna um traço com as duas bordas: ida por um lado, volta pelo outro", () => {
+    const outline = fountainOutline([0, 0, 100, 0, 200, 0]);
+
+    expect(outline).toHaveLength(6);
+    // Horizontal: um lado acima da linha, o outro abaixo, nas mesmas abscissas.
+    expect(outline.map((point) => Math.round(point.x))).toEqual([0, 100, 200, 200, 100, 0]);
+    expect(Math.sign(outline[0]!.y)).toBe(-Math.sign(outline[5]!.y));
+  });
+
+  it("tem a espessura do meio-termo num traço horizontal e num vertical", () => {
+    const horizontal = fountainOutline([0, 0, 100, 0]);
+    const vertical = fountainOutline([0, 0, 0, 100]);
+
+    expect(larguraEm(horizontal, 0)).toBeCloseTo(fountainWidth({ x: 1, y: 0 }));
+    expect(larguraEm(vertical, 0)).toBeCloseTo(fountainWidth({ x: 0, y: 1 }));
+  });
+
+  it("sai no fio na diagonal paralela à pena", () => {
+    const outline = fountainOutline([0, 100, 100, 0]);
+
+    expect(larguraEm(outline, 0)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+    expect(larguraEm(outline, 1)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+  });
+
+  it("sai na largura inteira da pena na diagonal perpendicular", () => {
+    const outline = fountainOutline([0, 0, 100, 100]);
+
+    expect(larguraEm(outline, 0)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+    expect(larguraEm(outline, 1)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+  });
+
+  /**
+   * Na junta entre um trecho no fio e um na largura inteira, a espessura é a média dos dois:
+   * a largura muda ao longo dos trechos, e não salta no vértice.
+   */
+  it("faz a transição da espessura na junta, sem salto", () => {
+    const outline = fountainOutline([0, 100, 100, 0, 200, 100]);
+
+    expect(larguraEm(outline, 0)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+    expect(larguraEm(outline, 1)).toBeCloseTo((FOUNTAIN_MIN_WIDTH + FOUNTAIN_MAX_WIDTH) / 2);
+    expect(larguraEm(outline, 2)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+  });
+
+  /** Sem bico: a borda na junta fica perto do vértice, e não disparada para longe dele. */
+  it("dobra a esquina sem abrir um bico", () => {
+    const outline = fountainOutline([0, 0, 100, 0, 100, 100]);
+    const junta = { x: 100, y: 0 };
+
+    for (const borda of [outline[1]!, outline[outline.length - 2]!]) {
+      expect(Math.hypot(borda.x - junta.x, borda.y - junta.y)).toBeLessThanOrEqual(
+        FOUNTAIN_MAX_WIDTH / 2,
+      );
+    }
+  });
+
+  it("não quebra num traço que volta sobre si mesmo", () => {
+    const outline = fountainOutline([0, 0, 100, 0, 0, 0]);
+
+    expect(outline).toHaveLength(6);
+    for (const point of outline) {
+      expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true);
+    }
+  });
+
+  it("não produz polígono degenerado num traço quase reto", () => {
+    const outline = fountainOutline([0, 0, 100, 0.001, 200, 0]);
+
+    for (const point of outline) {
+      expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(true);
+    }
+    expect(larguraEm(outline, 1)).toBeGreaterThan(FOUNTAIN_MIN_WIDTH);
+  });
+
+  it("ignora pontos repetidos em sequência", () => {
+    expect(fountainOutline([0, 0, 0, 0, 100, 0, 100, 0])).toEqual(fountainOutline([0, 0, 100, 0]));
+  });
+
+  it("desenha a marca da pena parada num traço de dois pontos iguais", () => {
+    const outline = fountainOutline([50, 50, 50, 50]);
+
+    expect(outline).toHaveLength(4);
+    const [a, b, c] = outline as [Point, Point, Point];
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+    expect(Math.hypot(c.x - b.x, c.y - b.y)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
+    // Centrada no ponto.
+    const centro = outline.reduce((soma, p) => ({ x: soma.x + p.x / 4, y: soma.y + p.y / 4 }), {
+      x: 0,
+      y: 0,
+    });
+    expect(centro.x).toBeCloseTo(50);
+    expect(centro.y).toBeCloseTo(50);
+  });
+
+  it("não tem contorno sem pontos", () => {
+    expect(fountainOutline([])).toEqual([]);
+  });
+});
+
+describe("polygonPath", () => {
+  it("escreve o polígono como um caminho fechado", () => {
+    expect(
+      polygonPath([
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 5 },
+      ]),
+    ).toBe("M0 0L10 0L10 5Z");
+  });
+
+  it("é vazio para um polígono sem pontos", () => {
+    expect(polygonPath([])).toBe("");
   });
 });
