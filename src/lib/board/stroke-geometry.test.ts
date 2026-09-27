@@ -356,7 +356,11 @@ describe("fountainOutline", () => {
     const outline = fountainOutline([0, 100, 100, 0, 200, 100]);
 
     expect(larguraEm(outline, 0)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
-    expect(larguraEm(outline, 1)).toBeCloseTo((FOUNTAIN_MIN_WIDTH + FOUNTAIN_MAX_WIDTH) / 2);
+    // Medida na bissetriz, a largura da junta de 90° é a média dividida pela mitra: na
+    // perpendicular a cada trecho, é a média.
+    expect(larguraEm(outline, 1) * Math.SQRT1_2).toBeCloseTo(
+      (FOUNTAIN_MIN_WIDTH + FOUNTAIN_MAX_WIDTH) / 2,
+    );
     expect(larguraEm(outline, 2)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
   });
 
@@ -369,6 +373,45 @@ describe("fountainOutline", () => {
       expect(Math.hypot(borda.x - junta.x, borda.y - junta.y)).toBeLessThanOrEqual(
         FOUNTAIN_MAX_WIDTH / 2,
       );
+    }
+  });
+
+  /**
+   * Na junta, a borda sai pela bissetriz; sem compensar a mitra, a tinta afinaria na esquina
+   * (a ~0,71 da espessura numa junta de 90°). A distância da borda a cada trecho é a
+   * meia-largura dele.
+   */
+  it("mantém a espessura na junta, sem estrangular a esquina", () => {
+    // Horizontal e vertical: mesma espessura dos dois lados da junta. A borda fica a essa
+    // meia-largura de cada trecho, a menos que a mitra passe da meia pena — aí o teto vale.
+    const outline = fountainOutline([0, 0, 100, 0, 100, 100]);
+    const meia = Math.min(
+      fountainWidth({ x: 1, y: 0 }) / 2,
+      (FOUNTAIN_MAX_WIDTH / 2) * Math.SQRT1_2,
+    );
+    const semMitra = (fountainWidth({ x: 1, y: 0 }) / 2) * Math.SQRT1_2;
+    const borda = outline[outline.length - 2]!;
+
+    // Distância da borda à reta do primeiro trecho (y = 0) e à do segundo (x = 100).
+    expect(Math.abs(borda.y)).toBeCloseTo(meia);
+    expect(Math.abs(borda.x - 100)).toBeCloseTo(meia);
+    expect(meia).toBeGreaterThan(semMitra);
+  });
+
+  it("não deixa a borda passar da meia pena numa volta fechada", () => {
+    const outline = fountainOutline([0, 0, 100, 0, 0, 5]);
+
+    for (const [index, ponto] of [
+      [0, 0],
+      [100, 0],
+      [0, 5],
+    ].entries()) {
+      const bordas = [outline[index]!, outline[outline.length - 1 - index]!];
+      for (const borda of bordas) {
+        expect(Math.hypot(borda.x - ponto[0]!, borda.y - ponto[1]!)).toBeLessThanOrEqual(
+          FOUNTAIN_MAX_WIDTH / 2 + 1e-9,
+        );
+      }
     }
   });
 
