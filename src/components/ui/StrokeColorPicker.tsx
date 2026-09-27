@@ -28,16 +28,16 @@ interface StrokeColorPickerProps {
 
 /**
  * As sete cores do traço: as seis da nota, mais o preto (#69), para qualquer ferramenta de
- * desenho (#112).
+ * desenho (#112). Em círculos, no bloco acima da toolbar (#140).
  *
  * O preto entra por último, depois das seis de `ColorPicker`, porque é assim que
  * `STROKE_COLORS` as ordena (`[...NOTE_COLORS, "black"]`) — a mesma ordem em que o board
  * guarda o índice, e a paleta precisa concordar com ela ou o quadradinho errado acenderia
  * como marcado.
  *
- * A grade e a navegação por teclado moram em `ColorRadioGroup`, a mesma base do `ColorPicker`
+ * A fila e a navegação por teclado moram em `ColorRadioGroup`, a mesma base do `ColorPicker`
  * do post-it. O que muda aqui é só o que é específico do traço: a cor de fundo de cada
- * quadradinho vem de `strokeColor` (que sabe resolver o preto para `--color-ink`, e as seis
+ * círculo vem de `strokeColor` (que sabe resolver o preto para `--color-ink`, e as seis
  * primeiras para a mesma paleta de nota), e o rótulo de cada opção reaproveita
  * `note.colors` para as seis compartilhadas — só o preto tem um rótulo próprio, porque é a
  * única cor que a nota não tem.
@@ -57,6 +57,7 @@ export function StrokeColorPicker({ tool, value, onChange }: StrokeColorPickerPr
       }
       ariaLabel={ui[name].color}
       testId={`${name}-color-picker`}
+      shape="circle"
     />
   );
 }

@@ -94,3 +94,34 @@ describe("StrokeColorPicker", () => {
     });
   });
 });
+
+describe("StrokeColorPicker — círculos da toolbar (#140)", () => {
+  it("desenha círculos, e a cor marcada maior que as outras", () => {
+    render(
+      <StrokeColorPicker tool={STROKE_TOOL_PENCIL} value={STROKE_COLOR_BLACK} onChange={vi.fn()} />,
+    );
+
+    for (const cor of cores()) expect(cor.className).toContain("rounded-full");
+    expect(cores()[6]?.className).toContain("h-7 w-7");
+    expect(cores()[0]?.className).toContain("h-6 w-6");
+  });
+
+  it("as setas continuam andando entre as cores", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StrokeColorPicker
+        tool={STROKE_TOOL_PENCIL}
+        value={STROKE_COLOR_BLACK}
+        onChange={onChange}
+      />,
+    );
+
+    await user.tab();
+    expect(document.activeElement).toBe(cores()[6]);
+
+    await user.keyboard("{ArrowRight}");
+    expect(onChange).toHaveBeenLastCalledWith(0);
+    expect(document.activeElement).toBe(cores()[0]);
+  });
+});

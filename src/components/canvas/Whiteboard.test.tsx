@@ -4188,14 +4188,15 @@ describe("Whiteboard — remover e duplicar no toque (#99)", () => {
     criaPostIt(300, 300);
 
     const toolbar = screen.getByTestId("toolbar");
-    const coluna = toolbar.parentElement!;
-    const barra = [...coluna.children].find((filho) => filho.contains(botaoRemover()));
+    const remover = botaoRemover()!;
+    // A primeira coluna que tem as duas peças: a da base da tela, no `AppShell`.
+    let coluna = toolbar.parentElement!;
+    while (!coluna.contains(remover)) coluna = coluna.parentElement!;
+    const filhos = [...coluna.children];
+    const posicao = (alvo: Element) => filhos.findIndex((filho) => filho.contains(alvo));
 
-    expect(barra).toBeDefined();
     expect(coluna.className).toContain("flex-col");
-    expect([...coluna.children].indexOf(barra!)).toBeLessThan(
-      [...coluna.children].indexOf(toolbar),
-    );
+    expect(posicao(remover)).toBeLessThan(posicao(toolbar));
   });
 
   // Critério de aceite: a barra de cor esconde uma seleção só de traço de propósito (#70),
@@ -4813,5 +4814,79 @@ describe("Whiteboard — alvo da caneta tinteiro (#115)", () => {
     const sobra = (FOUNTAIN_MAX_WIDTH - STROKE_WIDTH) / 2;
     expect(Number.parseFloat(caixa.style.top)).toBe(200 - sobra);
     expect(Number.parseFloat(caixa.style.height)).toBe(sobra * 2);
+  });
+});
+
+describe("Whiteboard — bloco de cores acima da toolbar (#140)", () => {
+  function bloco(): HTMLElement | null {
+    return screen.queryByTestId("toolbar-palette");
+  }
+
+  it.each([
+    ["p", "pencil"],
+    ["f", "fountain"],
+    ["h", "highlighter"],
+  ])("aparece com %s, acima da toolbar, com a paleta da ferramenta", (tecla, nome) => {
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: tecla });
+
+    const pilula = defined(bloco() ?? undefined, "o bloco de cores");
+    expect(pilula.querySelector(`[data-testid="${nome}-color-picker"]`)).not.toBeNull();
+    // Antes da toolbar na mesma coluna: na tela, logo acima dela.
+    const toolbar = screen.getByTestId("toolbar");
+    expect(pilula.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(pilula.parentElement).toBe(toolbar.parentElement);
+  });
+
+  it.each([
+    ["n", "a nota"],
+    ["e", "a borracha"],
+  ])("não aparece com %s (%s)", (tecla) => {
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: tecla });
+
+    expect(bloco()).toBeNull();
+  });
+
+  it("some ao desligar a ferramenta e ao trocar para a borracha", () => {
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: "p" });
+    fireEvent.keyDown(document, { key: "p" });
+    expect(bloco()).toBeNull();
+
+    fireEvent.keyDown(document, { key: "h" });
+    fireEvent.keyDown(document, { key: "e" });
+    expect(bloco()).toBeNull();
+  });
+
+  it("trocar de ferramenta mostra a cor da ferramenta nova", async () => {
+    const user = userEvent.setup();
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: "p" });
+    await user.click(screen.getByRole("radio", { name: UI.en.note.colors.blue }));
+    fireEvent.keyDown(document, { key: "h" });
+
+    // O marca-texto continua na cor dele (amarelo), sem herdar o azul do lápis.
+    const marcada = screen.getByRole("radio", { checked: true });
+    expect(marcada.getAttribute("aria-label")).toBe(UI.en.note.colors.yellow);
+    expect(screen.getByTestId("highlighter-color-picker")).toBeDefined();
+
+    fireEvent.keyDown(document, { key: "p" });
+    expect(screen.getByRole("radio", { checked: true }).getAttribute("aria-label")).toBe(
+      UI.en.note.colors.blue,
+    );
+  });
+
+  it("não fica mais no canto de cima", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+
+    const novoQuadro = screen.getByRole("button", { name: UI.en.newBoard.action });
+    const canto = novoQuadro.closest(".top-0")!;
+    expect(canto.querySelector('[role="radiogroup"]')).toBeNull();
   });
 });
