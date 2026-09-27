@@ -35,6 +35,27 @@ describe("AppShell", () => {
     expect(faixa?.className).toContain("z-30");
   });
 
+  it("centra a toolbar na borda de baixo, com o que vem acima empilhado em coluna", () => {
+    render(
+      <AppShell
+        toolbar={
+          <>
+            <button type="button">acima</button>
+            <button type="button">toolbar</button>
+          </>
+        }
+      />,
+    );
+    const faixa = screen.getByRole("button", { name: "toolbar" }).parentElement!;
+
+    expect(faixa.className).toContain("bottom-0");
+    expect(faixa.className).toContain("flex-col");
+    expect(faixa.className).toContain("items-center");
+    expect(faixa.className).toContain("z-30");
+    // A ordem da árvore é a da tela: a última peça é a que encosta na borda.
+    expect(faixa.lastElementChild?.textContent).toBe("toolbar");
+  });
+
   it("renderiza o conteúdo do canvas", () => {
     render(<AppShell>conteúdo do quadro</AppShell>);
 

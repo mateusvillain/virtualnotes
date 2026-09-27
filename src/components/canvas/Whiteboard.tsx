@@ -15,15 +15,9 @@ import { useViewport } from "@/lib/canvas/useViewport";
 import { useTouchPrimary } from "@/lib/dom/useTouchPrimary";
 import { useCopy, usePaste } from "@/lib/dom/useClipboard";
 import { ColorPicker } from "@/components/postit/ColorPicker";
-import { SelectButton } from "@/components/ui/SelectButton";
 import { HistoryButtons } from "@/components/ui/HistoryButtons";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
-import { NoteButton } from "@/components/ui/NoteButton";
-import { PencilButton } from "@/components/ui/PencilButton";
-import { FountainPenButton } from "@/components/ui/FountainPenButton";
-import { HighlighterButton } from "@/components/ui/HighlighterButton";
 import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
-import { EraserButton } from "@/components/ui/EraserButton";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { useShareBoard } from "@/lib/board/useShareBoard";
 import { Onboarding } from "./Onboarding";
@@ -31,6 +25,7 @@ import { Board } from "./Board";
 import { Viewport } from "./Viewport";
 import { SelectionActions } from "./SelectionActions";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { Toolbar, type ToolbarMode } from "./Toolbar";
 import { ViewportControls } from "./ViewportControls";
 
 type WhiteboardProps = Pick<UseBoardOptions, "initialBoard" | "autosave">;
@@ -52,8 +47,11 @@ type WhiteboardProps = Pick<UseBoardOptions, "initialBoard" | "autosave">;
  * — a mesma regra que já valia entre o lápis e a colocação de nota, agora com mais um nome.
  * `"highlighter"` (#117) é mais uma, pela mesma regra: ligar o marca-texto desliga o lápis.
  * `"fountain"` (#114) também: a caneta tinteiro desliga o lápis, o marca-texto e o resto.
+ *
+ * Desde a toolbar inferior (#137) a seleção voltou a não ter botão, mas continua tendo nome:
+ * é o que vale com nenhuma ferramenta da toolbar ligada, e o destino de `V` e `Esc`.
  */
-type BoardMode = "select" | "pencil" | "fountain" | "highlighter" | "erasing" | "placing";
+type BoardMode = "select" | ToolbarMode;
 
 /**
  * O quadro: junta o estado de viewport à superfície navegável, aos controles e aos post-its.
@@ -157,7 +155,6 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
    * superfície o que ela está fazendo para saber o que desenhar.
    */
   const [mode, setMode] = useState<BoardMode>("select");
-  const selecting = mode === "select";
   const pencil = mode === "pencil";
   const fountain = mode === "fountain";
   const highlighter = mode === "highlighter";
@@ -280,8 +277,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
 
   /**
    * A paleta de uma ferramenta de desenho. Cada uma mostra e troca a própria cor — o
-   * marca-texto abre no amarelo, o lápis no preto —, e a caixa é a mesma dos botões para a
-   * pilha continuar parecendo um grupo só, com um item a mais quando o modo está ligado.
+   * marca-texto abre no amarelo, o lápis no preto —, na mesma caixa dos botões do canto.
    */
   function strokePalette(tool: StrokeTool) {
     return (
@@ -301,27 +297,31 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
         <div className="flex flex-col items-start gap-2">
           <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
           {/*
-            A pilha de ferramentas, da mais usada para a menos: selecionar, criar nota,
-            rabiscar, destacar, apagar. A seleção no topo porque é a ferramenta de partida — o
-            estado em que o quadro começa e para onde `Esc` sempre volta —, e as de desenho
-            depois, porque é o que se faz em volta das notas. A borracha fecha a pilha: é a
-            que desfaz o que as de cima fizeram.
+            A paleta só aparece com uma ferramenta de desenho ligada (#69, #117): escolhe a cor
+            do **próximo** traço, e fora do modo não há gesto nenhum para ela influenciar.
           */}
-          <SelectButton active={selecting} onSelect={selectTool} />
-          <NoteButton active={placing} onToggle={togglePlacing} />
-          <PencilButton active={pencil} onToggle={togglePencil} />
-          {/*
-            A paleta só aparece com uma ferramenta de desenho ligada (#69, #117), logo abaixo
-            do botão dela: escolhe a cor do **próximo** traço, e fora do modo não há gesto
-            nenhum para ela influenciar.
-          */}
-          {pencil ? strokePalette(STROKE_TOOL_PENCIL) : null}
-          <FountainPenButton active={fountain} onToggle={toggleFountain} />
-          {fountain ? strokePalette(STROKE_TOOL_FOUNTAIN) : null}
-          <HighlighterButton active={highlighter} onToggle={toggleHighlighter} />
-          {highlighter ? strokePalette(STROKE_TOOL_HIGHLIGHTER) : null}
-          <EraserButton active={erasing} onToggle={toggleEraser} />
+          {drawingTool === null ? null : strokePalette(drawingTool)}
         </div>
+      }
+      toolbar={
+        <>
+          {/*
+            Remover e duplicar no toque (#99), logo acima da toolbar: fixos na base da tela, e
+            não ancorados na seleção como a barra de cor — o alvo inclui traço sozinho, que
+            aquela barra esconde de propósito. Na coluna da toolbar, e não numa faixa própria,
+            para nunca cair por cima dela (#137).
+
+            Mesma guarda de gesto da barra de cor, pelo mesmo motivo, e a mais: só em aparelho
+            de toque, porque em desktop as duas ações já têm caminho pelo teclado (#85, #88).
+          */}
+          {!touchPrimary || inGesture || board.selectedRects.length === 0 ? null : (
+            <SelectionActions
+              onRemove={board.deleteSelection}
+              onDuplicate={board.duplicateSelection}
+            />
+          )}
+          <Toolbar active={mode === "select" ? null : mode} onToggle={toggleMode} />
+        </>
       }
       trailingActions={
         // Desfazer à esquerda de salvar: o canto deixa de ser uma ação só e vira um grupo,
@@ -422,30 +422,6 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
             <SelectionToolbar rects={board.selectedRects} viewport={controls.viewport}>
               <ColorPicker value={board.selectionColor} onChange={board.colorSelection} />
             </SelectionToolbar>
-          </div>
-        )}
-
-        {/*
-          Remover e duplicar no toque (#99): fixos na base da tela, e não ancorados na
-          seleção como a barra de cor acima — o alvo inclui traço sozinho, que aquela barra
-          esconde de propósito, e duplicar essa regra aqui só multiplicaria onde a barra
-          pode aparecer sem multiplicar o que ela mostra.
-
-          Mesma guarda de gesto da barra de cor, pelo mesmo motivo, e a mais: só em aparelho
-          de toque, porque em desktop as duas ações já têm caminho pelo teclado (#85, #88).
-        */}
-        {!touchPrimary || inGesture || board.selectedRects.length === 0 ? null : (
-          // Mesmo respiro dos controles de zoom, que ficam no outro canto da mesma borda
-          // (`AppShell`): a faixa inteira encostada em `bottom-0`, com `p-4` empurrando a
-          // caixa para dentro — e não um `bottom-4` na caixa sozinha, que por si só já dava
-          // a mesma distância, mas divergia do padrão que o resto da moldura usa.
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center p-4">
-            <div className="pointer-events-auto">
-              <SelectionActions
-                onRemove={board.deleteSelection}
-                onDuplicate={board.duplicateSelection}
-              />
-            </div>
           </div>
         )}
       </div>

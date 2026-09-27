@@ -43,7 +43,8 @@ describe("interface do quadro em cada idioma", () => {
       expect(screen.getByRole("button", { name: ui.pencil.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.fountain.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.highlighter.action })).toBeDefined();
-      expect(screen.getByRole("button", { name: ui.select.action })).toBeDefined();
+      expect(screen.getByRole("button", { name: ui.eraser.action })).toBeDefined();
+      expect(screen.getByRole("toolbar", { name: ui.toolbar.label })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.undo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.redo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.zoom.in })).toBeDefined();
@@ -82,7 +83,7 @@ describe("interface do quadro em cada idioma", () => {
   });
 
   /**
-   * As ações com atalho (issue #97): seleção, nota, lápis, marca-texto (#117), borracha,
+   * As ações com atalho (issue #97): nota, lápis, marca-texto (#117), borracha,
    * desfazer, refazer e salvar. O nome continua saindo de `ui`, como no teste acima; o que
    * este caso guarda é o atalho ao lado, e o `aria-keyshortcuts` do botão que o anuncia para
    * quem usa leitor de tela.
@@ -92,7 +93,6 @@ describe("interface do quadro em cada idioma", () => {
     async (locale) => {
       const ui = UI[locale];
       const acoes = [
-        { name: ui.select.action, shortcut: SHORTCUTS.select },
         { name: ui.note.action, shortcut: SHORTCUTS.note },
         { name: ui.pencil.action, shortcut: SHORTCUTS.pencil },
         { name: ui.fountain.action, shortcut: SHORTCUTS.fountain },

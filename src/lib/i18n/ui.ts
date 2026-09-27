@@ -38,8 +38,11 @@ export interface UiCopy {
     cancel: string;
   };
   zoom: { out: string; reset: string; in: string };
-  /** Nome do botão da ferramenta de seleção (#83) — a mesma ação da tecla `V`. */
-  select: { action: string };
+  /**
+   * Nome da toolbar inferior de ferramentas (#137). Não há mais botão de seleção: ela é o que
+   * vale com nenhuma ferramenta ligada, e `V`/`Esc` levam até ela.
+   */
+  toolbar: { label: string };
   /** Nomes dos botões de desfazer e refazer (#87) — as mesmas ações de `Ctrl+Z` e `Ctrl+Shift+Z`. */
   history: { undo: string; redo: string };
   pencil: {
@@ -124,7 +127,7 @@ export const UI: Record<Locale, UiCopy> = {
       cancel: "Cancel",
     },
     zoom: { out: "Zoom out", reset: "Reset zoom to 100%", in: "Zoom in" },
-    select: { action: "Select" },
+    toolbar: { label: "Tools" },
     history: { undo: "Undo", redo: "Redo" },
     pencil: { action: "Pencil", color: "Pencil colour", black: "Black" },
     fountain: { action: "Fountain pen", color: "Fountain pen colour" },
@@ -182,7 +185,7 @@ export const UI: Record<Locale, UiCopy> = {
       cancel: "Cancelar",
     },
     zoom: { out: "Diminuir zoom", reset: "Voltar o zoom para 100%", in: "Aumentar zoom" },
-    select: { action: "Seleção" },
+    toolbar: { label: "Ferramentas" },
     history: { undo: "Desfazer", redo: "Refazer" },
     pencil: { action: "Lápis", color: "Cor do lápis", black: "Preto" },
     fountain: { action: "Caneta tinteiro", color: "Cor da caneta tinteiro" },
