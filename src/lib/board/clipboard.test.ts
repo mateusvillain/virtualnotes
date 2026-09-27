@@ -43,6 +43,14 @@ describe("serializeSelection", () => {
     expect(serializeSelection(board([note({ id: "a" })]), selecao(["sumiu"]))).toBeNull();
   });
 
+  it("leva a ferramenta do traço junto (#110)", () => {
+    const quadro = board([], [stroke({ id: "t", tool: 2 })]);
+
+    const recorte = parseClipboard(serializeSelection(quadro, selecao([], ["t"])) ?? "");
+
+    expect(recorte?.strokes[0]).toMatchObject({ tool: 2 });
+  });
+
   it("escreve na versão de schema atual", () => {
     const texto = serializeSelection(board([note({ id: "a" })]), selecao(["a"]));
 

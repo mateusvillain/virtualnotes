@@ -144,6 +144,16 @@ describe("parseBoard", () => {
     expect(result.ok && result.board.version).toBe(SCHEMA_VERSION);
   });
 
+  it("abre um board da v2 sem aviso, com todo traço como lápis", () => {
+    const result = parseBoard({ version: 2, notes: [note()], strokes: [stroke()] });
+
+    expect(result).toEqual({
+      ok: true,
+      board: { version: SCHEMA_VERSION, notes: [note()], strokes: [stroke()] },
+      warnings: [],
+    });
+  });
+
   it("abre normalmente um board da v1, sem strokes, com a lista de traços vazia", () => {
     const result = parseBoard({ version: 1, notes: [note()] });
 
@@ -303,5 +313,37 @@ describe("normalizeStroke", () => {
 
   it("normaliza um traço válido", () => {
     expect(normalizeStroke(stroke())).toEqual(stroke());
+  });
+
+  describe("ferramenta (#110)", () => {
+    it("preserva a caneta tinteiro e o marca-texto", () => {
+      expect(normalizeStroke(stroke({ tool: 1 }))).toEqual(stroke({ tool: 1 }));
+      expect(normalizeStroke(stroke({ tool: 2 }))).toEqual(stroke({ tool: 2 }));
+    });
+
+    it("grava o lápis sem o campo, mesmo quando ele vem explícito", () => {
+      expect(normalizeStroke(stroke({ tool: 0 }))).not.toHaveProperty("tool");
+    });
+
+    it("lê ferramenta inválida como lápis, sem descartar o traço", () => {
+      for (const tool of [3, -1, 1.5, "1", null]) {
+        const result = normalizeStroke(stroke({ tool }));
+        expect(result).toEqual(stroke());
+        expect(result).not.toHaveProperty("tool");
+      }
+    });
+
+    /**
+     * O critério de tamanho de link do PRD: um board só com lápis sai, depois de `tool`
+     * existir, exatamente com o JSON que saía antes — só a versão muda.
+     */
+    it("serializa um board só com lápis igual ao de antes do campo", () => {
+      const antes = { version: 2, notes: [note()], strokes: [stroke(), stroke({ id: "s2" })] };
+
+      const result = parseBoard(antes);
+
+      expect(result.ok).toBe(true);
+      expect(result.ok && JSON.stringify(result.board.strokes)).toBe(JSON.stringify(antes.strokes));
+    });
   });
 });

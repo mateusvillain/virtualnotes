@@ -9,7 +9,7 @@ exportação. O código vive em `src/lib/board/`: `types.ts` (contrato) e `schem
 ```ts
 Board = { version: number; notes: Note[]; strokes: Stroke[] }
 Note = { id: string; x: number; y: number; w: number; h: number; color: 0..5; text: string; z: number }
-Stroke = { id: string; color: 0..6; points: number[]; z: number }
+Stroke = { id: string; color: 0..6; tool?: 1..2; points: number[]; z: number }
 ```
 
 - `x`/`y` — canto superior esquerdo, em coordenadas de canvas (não de tela).
@@ -20,6 +20,11 @@ Stroke = { id: string; color: 0..6; points: number[]; z: number }
   independentes uma da outra.
 - `color` do traço — índice na paleta `STROKE_COLORS`: as mesmas seis cores de `NOTE_COLORS`,
   na mesma ordem, mais o preto no índice `6` (o padrão do lápis, epic #64).
+- `tool` do traço — índice em `STROKE_TOOLS` (`["pencil", "fountain", "highlighter"]`): a
+  ferramenta que desenhou o traço (epic #107). **Ausente é lápis**, e o lápis é sempre
+  gravado sem o campo: todo traço de antes do campo era lápis, então boards antigos não
+  precisam de migração, e um board só com lápis gera exatamente o mesmo link de antes.
+  Índice fora da lista também vira lápis, sem descartar o traço (#110).
 - `points` — coordenadas de canvas **achatadas**: `[x0, y0, x1, y1, …]`, e não uma lista de
   `{x, y}`. Comprimento par, com ao menos dois pontos (quatro números). É a mesma lógica da
   cor por índice — o traço é o rabisco inteiro, e cada ponto dele custa bytes de link — mas
@@ -60,10 +65,11 @@ serializado, não como.
 
 ## Versionamento
 
-`version` acompanha `SCHEMA_VERSION` (hoje `2`) e existe para os links não quebrarem quando
+`version` acompanha `SCHEMA_VERSION` (hoje `3`) e existe para os links não quebrarem quando
 o formato evoluir. As regras de leitura:
 
-- Versão **menor ou igual** à atual: aceita. Um board da v1 (sem `strokes`) abre
+- Versão **menor ou igual** à atual: aceita. Um board da v2 (sem `tool`) abre com todo
+  traço como lápis. Um board da v1 (sem `strokes`) abre
   normalmente — `parseBoard` trata o campo ausente como lista vazia, e não como erro. O
   board devolvido sempre sai carimbado com a versão atual, porque é nessa versão que ele foi
   normalizado.
@@ -80,6 +86,10 @@ erro silencioso — dado presente que a versão antiga não sabe interpretar —
 recusar versão futura existe para evitar. Um campo opcional só dispensa o incremento quando
 nenhuma versão anterior do app pode mostrar o board de forma **visivelmente** incompleta por
 ignorá-lo.
+
+`tool` (#110) subiu a versão de `2` para `3` pela mesma regra: a v2 leria um traço de
+marca-texto como uma linha fina e opaca de lápis — o dado está lá, mas o desenho sai errado,
+sem aviso.
 
 ## Validação
 

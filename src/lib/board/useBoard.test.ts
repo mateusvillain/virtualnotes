@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { defined } from "@/test-utils/defined";
 import { desvioMaximo, pontosDe } from "@/test-utils/geometry";
 import { SIMPLIFY_TOLERANCE } from "@/lib/canvas/simplify";
-import { CANVAS_MAX_ABS_COORDINATE, NOTE_COLORS, NOTE_SIZE, STROKE_COLOR_BLACK } from "./types";
+import {
+  CANVAS_MAX_ABS_COORDINATE,
+  NOTE_COLORS,
+  NOTE_SIZE,
+  SCHEMA_VERSION,
+  STROKE_COLOR_BLACK,
+  type Board,
+} from "./types";
 import { selectionSize } from "./selection";
 import { useBoard } from "./useBoard";
 
@@ -1367,5 +1374,49 @@ describe("useBoard — borracha (#98)", () => {
     // tratado: o controle de "já tocado" não vaza de uma passada para a outra.
     ids = hook.result.current.strokes.map((s) => s.id);
     expect(ids).not.toContain(segundo.id);
+  });
+});
+
+/**
+ * O que `useBoard` recria a partir de um traço existente — duplicar, colar e o que sobra da
+ * borracha — leva a ferramenta do original (#110).
+ */
+describe("useBoard — ferramenta do traço (#110)", () => {
+  const comMarcaTexto: Board = {
+    version: SCHEMA_VERSION,
+    notes: [],
+    strokes: [{ id: "mt", color: 0, tool: 2, points: [0, 0, 100, 0], z: 1 }],
+  };
+
+  it("duplicar preserva a ferramenta", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comMarcaTexto, autosave: false }));
+    act(() => hook.result.current.selectEverything());
+
+    act(() => hook.result.current.duplicateSelection());
+
+    expect(hook.result.current.strokes.map((s) => s.tool)).toEqual([2, 2]);
+  });
+
+  it("copiar e colar preserva a ferramenta", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comMarcaTexto, autosave: false }));
+    act(() => hook.result.current.selectEverything());
+    const texto = defined(hook.result.current.copySelection() ?? undefined, "o recorte");
+
+    act(() => {
+      hook.result.current.pasteFromClipboard(texto);
+    });
+
+    expect(hook.result.current.strokes.map((s) => s.tool)).toEqual([2, 2]);
+  });
+
+  it("os pedaços que a borracha deixa continuam com a ferramenta", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comMarcaTexto, autosave: false }));
+
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x: 50, y: 0 }, { x: 50, y: 0 }));
+    act(() => hook.result.current.endErasing());
+
+    expect(hook.result.current.strokes).toHaveLength(2);
+    expect(hook.result.current.strokes.every((s) => s.tool === 2)).toBe(true);
   });
 });

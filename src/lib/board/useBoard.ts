@@ -461,6 +461,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
         })),
         recorte.strokes.map((stroke) => ({
           color: stroke.color,
+          tool: stroke.tool,
           points: translateStrokePoints(stroke, { x: offset, y: offset }),
         })),
       );
@@ -772,6 +773,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
       })),
       strokes.map((stroke) => ({
         color: stroke.color,
+        tool: stroke.tool,
         points: translateStrokePoints(stroke, { x: PASTE_OFFSET, y: PASTE_OFFSET }),
       })),
     );
@@ -856,7 +858,8 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
     for (const [id, runs] of touched) {
       const original = byId.get(id);
       if (original === undefined || runs === null) continue;
-      for (const points of runs) additions.push({ color: original.color, points });
+      for (const points of runs)
+        additions.push({ color: original.color, tool: original.tool, points });
     }
 
     store.spliceStrokes([...touched.keys()], additions);

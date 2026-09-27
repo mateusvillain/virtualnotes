@@ -81,6 +81,16 @@ describe("addStroke", () => {
     expect(stroke).toMatchObject({ color: 0, points: [0, 0, 10, 10] });
   });
 
+  it("grava a ferramenta do traço, e o lápis sem o campo", () => {
+    const store = createBoardStore();
+
+    const caneta = store.addStroke({ color: 6, tool: 1, points: [0, 0, 10, 10] });
+    const lapis = store.addStroke({ color: 6, tool: 0, points: [0, 0, 10, 10] });
+
+    expect(caneta).toMatchObject({ tool: 1 });
+    expect(lapis).not.toHaveProperty("tool");
+  });
+
   it("devolve null, sem lançar, para pontos insuficientes", () => {
     const store = createBoardStore();
 
@@ -117,6 +127,57 @@ describe("addStroke", () => {
 
     expect(stroke?.z).toBe(1);
     expect(note.z).toBe(1);
+  });
+});
+
+/**
+ * Todo caminho que cria ou reescreve traço carrega a ferramenta junto (#110): um traço de
+ * marca-texto que voltasse lápis depois de colado, movido ou cortado pela borracha
+ * mudaria de desenho sem ninguém ter pedido.
+ */
+describe("ferramenta do traço (#110)", () => {
+  it("addElements preserva a ferramenta de cada traço do lote", () => {
+    const store = createBoardStore();
+
+    const { strokes } = store.addElements(
+      [],
+      [
+        { color: 0, tool: 2, points: [0, 0, 10, 10] },
+        { color: 6, points: [0, 0, 10, 10] },
+      ],
+    );
+
+    expect(strokes[0]).toMatchObject({ tool: 2 });
+    expect(strokes[1]).not.toHaveProperty("tool");
+  });
+
+  it("spliceStrokes preserva a ferramenta dos pedaços", () => {
+    const store = createBoardStore();
+    const original = store.addStroke({ color: 0, tool: 1, points: [0, 0, 100, 0] });
+
+    store.spliceStrokes([original?.id ?? ""], [{ color: 0, tool: 1, points: [0, 0, 40, 0] }]);
+
+    expect(store.getBoard().strokes).toEqual([expect.objectContaining({ tool: 1 })]);
+  });
+
+  it("updateStrokes mantém a ferramenta ao mover", () => {
+    const store = createBoardStore();
+    const stroke = store.addStroke({ color: 0, tool: 2, points: [0, 0, 10, 10] });
+
+    store.updateStrokes([{ id: stroke?.id ?? "", patch: { points: [5, 5, 15, 15] } }]);
+
+    expect(store.getBoard().strokes[0]).toMatchObject({ tool: 2, points: [5, 5, 15, 15] });
+  });
+
+  it("trocar só a ferramenta é uma mudança, e desfazer a devolve", () => {
+    const store = createBoardStore();
+    const stroke = store.addStroke({ color: 0, points: [0, 0, 10, 10] });
+
+    store.updateStrokes([{ id: stroke?.id ?? "", patch: { tool: 1 } }]);
+    expect(store.getBoard().strokes[0]).toMatchObject({ tool: 1 });
+
+    store.undo();
+    expect(store.getBoard().strokes[0]).not.toHaveProperty("tool");
   });
 });
 
