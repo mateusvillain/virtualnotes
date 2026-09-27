@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/shell/AppShell";
+import { STROKE_TOOL_PENCIL } from "@/lib/board/types";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
 import type { Point } from "@/lib/canvas/coords";
@@ -14,7 +15,7 @@ import { HistoryButtons } from "@/components/ui/HistoryButtons";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
 import { NoteButton } from "@/components/ui/NoteButton";
 import { PencilButton } from "@/components/ui/PencilButton";
-import { PencilColorPicker } from "@/components/ui/PencilColorPicker";
+import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
 import { EraserButton } from "@/components/ui/EraserButton";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { useShareBoard } from "@/lib/board/useShareBoard";
@@ -273,7 +274,11 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           */}
           {pencil ? (
             <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-              <PencilColorPicker value={board.pencilColor} onChange={board.setPencilColor} />
+              <StrokeColorPicker
+                tool={STROKE_TOOL_PENCIL}
+                value={board.strokeColors[STROKE_TOOL_PENCIL]}
+                onChange={(color) => board.setStrokeColor(STROKE_TOOL_PENCIL, color)}
+              />
             </div>
           ) : null}
           <EraserButton active={erasing} onToggle={toggleEraser} />
@@ -316,7 +321,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           onSelectionStart={board.beginRectSelection}
           onSelectionRect={board.selectInRect}
           pencil={pencil}
-          pencilColor={board.pencilColor}
+          pencilColor={board.strokeColors[STROKE_TOOL_PENCIL]}
           erasing={erasing}
           placing={placing}
           onPlaceNote={placeNote}

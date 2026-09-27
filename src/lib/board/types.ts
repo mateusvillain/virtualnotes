@@ -76,6 +76,32 @@ export type StrokeTool = TupleIndex<typeof STROKE_TOOLS>;
 export const STROKE_TOOL_PENCIL = 0 satisfies StrokeTool;
 
 /**
+ * Cor com que o marca-texto nasce: o amarelo (#112).
+ *
+ * Diferente do lápis e da caneta, que nascem em preto: o marca-texto destaca o que já está
+ * no quadro, e o amarelo translúcido é o que se reconhece como destaque. É o índice do
+ * amarelo em {@link NOTE_COLORS}, que {@link STROKE_COLORS} repete na mesma posição.
+ */
+export const DEFAULT_HIGHLIGHTER_COLOR = 0 satisfies StrokeColor;
+
+/**
+ * Uma cor por ferramenta de desenho, na ordem de {@link STROKE_TOOLS} — indexada pelo
+ * próprio {@link StrokeTool}.
+ */
+export type StrokeColors = readonly [
+  pencil: StrokeColor,
+  fountain: StrokeColor,
+  highlighter: StrokeColor,
+];
+
+/** A cor com que cada ferramenta nasce: lápis e caneta em preto, marca-texto em amarelo. */
+export const DEFAULT_STROKE_COLORS: StrokeColors = [
+  STROKE_COLOR_BLACK,
+  STROKE_COLOR_BLACK,
+  DEFAULT_HIGHLIGHTER_COLOR,
+];
+
+/**
  * A cor com que um post-it nasce.
  *
  * Existe como constante porque passou a ter dois leitores: a store, que a aplica ao criar,
