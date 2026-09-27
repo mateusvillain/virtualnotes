@@ -1462,6 +1462,17 @@ describe("useBoard — borracha na caneta tinteiro (#115)", () => {
   it("não alcança além da borda da tinta", () => {
     expect(passa(100, 12)).toContain("caneta");
   });
+
+  it("cortar a caneta no meio deixa dois pedaços de caneta", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: board, autosave: false }));
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x: 100, y: -20 }, { x: 100, y: 20 }));
+    act(() => hook.result.current.endErasing());
+
+    const pedacos = hook.result.current.strokes.filter((s) => s.id !== "lapis");
+    expect(pedacos).toHaveLength(2);
+    for (const pedaco of pedacos) expect(pedaco.tool).toBe(STROKE_TOOL_FOUNTAIN);
+  });
 });
 
 describe("useBoard — borracha no marca-texto (#118)", () => {
