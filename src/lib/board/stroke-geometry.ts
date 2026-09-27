@@ -65,6 +65,141 @@ export function widenByInk(width: number, tool: StrokeTool): number {
 }
 
 /**
+ * Ângulo da pena da caneta tinteiro, em radianos (#111): 45° acima da horizontal, subindo
+ * para a direita, como a pena de quem escreve com a mão direita.
+ *
+ * Medido como se lê na tela, e não no eixo do canvas — lá o `y` cresce para baixo, e a pena
+ * aponta para `(cos, −sin)`. O risco que corre paralelo a ela (↗ ou ↙) sai no fio; o que
+ * corre perpendicular (↘ ou ↖), na largura inteira.
+ */
+export const FOUNTAIN_NIB_ANGLE = Math.PI / 4;
+
+/**
+ * Espessura mínima da tinta da caneta tinteiro, em unidades de canvas: o fio, quando o
+ * movimento corre paralelo à pena. Não zero, porque uma pena de verdade tem espessura, e um
+ * traço paralelo a ela sumiria. Valor de partida, ajustável em revisão.
+ */
+export const FOUNTAIN_MIN_WIDTH = 1;
+
+/**
+ * Espessura máxima da tinta da caneta tinteiro, em unidades de canvas: a largura da pena,
+ * quando o movimento corre perpendicular a ela. Valor de partida, ajustável em revisão.
+ */
+export const FOUNTAIN_MAX_WIDTH = 5;
+
+/** A pena como vetor unitário, em coordenadas de canvas (`y` para baixo). */
+const NIB: Point = { x: Math.cos(FOUNTAIN_NIB_ANGLE), y: -Math.sin(FOUNTAIN_NIB_ANGLE) };
+
+/**
+ * A espessura da tinta da caneta tinteiro para um movimento na direção `direction` (#111).
+ *
+ * Proporcional ao seno do ângulo entre o movimento e a pena — é quanto da pena fica de
+ * través ao caminho —, entre {@link FOUNTAIN_MIN_WIDTH} e {@link FOUNTAIN_MAX_WIDTH}. O
+ * sentido não importa: ↗ e ↙ são o mesmo risco, andado ao contrário. Um vetor nulo não tem
+ * direção, e fica no fio.
+ */
+export function fountainWidth(direction: Point): number {
+  const length = Math.hypot(direction.x, direction.y);
+  if (length === 0) return FOUNTAIN_MIN_WIDTH;
+
+  const sin = Math.abs(direction.x * NIB.y - direction.y * NIB.x) / length;
+  return FOUNTAIN_MIN_WIDTH + (FOUNTAIN_MAX_WIDTH - FOUNTAIN_MIN_WIDTH) * sin;
+}
+
+/** `v` com comprimento 1, ou `null` se ele não tiver comprimento nenhum. */
+function unit(v: Point): Point | null {
+  const length = Math.hypot(v.x, v.y);
+  return length === 0 ? null : { x: v.x / length, y: v.y / length };
+}
+
+/**
+ * A marca de uma pena parada: um retângulo do tamanho da pena, na inclinação dela.
+ *
+ * É o que um traço sem comprimento — dois pontos iguais, que um board de fora pode trazer —
+ * desenha, em vez de um polígono de área zero que não pintaria nada.
+ */
+function nibDab(center: Point): Point[] {
+  const along = { x: (NIB.x * FOUNTAIN_MAX_WIDTH) / 2, y: (NIB.y * FOUNTAIN_MAX_WIDTH) / 2 };
+  const across = { x: (-NIB.y * FOUNTAIN_MIN_WIDTH) / 2, y: (NIB.x * FOUNTAIN_MIN_WIDTH) / 2 };
+
+  return [
+    { x: center.x - along.x - across.x, y: center.y - along.y - across.y },
+    { x: center.x + along.x - across.x, y: center.y + along.y - across.y },
+    { x: center.x + along.x + across.x, y: center.y + along.y + across.y },
+    { x: center.x - along.x + across.x, y: center.y - along.y + across.y },
+  ];
+}
+
+/**
+ * O contorno da tinta de uma caneta tinteiro que passa pelos pontos `flat` (#111), como um
+ * polígono fechado: a borda de um lado, na ordem do traço, e a do outro, de volta.
+ *
+ * A espessura não é gravada no board: ela sai da direção de cada trecho, aqui, na hora de
+ * desenhar (ver {@link fountainWidth}). Cada vértice é empurrado para os dois lados pela
+ * **bissetriz** dos dois trechos que se encontram nele, com a média das duas espessuras — é
+ * o que faz a largura mudar aos poucos ao longo do trecho, em vez de saltar na junta, e a
+ * borda dobrar a esquina sem abrir um bico. Numa volta completa (o traço vira para trás
+ * sobre si mesmo), a bissetriz não existe, e vale a direção de chegada.
+ *
+ * Pontos repetidos em sequência não têm direção, e são descartados antes. Um traço que só
+ * tem um ponto distinto vira a marca da pena parada ({@link nibDab}); sem ponto nenhum, não
+ * há contorno.
+ */
+export function fountainOutline(flat: readonly number[]): Point[] {
+  const points = pointsFromFlat(flat).filter(
+    (point, index, all) =>
+      index === 0 || point.x !== all[index - 1]!.x || point.y !== all[index - 1]!.y,
+  );
+
+  const first = points[0];
+  if (first === undefined) return [];
+  if (points.length === 1) return nibDab(first);
+
+  const left: Point[] = [];
+  const right: Point[] = [];
+
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index]!;
+    const before = points[index - 1];
+    const after = points[index + 1];
+
+    // Os dois trechos que se encontram aqui. Nas pontas, só existe um, que vale pelos dois.
+    const incoming =
+      before === undefined ? null : unit({ x: point.x - before.x, y: point.y - before.y });
+    const outgoing =
+      after === undefined ? null : unit({ x: after.x - point.x, y: after.y - point.y });
+    const into = incoming ?? outgoing!;
+    const out = outgoing ?? incoming!;
+
+    const tangent = unit({ x: into.x + out.x, y: into.y + out.y }) ?? into;
+    // Na bissetriz, a borda fica mais perto da linha do que a meia-largura: numa junta de
+    // 90°, a tinta sairia com ~0,71 da espessura. Dividir pelo cosseno do meio ângulo (a
+    // mitra) devolve a espessura na junta; o teto na meia pena impede que uma volta fechada
+    // estique a borda para longe — e mantém a tinta dentro do alcance dos alvos (#115).
+    const cos = into.x * tangent.x + into.y * tangent.y;
+    const half = Math.min(
+      (fountainWidth(into) + fountainWidth(out)) / 4 / Math.max(cos, Number.EPSILON),
+      FOUNTAIN_MAX_WIDTH / 2,
+    );
+    const normal = { x: -tangent.y * half, y: tangent.x * half };
+
+    left.push({ x: point.x + normal.x, y: point.y + normal.y });
+    right.push({ x: point.x - normal.x, y: point.y - normal.y });
+  }
+
+  return [...left, ...right.reverse()];
+}
+
+/**
+ * Um polígono fechado como o atributo `d` de um `<path>` SVG. Vazio para uma lista vazia:
+ * um `d` sem comando não desenha nada, que é o que se quer de um contorno sem forma.
+ */
+export function polygonPath(polygon: readonly Point[]): string {
+  if (polygon.length === 0) return "";
+  return `M${polygon.map((point) => `${point.x} ${point.y}`).join("L")}Z`;
+}
+
+/**
  * Uma lista achatada de coordenadas, despachada aos pares.
  *
  * Um número solto no fim é ignorado. O contrato não produz isso — `normalizeStroke` exige
