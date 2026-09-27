@@ -60,11 +60,7 @@ export function NoteButton({ active, onToggle }: NoteButtonProps) {
 
   return (
     <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-      <Tooltip
-        label={ui.note.action}
-        shortcut={shortcutLabel(SHORTCUTS.note, isMac)}
-        align="start"
-      >
+      <Tooltip label={ui.note.action} shortcut={shortcutLabel(SHORTCUTS.note, isMac)} align="start">
         <button
           type="button"
           // O fundo do estado armado é o mesmo que o `hover` já usa: o botão fica com a

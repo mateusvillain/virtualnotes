@@ -24,6 +24,7 @@ import { cancelPointerGesture, releaseCapture } from "@/lib/canvas/pointer-captu
 import { useSpaceHeld } from "@/lib/canvas/useSpaceHeld";
 import {
   STROKE_COLOR_BLACK,
+  STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   type StrokeColor,
@@ -65,8 +66,8 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
   /** Retângulo de seleção em curso, em coordenadas de canvas. */
   onSelectionRect?: (rect: Rect) => void;
   /**
-   * Um modo de desenho ligado: arrastar desenha em vez de selecionar (#68). Lápis ou
-   * marca-texto (#117) — qual dos dois é `drawingTool`.
+   * Um modo de desenho ligado: arrastar desenha em vez de selecionar (#68). Lápis, caneta
+   * tinteiro (#114) ou marca-texto (#117) — qual deles é `drawingTool`.
    */
   pencil?: boolean;
   /**
@@ -892,7 +893,9 @@ export function Viewport({
       : pencil
         ? drawingTool === STROKE_TOOL_HIGHLIGHTER
           ? "cursor-highlighter"
-          : "cursor-pencil"
+          : drawingTool === STROKE_TOOL_FOUNTAIN
+            ? "cursor-fountain"
+            : "cursor-pencil"
         : erasing
           ? "cursor-none"
           : placing

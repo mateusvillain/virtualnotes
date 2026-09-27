@@ -55,11 +55,15 @@ export interface UiCopy {
     color: string;
     black: string;
   };
-  /**
-   * Nome do grupo de cores da caneta tinteiro (#112). O rótulo do preto é o de
-   * `pencil.black`, que vale para a paleta inteira: é a mesma cor nas três ferramentas.
-   */
-  fountain: { color: string };
+  fountain: {
+    /** Dica e `aria-label` do botão que liga o modo caneta tinteiro (#114). */
+    action: string;
+    /**
+     * Nome do grupo de cores da caneta tinteiro (#112). O rótulo do preto é o de
+     * `pencil.black`, que vale para a paleta inteira: é a mesma cor nas três ferramentas.
+     */
+    color: string;
+  };
   highlighter: {
     /** Dica e `aria-label` do botão que liga o modo marca-texto (#117). */
     action: string;
@@ -123,7 +127,7 @@ export const UI: Record<Locale, UiCopy> = {
     select: { action: "Select" },
     history: { undo: "Undo", redo: "Redo" },
     pencil: { action: "Pencil", color: "Pencil colour", black: "Black" },
-    fountain: { color: "Fountain pen colour" },
+    fountain: { action: "Fountain pen", color: "Fountain pen colour" },
     highlighter: { action: "Highlighter", color: "Highlighter colour" },
     eraser: { action: "Eraser" },
     selectionActions: { remove: "Delete selection", duplicate: "Duplicate selection" },
@@ -181,7 +185,7 @@ export const UI: Record<Locale, UiCopy> = {
     select: { action: "Seleção" },
     history: { undo: "Desfazer", redo: "Refazer" },
     pencil: { action: "Lápis", color: "Cor do lápis", black: "Preto" },
-    fountain: { color: "Cor da caneta tinteiro" },
+    fountain: { action: "Caneta tinteiro", color: "Cor da caneta tinteiro" },
     highlighter: { action: "Marca-texto", color: "Cor do marca-texto" },
     eraser: { action: "Borracha" },
     selectionActions: { remove: "Apagar seleção", duplicate: "Duplicar seleção" },

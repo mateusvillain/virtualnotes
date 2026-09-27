@@ -30,6 +30,8 @@ interface KeyboardShortcutsOptions {
   onRedo: () => void;
   /** Ligar e desligar o modo lápis (#68). A mesma tecla faz as duas coisas. */
   onTogglePencil: () => void;
+  /** Ligar e desligar o modo caneta tinteiro (#114). A mesma tecla faz as duas coisas. */
+  onToggleFountain: () => void;
   /** Ligar e desligar o modo marca-texto (#117). A mesma tecla faz as duas coisas. */
   onToggleHighlighter: () => void;
   /** Ligar e desligar o modo borracha (#98). A mesma tecla faz as duas coisas. */
@@ -143,6 +145,7 @@ export function useKeyboardShortcuts({
   onUndo,
   onRedo,
   onTogglePencil,
+  onToggleFountain,
   onToggleHighlighter,
   onToggleEraser,
   onSelectTool,
@@ -163,6 +166,7 @@ export function useKeyboardShortcuts({
     onUndo,
     onRedo,
     onTogglePencil,
+    onToggleFountain,
     onToggleHighlighter,
     onToggleEraser,
     onSelectTool,
@@ -178,6 +182,7 @@ export function useKeyboardShortcuts({
       onUndo,
       onRedo,
       onTogglePencil,
+      onToggleFountain,
       onToggleHighlighter,
       onToggleEraser,
       onSelectTool,
@@ -192,6 +197,7 @@ export function useKeyboardShortcuts({
     onUndo,
     onRedo,
     onTogglePencil,
+    onToggleFountain,
     onToggleHighlighter,
     onToggleEraser,
     onSelectTool,
@@ -298,6 +304,12 @@ export function useKeyboardShortcuts({
       if (event.key.toLowerCase() === "p") {
         event.preventDefault();
         handlers.current.onTogglePencil();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        handlers.current.onToggleFountain();
         return;
       }
 

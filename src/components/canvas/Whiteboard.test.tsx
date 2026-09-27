@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defined } from "@/test-utils/defined";
 import { stubMatchMedia } from "@/test-utils/matchMedia";
-import { HIGHLIGHTER_WIDTH, STROKE_WIDTH } from "@/lib/board/stroke-geometry";
+import {
+  HIGHLIGHTER_WIDTH,
+  STROKE_WIDTH,
+  fountainOutline,
+  polygonPath,
+} from "@/lib/board/stroke-geometry";
 import {
   DEFAULT_HIGHLIGHTER_COLOR,
   NOTE_COLORS,
@@ -4573,5 +4578,170 @@ describe("Whiteboard — alvo do marca-texto (#118)", () => {
     const sobra = (HIGHLIGHTER_WIDTH - STROKE_WIDTH) / 2;
     expect(Number.parseFloat(caixa.style.top)).toBe(200 - sobra);
     expect(Number.parseFloat(caixa.style.height)).toBe(sobra * 2);
+  });
+});
+
+describe("Whiteboard — caneta tinteiro (#114)", () => {
+  function botao(): HTMLElement {
+    return screen.getByRole("button", { name: UI.en.fountain.action });
+  }
+
+  function ligaCaneta(): void {
+    fireEvent.keyDown(document, { key: "f" });
+  }
+
+  function rabisca(de: [number, number], ate: [number, number]): void {
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: de[0], clientY: de[1] });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+  }
+
+  function tintas(): HTMLElement[] {
+    return screen.queryAllByTestId("stroke");
+  }
+
+  function paleta(): HTMLElement | null {
+    return screen.queryByTestId("fountain-color-picker");
+  }
+
+  it("F liga e desliga o modo, e o botão anuncia o estado", () => {
+    render(<Whiteboard />);
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+
+    ligaCaneta();
+    expect(botao().getAttribute("aria-pressed")).toBe("true");
+
+    ligaCaneta();
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("o botão faz o mesmo que a tecla, e anuncia o atalho", () => {
+    render(<Whiteboard />);
+    expect(botao().getAttribute("aria-keyshortcuts")).toBe("F");
+
+    fireEvent.click(botao());
+
+    expect(botao().getAttribute("aria-pressed")).toBe("true");
+    expect(paleta()).not.toBeNull();
+  });
+
+  it("Esc e V voltam para a seleção", () => {
+    render(<Whiteboard />);
+
+    ligaCaneta();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+
+    ligaCaneta();
+    fireEvent.keyDown(document, { key: "v" });
+    expect(botao().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("é exclusivo: ligar a caneta desliga o lápis, o marca-texto, a borracha e a nota", () => {
+    render(<Whiteboard />);
+    const outros = [
+      { tecla: "p", nome: UI.en.pencil.action },
+      { tecla: "h", nome: UI.en.highlighter.action },
+      { tecla: "e", nome: UI.en.eraser.action },
+      { tecla: "n", nome: UI.en.note.action },
+    ];
+
+    for (const outro of outros) {
+      fireEvent.keyDown(document, { key: outro.tecla });
+      ligaCaneta();
+
+      expect(screen.getByRole("button", { name: outro.nome }).getAttribute("aria-pressed")).toBe(
+        "false",
+      );
+      expect(botao().getAttribute("aria-pressed")).toBe("true");
+      ligaCaneta();
+    }
+  });
+
+  it("a paleta abre no preto e troca só a cor da caneta", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+
+    const marcada = within(defined(paleta() ?? undefined, "a paleta da caneta")).getByRole(
+      "radio",
+      { checked: true },
+    );
+    expect(marcada.getAttribute("aria-label")).toBe(UI.en.pencil.black);
+
+    fireEvent.click(
+      within(defined(paleta() ?? undefined, "a paleta")).getByRole("radio", {
+        name: UI.en.note.colors.blue,
+      }),
+    );
+    rabisca([100, 100], [300, 200]);
+
+    fireEvent.keyDown(document, { key: "p" });
+    rabisca([100, 300], [300, 300]);
+
+    const [caneta, lapis] = tintas();
+    expect(caneta?.getAttribute("fill")).toBe(strokeColor(3));
+    expect(lapis?.getAttribute("stroke")).toBe(strokeColor(STROKE_COLOR_BLACK));
+  });
+
+  it("desenha com a pena caligráfica, em preto", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+
+    rabisca([100, 100], [300, 300]);
+
+    expect(tintas()).toHaveLength(1);
+    const tinta = tintas()[0]!;
+    expect(tinta.tagName).toBe("path");
+    expect(tinta.getAttribute("fill")).toBe(strokeColor(STROKE_COLOR_BLACK));
+  });
+
+  it("grava o traço com os pontos do gesto, desenhados pelo contorno da pena", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+
+    rabisca([100, 100], [300, 300]);
+
+    const hit = screen.getByTestId("stroke-hit").getAttribute("points") ?? "";
+    const pontos = hit.split(/[ ,]/).map(Number);
+    expect(tintas()[0]?.getAttribute("d")).toBe(polygonPath(fountainOutline(pontos)));
+  });
+
+  it("desenha com um dedo no toque", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+    const surface = screen.getByTestId("viewport-surface");
+    const toque = { pointerId: 1, pointerType: "touch" };
+
+    fireEvent.pointerDown(surface, { ...toque, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { ...toque, clientX: 200, clientY: 60 });
+    fireEvent.pointerUp(surface, { ...toque, clientX: 200, clientY: 60 });
+
+    expect(tintas()).toHaveLength(1);
+    expect(tintas()[0]?.tagName).toBe("path");
+  });
+
+  it("a prévia do gesto já sai com a pena", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+
+    expect(screen.getByTestId("stroke-preview").querySelector("path")).not.toBeNull();
+
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    expect(screen.queryByTestId("stroke-preview")).toBeNull();
+  });
+
+  it("mostra o cursor da caneta", () => {
+    render(<Whiteboard />);
+    ligaCaneta();
+
+    const surface = screen.getByTestId("viewport-surface");
+    expect(surface.className).toContain("cursor-fountain");
+    expect(surface.className).not.toContain("cursor-pencil");
   });
 });
