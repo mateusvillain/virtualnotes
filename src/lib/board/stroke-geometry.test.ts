@@ -16,13 +16,19 @@ import {
   scaleStrokePoints,
   strokeBounds,
   strokeInkBounds,
+  strokeInkWidth,
   strokeIntersectsRect,
   strokeIntersectsSegment,
   strokePoints,
   translateStrokePoints,
   widenByInk,
 } from "./stroke-geometry";
-import { STROKE_TOOL_HIGHLIGHTER, STROKE_TOOL_PENCIL, type Stroke } from "./types";
+import {
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
+  type Stroke,
+} from "./types";
 
 function stroke(points: number[]): Stroke {
   return { id: "trc123", color: 6, points, z: 1 };
@@ -399,7 +405,8 @@ describe("fountainOutline", () => {
 
     expect(outline).toHaveLength(4);
     const [a, b, c] = outline as [Point, Point, Point];
-    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
+    // A diagonal do retângulo é a pena inteira: cabe no alcance que os alvos consideram.
+    expect(Math.hypot(c.x - a.x, c.y - a.y)).toBeCloseTo(FOUNTAIN_MAX_WIDTH);
     expect(Math.hypot(c.x - b.x, c.y - b.y)).toBeCloseTo(FOUNTAIN_MIN_WIDTH);
     // Centrada no ponto.
     const centro = outline.reduce((soma, p) => ({ x: soma.x + p.x / 4, y: soma.y + p.y / 4 }), {
@@ -428,5 +435,60 @@ describe("polygonPath", () => {
 
   it("é vazio para um polígono sem pontos", () => {
     expect(polygonPath([])).toBe("");
+  });
+});
+
+describe("alvo da caneta tinteiro (#115)", () => {
+  const sobra = (FOUNTAIN_MAX_WIDTH - STROKE_WIDTH) / 2;
+
+  function caneta(points: number[]): Stroke {
+    return { ...stroke(points), tool: STROKE_TOOL_FOUNTAIN };
+  }
+
+  it("a tinta da caneta, para os alvos, é a pena inteira", () => {
+    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN)).toBe(FOUNTAIN_MAX_WIDTH);
+    expect(inkOverhang(STROKE_TOOL_FOUNTAIN)).toBe(sobra);
+  });
+
+  /** Nenhum ponto do contorno passa da metade da pena, então o alvo cobre toda a tinta. */
+  it("o contorno nunca passa da metade da largura que o alvo considera", () => {
+    const tracos = [
+      [0, 0, 100, 100],
+      [0, 100, 100, 0],
+      [0, 0, 100, 0, 100, 100, 0, 100],
+      [0, 0, 50, 80, 90, 10, 140, 60],
+      [10, 10, 10, 10],
+    ];
+
+    for (const pontos of tracos) {
+      const linha = strokePoints(caneta(pontos));
+      for (const vertice of fountainOutline(pontos)) {
+        const perto = Math.min(
+          ...linha.map((ponto) => Math.hypot(ponto.x - vertice.x, ponto.y - vertice.y)),
+        );
+        expect(perto).toBeLessThanOrEqual(strokeInkWidth(STROKE_TOOL_FOUNTAIN) / 2 + 1e-9);
+      }
+    }
+  });
+
+  it("o retângulo na borda da tinta toca a caneta, e não um lápis no mesmo lugar", () => {
+    // Como no marca-texto, o retângulo conta a partir da borda do lápis: a sobra de 1,5 além
+    // da linha do meio. Na horizontal a tinta vai a ~1,9 dela, então 1,4 ainda é tinta.
+    const borda = rect(40, 1.4, 10, 0.05);
+    expect(fountainWidth({ x: 1, y: 0 }) / 2).toBeGreaterThan(1.4);
+
+    expect(strokeIntersectsRect(caneta([0, 0, 100, 0]), borda)).toBe(true);
+    expect(strokeIntersectsRect(stroke([0, 0, 100, 0]), borda)).toBe(false);
+  });
+
+  it("a borracha da caneta cresce pela sobra, e a do lápis fica como está", () => {
+    expect(eraserHitWidth(STROKE_TOOL_FOUNTAIN)).toBe(ERASER_HIT_WIDTH + sobra * 2);
+    expect(eraserHitWidth(STROKE_TOOL_PENCIL)).toBe(ERASER_HIT_WIDTH);
+  });
+
+  it("a caixa da tinta envolve a pena numa linha reta", () => {
+    expect(strokeInkBounds(caneta([0, 0, 100, 0]))).toEqual(
+      rect(-sobra, -sobra, 100 + sobra * 2, sobra * 2),
+    );
   });
 });

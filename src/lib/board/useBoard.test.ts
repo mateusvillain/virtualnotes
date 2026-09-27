@@ -1434,6 +1434,36 @@ describe("useBoard — borracha (#98)", () => {
   });
 });
 
+describe("useBoard — borracha na caneta tinteiro (#115)", () => {
+  /** Uma caneta e um lápis na mesma linha y = 0, lado a lado em x. */
+  const board: Board = {
+    version: SCHEMA_VERSION,
+    notes: [],
+    strokes: [
+      { id: "caneta", color: 6, tool: STROKE_TOOL_FOUNTAIN, points: [0, 0, 200, 0], z: 1 },
+      { id: "lapis", color: 6, points: [300, 0, 500, 0], z: 2 },
+    ],
+  };
+
+  function passa(x: number, y: number) {
+    const hook = renderHook(() => useBoard({ initialBoard: board, autosave: false }));
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x, y }, { x, y }));
+    act(() => hook.result.current.endErasing());
+    return hook.result.current.strokes.map((s) => s.id);
+  }
+
+  it("apaga a caneta encostando na borda da tinta, além do alcance do lápis", () => {
+    // Raio do lápis: 8. A pena passa 1,5 da linha do lápis de cada lado: 9 alcança a caneta.
+    expect(passa(100, 9)).not.toContain("caneta");
+    expect(passa(400, 9)).toContain("lapis");
+  });
+
+  it("não alcança além da borda da tinta", () => {
+    expect(passa(100, 12)).toContain("caneta");
+  });
+});
+
 describe("useBoard — borracha no marca-texto (#118)", () => {
   /** Um destaque horizontal na linha y = 0, com a tinta indo de y = -8 a y = 8. */
   const comDestaque: Board = {
