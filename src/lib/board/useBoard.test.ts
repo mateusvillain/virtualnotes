@@ -1434,10 +1434,6 @@ describe("useBoard — borracha (#98)", () => {
   });
 });
 
-/**
- * O que `useBoard` recria a partir de um traço existente — duplicar, colar e o que sobra da
- * borracha — leva a ferramenta do original (#110).
- */
 describe("useBoard — borracha no marca-texto (#118)", () => {
   /** Um destaque horizontal na linha y = 0, com a tinta indo de y = -8 a y = 8. */
   const comDestaque: Board = {
@@ -1469,6 +1465,17 @@ describe("useBoard — borracha no marca-texto (#118)", () => {
     expect(passa(30).map((s) => s.id)).toContain("mt");
   });
 
+  it("a barra de ações se ancora na caixa da tinta, e não na linha do meio", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comDestaque, autosave: false }));
+    act(() => hook.result.current.selectEverything());
+
+    // Destaque: linha em y = 0, tinta de −8 a 8 (sobra de 7 além do lápis). Lápis: igual.
+    expect(hook.result.current.selectedRects).toEqual([
+      { x: -7, y: -7, w: 214, h: 14 },
+      { x: 0, y: 100, w: 200, h: 0 },
+    ]);
+  });
+
   it("o lápis continua com o alcance de antes", () => {
     // Mesma distância da linha do meio que apagou o destaque acima: o lápis sobrevive.
     expect(passa(100 + 14).map((s) => s.id)).toContain("lapis");
@@ -1476,6 +1483,10 @@ describe("useBoard — borracha no marca-texto (#118)", () => {
   });
 });
 
+/**
+ * O que `useBoard` recria a partir de um traço existente — duplicar, colar e o que sobra da
+ * borracha — leva a ferramenta do original (#110).
+ */
 describe("useBoard — ferramenta do traço (#110)", () => {
   const comMarcaTexto: Board = {
     version: SCHEMA_VERSION,

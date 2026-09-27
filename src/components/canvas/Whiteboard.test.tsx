@@ -4543,9 +4543,11 @@ describe("Whiteboard — alvo do marca-texto (#118)", () => {
       return { tinta, alvo };
     });
 
-    expect(destaque!.tinta).toBe(HIGHLIGHTER_WIDTH);
-    expect(destaque!.alvo).toBeGreaterThan(destaque!.tinta);
-    expect(destaque!.alvo - destaque!.tinta).toBe(lapis!.alvo - lapis!.tinta);
+    const d = defined(destaque, "o destaque");
+    const l = defined(lapis, "o rabisco");
+    expect(d.tinta).toBe(HIGHLIGHTER_WIDTH);
+    expect(d.alvo).toBeGreaterThan(d.tinta);
+    expect(d.alvo - d.tinta).toBe(l.alvo - l.tinta);
   });
 
   it("onde o rabisco passa por cima do destaque, o clique é do rabisco", () => {

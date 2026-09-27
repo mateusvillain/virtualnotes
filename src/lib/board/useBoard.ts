@@ -20,12 +20,13 @@ import {
 } from "./selection";
 import {
   STROKE_MIN_SIZE,
+  eraserHitWidth,
   flattenPoints,
   pointsFromFlat,
   scaleStrokePoints,
-  eraserHitWidth,
   splitPolylineBySegment,
   strokeBounds,
+  strokeInkBounds,
   strokePoints,
   translateStrokePoints,
 } from "./stroke-geometry";
@@ -698,8 +699,10 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
    * barra para o canto do canvas.
    */
   const selectedRects = useMemo((): Rect[] => {
+    // A caixa da tinta, e não a dos pontos (#118): a barra se ancora fora do que se vê, e
+    // num marca-texto a tinta passa da linha do meio.
     const strokes = selectedStrokes(board.strokes, selection)
-      .map(strokeBounds)
+      .map(strokeInkBounds)
       .filter((rect): rect is Rect => rect !== null);
 
     return [...selected, ...strokes];

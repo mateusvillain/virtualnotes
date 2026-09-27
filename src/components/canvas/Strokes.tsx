@@ -9,7 +9,7 @@ import {
   type StrokeColor,
   type StrokeTool,
 } from "@/lib/board/types";
-import { STROKE_WIDTH, inkOverhang, strokeInkWidth } from "@/lib/board/stroke-geometry";
+import { STROKE_WIDTH, strokeInkWidth, widenByInk } from "@/lib/board/stroke-geometry";
 import { createContext, useContext, useRef, type PointerEvent, type ReactNode } from "react";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
@@ -52,7 +52,7 @@ export const STROKE_HIT_WIDTH = 12;
  * vê — com o alvo do lápis, clicar na metade de fora de um destaque não o selecionaria.
  */
 function strokeHitWidth(tool: StrokeTool): number {
-  return STROKE_HIT_WIDTH + inkOverhang(tool) * 2;
+  return widenByInk(STROKE_HIT_WIDTH, tool);
 }
 
 interface StrokesProps {

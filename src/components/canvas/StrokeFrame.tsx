@@ -4,9 +4,8 @@ import type { CSSProperties } from "react";
 import { ResizeHandle } from "@/components/postit/ResizeHandle";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
-import type { Stroke } from "@/lib/board/types";
+import { strokeTool, type Stroke } from "@/lib/board/types";
 import { inkOverhang, strokeBounds } from "@/lib/board/stroke-geometry";
-import { strokeTool } from "@/lib/board/types";
 
 interface StrokeFrameProps {
   stroke: Stroke;

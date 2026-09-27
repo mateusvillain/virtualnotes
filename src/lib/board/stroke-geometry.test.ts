@@ -7,13 +7,14 @@ import {
   STROKE_WIDTH,
   eraserHitWidth,
   inkOverhang,
-  strokeInkBounds,
   scaleStrokePoints,
   strokeBounds,
+  strokeInkBounds,
   strokeIntersectsRect,
   strokeIntersectsSegment,
   strokePoints,
   translateStrokePoints,
+  widenByInk,
 } from "./stroke-geometry";
 import { STROKE_TOOL_HIGHLIGHTER, STROKE_TOOL_PENCIL, type Stroke } from "./types";
 
@@ -261,6 +262,11 @@ describe("tinta larga do marca-texto (#118)", () => {
     expect(strokeInkBounds(destaque([0, 0, 100, 0]))).toEqual(
       rect(-sobra, -sobra, 100 + sobra * 2, sobra * 2),
     );
+  });
+
+  it("alarga qualquer alvo do lápis pela sobra, e o do lápis fica como está", () => {
+    expect(widenByInk(12, STROKE_TOOL_PENCIL)).toBe(12);
+    expect(widenByInk(12, STROKE_TOOL_HIGHLIGHTER)).toBe(12 + sobra * 2);
   });
 
   it("a caixa da tinta do lápis é a mesma caixa dos pontos", () => {

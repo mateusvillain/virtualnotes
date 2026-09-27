@@ -57,6 +57,14 @@ export function inkOverhang(tool: StrokeTool): number {
 }
 
 /**
+ * Uma largura de alvo calibrada para o lápis, alargada pela sobra da tinta dos dois lados.
+ * É a regra única dos alvos por ferramenta (#118): clique, borracha e o que vier.
+ */
+export function widenByInk(width: number, tool: StrokeTool): number {
+  return width + inkOverhang(tool) * 2;
+}
+
+/**
  * Uma lista achatada de coordenadas, despachada aos pares.
  *
  * Um número solto no fim é ignorado. O contrato não produz isso — `normalizeStroke` exige
@@ -125,11 +133,10 @@ export function strokeIntersectsRect(stroke: Stroke, rect: Rect): boolean {
   const points = strokePoints(stroke);
   // A tinta larga (#118) conta: um retângulo que só encosta na borda do marca-texto toca o
   // que a pessoa vê, mesmo sem chegar à linha do meio.
-  const overhang = inkOverhang(strokeTool(stroke));
-  if (overhang > 0) rect = inflate(rect, overhang);
+  const alvo = inflate(rect, inkOverhang(strokeTool(stroke)));
 
   for (let index = 0; index + 1 < points.length; index += 1) {
-    if (segmentIntersectsRect(points[index]!, points[index + 1]!, rect)) return true;
+    if (segmentIntersectsRect(points[index]!, points[index + 1]!, alvo)) return true;
   }
 
   return false;
@@ -142,13 +149,15 @@ function inflate(rect: Rect, by: number): Rect {
 
 /**
  * A caixa da **tinta** de um traço: {@link strokeBounds} alargada pela sobra da ferramenta
- * (#118). É o que a moldura de seleção emoldura — sem isso, a caixa de um marca-texto
- * horizontal teria altura zero e cortaria a tinta ao meio.
+ * (#118) — a caixa de um marca-texto horizontal, pelos pontos, teria altura zero.
+ *
+ * É onde a barra de ações da seleção se ancora, para não cair em cima do destaque. A
+ * moldura faz a mesma conta à parte, porque durante o redimensionamento o tamanho vem do
+ * gesto, medido pelos pontos, e não do traço gravado.
  */
 export function strokeInkBounds(stroke: Stroke): Rect | null {
   const bounds = strokeBounds(stroke);
-  const overhang = inkOverhang(strokeTool(stroke));
-  return bounds === null || overhang === 0 ? bounds : inflate(bounds, overhang);
+  return bounds === null ? null : inflate(bounds, inkOverhang(strokeTool(stroke)));
 }
 
 /**
@@ -177,7 +186,7 @@ export const ERASER_HIT_WIDTH = 16;
  * que se vê, não bastaria.
  */
 export function eraserHitWidth(tool: StrokeTool): number {
-  return ERASER_HIT_WIDTH + inkOverhang(tool) * 2;
+  return widenByInk(ERASER_HIT_WIDTH, tool);
 }
 
 /** O retângulo do alvo da borracha: a caixa de `a` a `b`, alargada por `hitWidth`. */
@@ -198,6 +207,9 @@ function eraserRect(a: Point, b: Point, hitWidth: number): Rect {
  * aceite pede. A caixa que envolve os dois pontos, alargada por `hitWidth`, vira a mesma
  * pergunta que a seleção por retângulo já sabe responder; não há geometria nova aqui, só um
  * retângulo mais generoso em volta do gesto.
+ *
+ * `hitWidth` é o alvo **do lápis**: a sobra da tinta larga (#118) já entra por
+ * `strokeIntersectsRect`, e passar `eraserHitWidth` aqui a somaria duas vezes.
  */
 export function strokeIntersectsSegment(
   stroke: Stroke,
