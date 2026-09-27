@@ -221,10 +221,10 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   );
 
   /*
-    Ligar qualquer uma das duas ferramentas já dispensa a apresentação, antes mesmo de
-    existir nota ou traço.
+    Ligar qualquer ferramenta — nota, desenho ou borracha — já dispensa a apresentação,
+    antes mesmo de existir nota ou traço.
 
-    Quem apertou `N` ou `P` — ou achou o botão — acabou de provar que aprendeu o que a peça
+    Quem apertou `N`, `P`, `F`, `H` ou `E` — ou achou o botão — acabou de provar que aprendeu o que a peça
     tinha para ensinar, e é justamente aí que ela mais atrapalha: o texto fica no meio do
     quadro, exatamente onde a nota fantasma segue o cursor e onde o rabisco vai passar.
 

@@ -314,10 +314,11 @@ describe("Strokes — caneta tinteiro (#113)", () => {
    */
   it("redimensiona pelos pontos, sem esticar a pena", () => {
     const from = { x: 0, y: 0, w: 80, h: 40 };
-    const size = { w: 160, h: 40 };
+    // Fator fracionário: os pontos em curso saem inteiros, como `endResize` vai gravar.
+    const size = { w: 123, h: 40 };
     render(<Strokes strokes={[caneta]} resizing={{ id: caneta.id, from, size }} />);
 
-    const escalados = scaleStrokePoints(caneta, from, size);
+    const escalados = scaleStrokePoints(caneta, from, size).map(Math.round);
     expect(screen.getByTestId("stroke").getAttribute("d")).toBe(
       polygonPath(fountainOutline(escalados)),
     );
@@ -360,7 +361,7 @@ describe("StrokePreview — caneta tinteiro (#113)", () => {
   it("pinta a prévia com o mesmo contorno que o traço vai ter ao ser gravado", () => {
     render(<StrokePreview points={gesto} color={6} tool={STROKE_TOOL_FOUNTAIN} />);
 
-    const gravado = simplify(gesto).flatMap((point) => [point.x, point.y]);
+    const gravado = simplify(gesto).flatMap((point) => [Math.round(point.x), Math.round(point.y)]);
     const previa = screen.getByTestId("stroke-preview").querySelector("path");
     expect(previa?.getAttribute("d")).toBe(polygonPath(fountainOutline(gravado)));
     expect(previa?.getAttribute("fill")).toBe("var(--color-ink)");
@@ -386,6 +387,20 @@ describe("StrokePreview — caneta tinteiro (#113)", () => {
       />,
     );
     expect(screen.getByTestId("stroke").getAttribute("d")).toBe(previa);
+  });
+
+  /** A gravação arredonda os pontos; a prévia com frações mudaria de cara ao soltar. */
+  it("pinta a prévia com os pontos inteiros que a gravação vai guardar", () => {
+    const pontos = [
+      { x: 0.4, y: 0.3 },
+      { x: 40.6, y: 39.7 },
+      { x: 80.2, y: 0.4 },
+    ];
+    render(<StrokePreview points={pontos} color={6} tool={STROKE_TOOL_FOUNTAIN} />);
+
+    expect(screen.getByTestId("stroke-preview").querySelector("path")?.getAttribute("d")).toBe(
+      polygonPath(fountainOutline([0, 0, 41, 40, 80, 0])),
+    );
   });
 
   it("não simplifica a prévia do lápis", () => {
