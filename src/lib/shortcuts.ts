@@ -25,6 +25,7 @@ export const SHORTCUTS = {
   select: { key: "V" },
   note: { key: "N" },
   pencil: { key: "P" },
+  highlighter: { key: "H" },
   eraser: { key: "E" },
   undo: { mod: true, key: "Z" },
   redo: { mod: true, shift: true, key: "Z" },

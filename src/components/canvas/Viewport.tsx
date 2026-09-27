@@ -65,9 +65,15 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
   onSelectionStart?: (additive: boolean) => void;
   /** Retângulo de seleção em curso, em coordenadas de canvas. */
   onSelectionRect?: (rect: Rect) => void;
-  /** Modo lápis ligado: arrastar desenha em vez de selecionar (#68). */
+  /**
+   * Um modo de desenho ligado: arrastar desenha em vez de selecionar (#68). Lápis ou
+   * marca-texto (#117) — qual dos dois é `drawingTool`.
+   */
   pencil?: boolean;
-  /** Cor do lápis (#69), para o traço em curso nascer com ela, e não preto por padrão. */
+  /**
+   * Cor da ferramenta de desenho ligada (#69, #117), para o traço em curso nascer com ela, e
+   * não preto por padrão.
+   */
   pencilColor?: StrokeColor;
   /**
    * Ferramenta do traço em curso (#116). Decide a espessura e a opacidade da prévia, e em
@@ -877,7 +883,9 @@ export function Viewport({
     : wheelPanning
       ? "cursor-grabbing"
       : pencil
-        ? "cursor-pencil"
+        ? drawingTool === STROKE_TOOL_HIGHLIGHTER
+          ? "cursor-highlighter"
+          : "cursor-pencil"
         : erasing
           ? "cursor-none"
           : placing

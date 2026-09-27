@@ -135,6 +135,19 @@ body {
 }
 
 /**
+ * Cursor do modo marca-texto (#117): o mesmo desenho do ícone em
+ * src/components/ui/HighlighterButton.tsx, com o ponto quente na ponta chanfrada, embaixo à
+ * esquerda. As mesmas regras do `.cursor-pencil` acima valem aqui — cor literal de
+ * `--color-ink` e as duas cópias andando juntas.
+ */
+.cursor-highlighter {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 11-6 6v3h9l3-3'/%3E%3Cpath d='m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4'/%3E%3C/svg%3E")
+      4 20,
+    crosshair;
+}
+
+/**
  * Entrada da apresentação do quadro vazio.
  *
  * Um fade curto com um passo para cima, e não um simples aparecer: a peça nasce junto com

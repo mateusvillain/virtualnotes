@@ -41,6 +41,7 @@ describe("interface do quadro em cada idioma", () => {
       // para o lápis e para a colocação de nota em quem não tem teclado.
       expect(screen.getByRole("button", { name: ui.note.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.pencil.action })).toBeDefined();
+      expect(screen.getByRole("button", { name: ui.highlighter.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.select.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.undo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.redo })).toBeDefined();
@@ -80,10 +81,10 @@ describe("interface do quadro em cada idioma", () => {
   });
 
   /**
-   * As seis ações com atalho (issue #97): seleção, nota, lápis, borracha, desfazer, refazer
-   * e salvar. O nome continua saindo de `ui`, como no teste acima; o que este caso guarda é
-   * o atalho ao lado, e o `aria-keyshortcuts` do botão que o anuncia para quem usa leitor de
-   * tela.
+   * As ações com atalho (issue #97): seleção, nota, lápis, marca-texto (#117), borracha,
+   * desfazer, refazer e salvar. O nome continua saindo de `ui`, como no teste acima; o que
+   * este caso guarda é o atalho ao lado, e o `aria-keyshortcuts` do botão que o anuncia para
+   * quem usa leitor de tela.
    */
   it.each(LOCALES)(
     "mostra o atalho de cada ação, no Mac e fora dele — %s",
@@ -93,6 +94,7 @@ describe("interface do quadro em cada idioma", () => {
         { name: ui.select.action, shortcut: SHORTCUTS.select },
         { name: ui.note.action, shortcut: SHORTCUTS.note },
         { name: ui.pencil.action, shortcut: SHORTCUTS.pencil },
+        { name: ui.highlighter.action, shortcut: SHORTCUTS.highlighter },
         { name: ui.eraser.action, shortcut: SHORTCUTS.eraser },
         { name: ui.history.undo, shortcut: SHORTCUTS.undo },
         { name: ui.history.redo, shortcut: SHORTCUTS.redo },

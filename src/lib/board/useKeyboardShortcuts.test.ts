@@ -34,6 +34,7 @@ function opcoes(overrides: Partial<Parameters<typeof useKeyboardShortcuts>[0]>) 
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onTogglePencil: vi.fn(),
+    onToggleHighlighter: vi.fn(),
     onToggleEraser: vi.fn(),
     onSelectTool: vi.fn(),
     onCancel: vi.fn(),
@@ -283,6 +284,27 @@ describe("useKeyboardShortcuts — salvar com Ctrl/⌘+S", () => {
     tecla("p", document.body, { altKey: true });
 
     expect(onTogglePencil).not.toHaveBeenCalled();
+  });
+
+  it("H alterna o modo marca-texto (#117)", () => {
+    const onToggleHighlighter = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onToggleHighlighter })));
+
+    tecla("h");
+    tecla("H");
+
+    expect(onToggleHighlighter).toHaveBeenCalledTimes(2);
+  });
+
+  it("H não alterna com o cursor dentro de um post-it, nem com modificador", () => {
+    const onToggleHighlighter = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onToggleHighlighter })));
+
+    tecla("h", elemento("textarea"));
+    tecla("h", document.body, { ctrlKey: true });
+    tecla("h", document.body, { metaKey: true });
+
+    expect(onToggleHighlighter).not.toHaveBeenCalled();
   });
 
   it("E alterna o modo borracha", () => {

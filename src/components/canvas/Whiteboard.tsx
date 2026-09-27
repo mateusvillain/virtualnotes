@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/shell/AppShell";
-import { STROKE_TOOL_PENCIL } from "@/lib/board/types";
+import { STROKE_TOOL_HIGHLIGHTER, STROKE_TOOL_PENCIL, type StrokeTool } from "@/lib/board/types";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
 import type { Point } from "@/lib/canvas/coords";
@@ -15,6 +15,7 @@ import { HistoryButtons } from "@/components/ui/HistoryButtons";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
 import { NoteButton } from "@/components/ui/NoteButton";
 import { PencilButton } from "@/components/ui/PencilButton";
+import { HighlighterButton } from "@/components/ui/HighlighterButton";
 import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
 import { EraserButton } from "@/components/ui/EraserButton";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -43,8 +44,9 @@ type WhiteboardProps = Pick<UseBoardOptions, "initialBoard" | "autosave">;
  *
  * `"erasing"` chegou com a borracha (#98), como uma quarta ferramenta exclusiva das demais
  * — a mesma regra que já valia entre o lápis e a colocação de nota, agora com mais um nome.
+ * `"highlighter"` (#117) é mais uma, pela mesma regra: ligar o marca-texto desliga o lápis.
  */
-type BoardMode = "select" | "pencil" | "erasing" | "placing";
+type BoardMode = "select" | "pencil" | "highlighter" | "erasing" | "placing";
 
 /**
  * O quadro: junta o estado de viewport à superfície navegável, aos controles e aos post-its.
@@ -150,7 +152,17 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   const [mode, setMode] = useState<BoardMode>("select");
   const selecting = mode === "select";
   const pencil = mode === "pencil";
+  const highlighter = mode === "highlighter";
   const erasing = mode === "erasing";
+  /**
+   * A ferramenta do traço, com um dos modos de desenho ligado (#117) — ou `null` fora deles.
+   * É o que decide a cor da paleta, a prévia do gesto e o `tool` gravado no traço.
+   */
+  const drawingTool: StrokeTool | null = pencil
+    ? STROKE_TOOL_PENCIL
+    : highlighter
+      ? STROKE_TOOL_HIGHLIGHTER
+      : null;
   const placing = mode === "placing";
 
   /**
@@ -165,6 +177,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   }, []);
 
   const togglePencil = useCallback(() => toggleMode("pencil"), [toggleMode]);
+  const toggleHighlighter = useCallback(() => toggleMode("highlighter"), [toggleMode]);
   const toggleEraser = useCallback(() => toggleMode("erasing"), [toggleMode]);
   const togglePlacing = useCallback(() => toggleMode("placing"), [toggleMode]);
   /**
@@ -208,7 +221,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     trava chegaria um quadro atrasada. React reinicia o render com o valor novo antes de
     pintar, então ninguém vê o estado intermediário.
   */
-  if ((hasContent || placing || pencil || erasing) && !taught) setTaught(true);
+  if ((hasContent || placing || drawingTool !== null || erasing) && !taught) setTaught(true);
 
   /**
    * A apresentação some no mesmo quadro em que o primeiro post-it aparece.
@@ -246,11 +259,29 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     onUndo: board.undo,
     onRedo: board.redo,
     onTogglePencil: togglePencil,
+    onToggleHighlighter: toggleHighlighter,
     onToggleEraser: toggleEraser,
     onCancel: selectTool,
     onSelectTool: selectTool,
     onNudge: board.nudgeSelection,
   });
+
+  /**
+   * A paleta da ferramenta de desenho ligada, logo abaixo do botão dela (#69, #117). Cada
+   * ferramenta mostra e troca a própria cor — o marca-texto abre no amarelo, o lápis no
+   * preto —, e a caixa é a mesma dos botões para a pilha continuar parecendo um grupo só.
+   */
+  function strokePalette(tool: StrokeTool) {
+    return (
+      <div className="rounded-control border border-border bg-surface p-1 shadow-control">
+        <StrokeColorPicker
+          tool={tool}
+          value={board.strokeColors[tool]}
+          onChange={(color) => board.setStrokeColor(tool, color)}
+        />
+      </div>
+    );
+  }
 
   return (
     <AppShell
@@ -272,15 +303,9 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
             ferramenta — borda, fundo e sombra — para a pilha continuar parecendo um grupo
             só, com um item a mais quando o lápis está ativo.
           */}
-          {pencil ? (
-            <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-              <StrokeColorPicker
-                tool={STROKE_TOOL_PENCIL}
-                value={board.strokeColors[STROKE_TOOL_PENCIL]}
-                onChange={(color) => board.setStrokeColor(STROKE_TOOL_PENCIL, color)}
-              />
-            </div>
-          ) : null}
+          {pencil ? strokePalette(STROKE_TOOL_PENCIL) : null}
+          <HighlighterButton active={highlighter} onToggle={toggleHighlighter} />
+          {highlighter ? strokePalette(STROKE_TOOL_HIGHLIGHTER) : null}
           <EraserButton active={erasing} onToggle={toggleEraser} />
         </div>
       }
@@ -320,12 +345,13 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           onBackgroundClick={board.clearSelection}
           onSelectionStart={board.beginRectSelection}
           onSelectionRect={board.selectInRect}
-          pencil={pencil}
-          pencilColor={board.strokeColors[STROKE_TOOL_PENCIL]}
+          pencil={drawingTool !== null}
+          pencilColor={board.strokeColors[drawingTool ?? STROKE_TOOL_PENCIL]}
+          drawingTool={drawingTool ?? STROKE_TOOL_PENCIL}
           erasing={erasing}
           placing={placing}
           onPlaceNote={placeNote}
-          onStrokeEnd={board.addStroke}
+          onStrokeEnd={(points) => board.addStroke(points, drawingTool ?? STROKE_TOOL_PENCIL)}
           onEraseStart={board.beginErasing}
           onEraseSegment={board.eraseSegment}
           onEraseEnd={board.endErasing}
