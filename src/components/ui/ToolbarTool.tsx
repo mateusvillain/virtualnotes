@@ -31,8 +31,9 @@ interface ToolbarToolProps {
  * continua do mesmo tamanho com a ilustração em qualquer altura, e o ponteiro que acabou
  * de fazê-la subir não a perde por ela ter saído de baixo dele.
  *
- * Quem corta a ilustração é a toolbar (`overflow-hidden`), não o botão: o botão não sabe
- * onde fica a borda, só o quanto a ilustração sobe.
+ * O botão corta a ilustração (`overflow-hidden`) na própria base, e quem o monta alinha essa
+ * base à borda de baixo da toolbar. Cortar na toolbar inteira cortaria junto o tooltip, que
+ * mora ao lado do botão e sai por cima dela.
  *
  * O deslocamento (8px) é a diferença entre as variantes `default` e `activated` no Figma
  * (node 1-625). O mesmo para hover, foco e ativo: são três jeitos de dizer "esta aqui", e
@@ -58,7 +59,7 @@ export function ToolbarTool({
     <Tooltip label={label} shortcut={shortcutLabel(shortcut, isMac)} side="top">
       <button
         type="button"
-        className={`group relative flex justify-center rounded-control pt-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-selection ${className}`}
+        className={`group relative flex justify-center overflow-hidden rounded-control pt-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-selection ${className}`}
         onClick={onToggle}
         aria-label={label}
         aria-keyshortcuts={ariaKeyShortcuts(shortcut)}
