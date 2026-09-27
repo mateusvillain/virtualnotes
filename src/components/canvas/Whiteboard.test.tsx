@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defined } from "@/test-utils/defined";
 import { stubMatchMedia } from "@/test-utils/matchMedia";
 import {
+  FOUNTAIN_MAX_WIDTH,
   HIGHLIGHTER_WIDTH,
   STROKE_WIDTH,
   fountainOutline,
@@ -4743,5 +4744,46 @@ describe("Whiteboard — caneta tinteiro (#114)", () => {
     const surface = screen.getByTestId("viewport-surface");
     expect(surface.className).toContain("cursor-fountain");
     expect(surface.className).not.toContain("cursor-pencil");
+  });
+});
+
+describe("Whiteboard — alvo da caneta tinteiro (#115)", () => {
+  function desenhaCom(tecla: string, de: [number, number], ate: [number, number]): void {
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.keyDown(document, { key: tecla });
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: de[0], clientY: de[1] });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.keyDown(document, { key: "v" });
+  }
+
+  function alvos(): number[] {
+    return screen
+      .queryAllByTestId("stroke-hit")
+      .map((alvo) => Number(alvo.getAttribute("stroke-width")));
+  }
+
+  it("o alvo de clique cobre a pena inteira, com a mesma folga do lápis", () => {
+    render(<Whiteboard />);
+    desenhaCom("p", [100, 100], [300, 100]);
+    desenhaCom("f", [100, 200], [300, 300]);
+
+    const [lapis, caneta] = alvos();
+    expect(defined(caneta, "a caneta") - FOUNTAIN_MAX_WIDTH).toBe(
+      defined(lapis, "o lápis") - STROKE_WIDTH,
+    );
+  });
+
+  it("a moldura envolve a tinta da pena", () => {
+    render(<Whiteboard />);
+    desenhaCom("f", [100, 200], [300, 200]);
+
+    fireEvent.pointerDown(screen.getByTestId("stroke-hit"), { pointerId: 5, button: 0 });
+
+    const caixa = screen.getByTestId("stroke-frame");
+    const sobra = (FOUNTAIN_MAX_WIDTH - STROKE_WIDTH) / 2;
+    expect(Number.parseFloat(caixa.style.top)).toBe(200 - sobra);
+    expect(Number.parseFloat(caixa.style.height)).toBe(sobra * 2);
   });
 });

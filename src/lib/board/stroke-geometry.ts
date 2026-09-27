@@ -18,7 +18,13 @@ import {
   type Rect,
   type Size,
 } from "@/lib/canvas/coords";
-import { STROKE_TOOL_HIGHLIGHTER, strokeTool, type Stroke, type StrokeTool } from "./types";
+import {
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
+  strokeTool,
+  type Stroke,
+  type StrokeTool,
+} from "./types";
 
 /**
  * Espessura do traço de lápis, em unidades de canvas.
@@ -39,9 +45,18 @@ export const STROKE_WIDTH = 2;
  */
 export const HIGHLIGHTER_WIDTH = 16;
 
-/** A espessura da tinta de uma ferramenta, em unidades de canvas. */
+/**
+ * A espessura da tinta de uma ferramenta, em unidades de canvas.
+ *
+ * Para a caneta tinteiro, que não tem espessura única, é a **maior** que a pena alcança
+ * (#115): os alvos precisam cobrir a tinta onde ela é mais grossa, ou o clique na parte
+ * larga de uma letra passaria direto para o quadro. Nos trechos finos a folga sobra, e sobra
+ * pouco — a pena inteira é de {@link FOUNTAIN_MAX_WIDTH} unidades.
+ */
 export function strokeInkWidth(tool: StrokeTool): number {
-  return tool === STROKE_TOOL_HIGHLIGHTER ? HIGHLIGHTER_WIDTH : STROKE_WIDTH;
+  if (tool === STROKE_TOOL_HIGHLIGHTER) return HIGHLIGHTER_WIDTH;
+  if (tool === STROKE_TOOL_FOUNTAIN) return FOUNTAIN_MAX_WIDTH;
+  return STROKE_WIDTH;
 }
 
 /**
@@ -113,13 +128,16 @@ function unit(v: Point): Point | null {
 }
 
 /**
- * A marca de uma pena parada: um retângulo do tamanho da pena, na inclinação dela.
+ * A marca de uma pena parada: um retângulo da largura da pena, na inclinação dela.
  *
  * É o que um traço sem comprimento — dois pontos iguais, que um board de fora pode trazer —
  * desenha, em vez de um polígono de área zero que não pintaria nada.
  */
 function nibDab(center: Point): Point[] {
-  const along = { x: (NIB.x * FOUNTAIN_MAX_WIDTH) / 2, y: (NIB.y * FOUNTAIN_MAX_WIDTH) / 2 };
+  // O comprimento é aparado para os cantos caberem no círculo da pena inteira: é essa largura
+  // que os alvos consideram (#115), e um canto de fora dela seria tinta inclicável.
+  const reach = Math.sqrt((FOUNTAIN_MAX_WIDTH / 2) ** 2 - (FOUNTAIN_MIN_WIDTH / 2) ** 2);
+  const along = { x: NIB.x * reach, y: NIB.y * reach };
   const across = { x: (-NIB.y * FOUNTAIN_MIN_WIDTH) / 2, y: (NIB.x * FOUNTAIN_MIN_WIDTH) / 2 };
 
   return [
