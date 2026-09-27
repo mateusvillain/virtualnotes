@@ -53,6 +53,18 @@ import {
  */
 const PASTE_OFFSET = 20;
 
+/**
+ * Um traço novo com a cara de `stroke` e outros pontos — o que colar, duplicar e a borracha
+ * criam a partir de um traço existente.
+ *
+ * Um lugar só para o que o traço carrega além dos pontos: um campo novo no contrato que
+ * precisasse ser lembrado em cada chamada seria esquecido em uma delas, e o traço colado
+ * mudaria de desenho em silêncio (#110).
+ */
+function strokeLike(stroke: Stroke, points: number[]): NewStroke {
+  return { color: stroke.color, tool: stroke.tool, points };
+}
+
 /** Mapa vazio compartilhado: evita recriar uma instância nova a cada passada sem toque. */
 const EMPTY_ERASING: ReadonlyMap<string, number[][] | null> = new Map();
 
@@ -459,11 +471,9 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
           color: note.color,
           text: note.text,
         })),
-        recorte.strokes.map((stroke) => ({
-          color: stroke.color,
-          tool: stroke.tool,
-          points: translateStrokePoints(stroke, { x: offset, y: offset }),
-        })),
+        recorte.strokes.map((stroke) =>
+          strokeLike(stroke, translateStrokePoints(stroke, { x: offset, y: offset })),
+        ),
       );
 
       // O lote inteiro pode ter sido descartado pelo contrato. Sem nada criado não há o que
@@ -771,11 +781,9 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
         color: note.color,
         text: note.text,
       })),
-      strokes.map((stroke) => ({
-        color: stroke.color,
-        tool: stroke.tool,
-        points: translateStrokePoints(stroke, { x: PASTE_OFFSET, y: PASTE_OFFSET }),
-      })),
+      strokes.map((stroke) =>
+        strokeLike(stroke, translateStrokePoints(stroke, { x: PASTE_OFFSET, y: PASTE_OFFSET })),
+      ),
     );
 
     // O lote inteiro pode ter sido descartado pelo contrato — mesma guarda de
@@ -858,8 +866,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
     for (const [id, runs] of touched) {
       const original = byId.get(id);
       if (original === undefined || runs === null) continue;
-      for (const points of runs)
-        additions.push({ color: original.color, tool: original.tool, points });
+      for (const points of runs) additions.push(strokeLike(original, points));
     }
 
     store.spliceStrokes([...touched.keys()], additions);

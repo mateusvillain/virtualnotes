@@ -194,6 +194,16 @@ export function isNoteColor(value: unknown): value is NoteColor {
   );
 }
 
+/** Guarda de tipo para o índice de cor de traço vindo de dado não confiável. */
+export function isStrokeColor(value: unknown): value is StrokeColor {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < STROKE_COLORS.length
+  );
+}
+
 /** Guarda de tipo para o índice de ferramenta vindo de dado não confiável. */
 export function isStrokeTool(value: unknown): value is StrokeTool {
   return (
@@ -207,14 +217,4 @@ export function isStrokeTool(value: unknown): value is StrokeTool {
 /** A ferramenta de um traço, com a ausência do campo lida como lápis. */
 export function strokeTool(stroke: Pick<Stroke, "tool">): StrokeTool {
   return stroke.tool ?? STROKE_TOOL_PENCIL;
-}
-
-/** Guarda de tipo para o índice de cor de traço vindo de dado não confiável. */
-export function isStrokeColor(value: unknown): value is StrokeColor {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value < STROKE_COLORS.length
-  );
 }

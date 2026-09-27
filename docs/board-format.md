@@ -69,10 +69,9 @@ serializado, não como.
 o formato evoluir. As regras de leitura:
 
 - Versão **menor ou igual** à atual: aceita. Um board da v2 (sem `tool`) abre com todo
-  traço como lápis. Um board da v1 (sem `strokes`) abre
-  normalmente — `parseBoard` trata o campo ausente como lista vazia, e não como erro. O
-  board devolvido sempre sai carimbado com a versão atual, porque é nessa versão que ele foi
-  normalizado.
+  traço como lápis. Um board da v1 (sem `strokes`) abre normalmente — `parseBoard` trata o
+  campo ausente como lista vazia, e não como erro. O board devolvido sempre sai carimbado
+  com a versão atual, porque é nessa versão que ele foi normalizado.
 - Versão **maior** que a atual: recusada com mensagem explícita. Um board escrito por uma
   versão mais nova pode ter campos com outro significado, e mostrar dados silenciosamente
   errados é pior do que avisar.

@@ -1409,6 +1409,18 @@ describe("useBoard — ferramenta do traço (#110)", () => {
     expect(hook.result.current.strokes.map((s) => s.tool)).toEqual([2, 2]);
   });
 
+  it("redimensionar preserva a ferramenta", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comMarcaTexto, autosave: false }));
+
+    act(() => hook.result.current.startResize("stroke", "mt"));
+    act(() => hook.result.current.resizeBy({ x: 50, y: 0 }));
+    act(() => hook.result.current.endResize());
+
+    const traço = defined(hook.result.current.strokes[0], "o traço redimensionado");
+    expect(traço.points).not.toEqual([0, 0, 100, 0]);
+    expect(traço.tool).toBe(2);
+  });
+
   it("os pedaços que a borracha deixa continuam com a ferramenta", () => {
     const hook = renderHook(() => useBoard({ initialBoard: comMarcaTexto, autosave: false }));
 

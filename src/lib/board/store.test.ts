@@ -178,6 +178,9 @@ describe("ferramenta do traço (#110)", () => {
 
     store.undo();
     expect(store.getBoard().strokes[0]).not.toHaveProperty("tool");
+
+    store.redo();
+    expect(store.getBoard().strokes[0]).toMatchObject({ tool: 1 });
   });
 });
 
