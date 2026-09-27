@@ -24,7 +24,7 @@ function wrap(index: number, length: number): number {
 }
 
 /**
- * A grade de quadradinhos de cor por trás de `ColorPicker` (post-it) e `PencilColorPicker`
+ * A grade de quadradinhos de cor por trás de `ColorPicker` (post-it) e `StrokeColorPicker`
  * (traço, #69) — as duas paletas que o quadro tem, uma delas com um item a mais.
  *
  * É um `radiogroup`, e não uma fila de botões soltos: a pergunta é "qual destas N", e um

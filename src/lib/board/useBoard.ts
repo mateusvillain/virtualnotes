@@ -33,14 +33,17 @@ import { clampNoteSize } from "./schema";
 import { createBoardStore, type NewStroke } from "./store";
 import { useLocalPersistence } from "./useLocalPersistence";
 import {
+  DEFAULT_STROKE_COLORS,
   NOTE_SIZE,
-  STROKE_COLOR_BLACK,
+  STROKE_TOOL_PENCIL,
   createEmptyBoard,
   type Board,
   type Note,
   type NoteColor,
   type Stroke,
   type StrokeColor,
+  type StrokeColors,
+  type StrokeTool,
 } from "./types";
 
 /**
@@ -97,15 +100,16 @@ export interface BoardApi {
    * gesto e o board, e todo traço que entra passa por ela. Quem desenha entrega os pontos
    * crus que o ponteiro reportou e não precisa saber que existe compressão.
    */
-  addStroke: (points: readonly Point[]) => void;
+  addStroke: (points: readonly Point[], tool?: StrokeTool) => void;
   /**
-   * Cor do próximo traço (#69). Preto até ser trocada; a troca vale para os traços
-   * seguintes, e não recolore o que já foi desenhado — para isso, a mesma paleta pinta a
-   * seleção, como `colorSelection` já faz para post-it.
+   * Cor do próximo traço de cada ferramenta (#69, #112), indexada por {@link StrokeTool}.
+   * Cada uma nasce com a sua — ver {@link DEFAULT_STROKE_COLORS} — e trocar a de uma não
+   * mexe nas outras. A troca vale para os traços seguintes, e não recolore o que já foi
+   * desenhado.
    */
-  pencilColor: StrokeColor;
-  /** Troca a cor do lápis. */
-  setPencilColor: (color: StrokeColor) => void;
+  strokeColors: StrokeColors;
+  /** Troca a cor do próximo traço de uma ferramenta. */
+  setStrokeColor: (tool: StrokeTool, color: StrokeColor) => void;
   /**
    * Descarta o board atual e começa um quadro vazio (#58).
    *
@@ -288,12 +292,21 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
   const [resizing, setResizing] = useState<Resizing | null>(null);
   const [erasing, setErasing] = useState<ReadonlyMap<string, number[][] | null>>(EMPTY_ERASING);
   /**
-   * Cor do próximo traço a ser desenhado (#69). Preto ao ligar o lápis pela primeira vez na
-   * sessão, e vale para todos os traços seguintes até ser trocada de novo — não é campo do
-   * board, então nem persiste no link nem entra no histórico de desfazer: é escolha de
-   * interface sobre o que o **próximo** gesto vai fazer, não conteúdo do quadro já feito.
+   * Cor do próximo traço de cada ferramenta (#69, #112). Cada uma nasce com a sua na sessão,
+   * e vale para todos os traços seguintes daquela ferramenta até ser trocada de novo — não é
+   * campo do board, então nem persiste no link nem entra no histórico de desfazer: é escolha
+   * de interface sobre o que o **próximo** gesto vai fazer, não conteúdo do quadro já feito.
    */
-  const [pencilColor, setPencilColor] = useState<StrokeColor>(STROKE_COLOR_BLACK);
+  const [strokeColors, setStrokeColors] = useState<StrokeColors>(DEFAULT_STROKE_COLORS);
+
+  const setStrokeColor = useCallback((tool: StrokeTool, color: StrokeColor) => {
+    setStrokeColors((current) => {
+      if (current[tool] === color) return current;
+      const next: [...StrokeColors] = [...current];
+      next[tool] = color;
+      return next;
+    });
+  }, []);
 
   /**
    * Cópias em ref do que os callbacks de gesto precisam ler.
@@ -886,14 +899,15 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
   }, [publishErasing, publishSelection, store]);
 
   const addStroke = useCallback(
-    (points: readonly Point[]) => {
+    (points: readonly Point[], tool: StrokeTool = STROKE_TOOL_PENCIL) => {
       const simplified = simplify(points);
       store.addStroke({
-        color: pencilColor,
+        color: strokeColors[tool],
+        tool,
         points: simplified.flatMap((point) => [point.x, point.y]),
       });
     },
-    [pencilColor, store],
+    [strokeColors, store],
   );
 
   const resetBoard = useCallback(() => {
@@ -936,8 +950,8 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
     notes: board.notes,
     strokes: visibleStrokes,
     addStroke,
-    pencilColor,
-    setPencilColor,
+    strokeColors,
+    setStrokeColor,
     getBoard: store.getBoard,
     resetBoard,
     editingId,

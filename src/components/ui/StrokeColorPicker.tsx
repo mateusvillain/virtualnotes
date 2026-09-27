@@ -4,23 +4,31 @@ import {
   NOTE_COLORS,
   STROKE_COLORS,
   STROKE_COLOR_BLACK,
+  STROKE_TOOLS,
   type StrokeColor,
+  type StrokeTool,
 } from "@/lib/board/types";
 import { strokeColor } from "@/lib/theme/note-colors";
 import { useUi } from "@/lib/i18n/LocaleProvider";
 import { ColorRadioGroup } from "@/components/ui/ColorRadioGroup";
 
-interface PencilColorPickerProps {
+interface StrokeColorPickerProps {
   /**
-   * Cor do próximo traço. Sempre uma das sete — nunca `null`, ao contrário do post-it: o
-   * lápis não tem seleção mista, só a cor que o próximo gesto vai usar.
+   * A ferramenta cuja cor a paleta mostra (#112). Dá à paleta o nome acessível e o
+   * `data-testid` — as cores são as mesmas sete para todas.
+   */
+  tool: StrokeTool;
+  /**
+   * Cor do próximo traço. Sempre uma das sete — nunca `null`, ao contrário do post-it: a
+   * ferramenta não tem seleção mista, só a cor que o próximo gesto vai usar.
    */
   value: StrokeColor;
   onChange: (color: StrokeColor) => void;
 }
 
 /**
- * As sete cores do traço: as seis da nota, mais o preto (#69).
+ * As sete cores do traço: as seis da nota, mais o preto (#69), para qualquer ferramenta de
+ * desenho (#112).
  *
  * O preto entra por último, depois das seis de `ColorPicker`, porque é assim que
  * `STROKE_COLORS` as ordena (`[...NOTE_COLORS, "black"]`) — a mesma ordem em que o board
@@ -34,8 +42,9 @@ interface PencilColorPickerProps {
  * `note.colors` para as seis compartilhadas — só o preto tem um rótulo próprio, porque é a
  * única cor que a nota não tem.
  */
-export function PencilColorPicker({ value, onChange }: PencilColorPickerProps) {
+export function StrokeColorPicker({ tool, value, onChange }: StrokeColorPickerProps) {
   const ui = useUi();
+  const name = STROKE_TOOLS[tool];
 
   return (
     <ColorRadioGroup
@@ -46,8 +55,8 @@ export function PencilColorPicker({ value, onChange }: PencilColorPickerProps) {
       colorLabel={(color) =>
         color === STROKE_COLOR_BLACK ? ui.pencil.black : ui.note.colors[NOTE_COLORS[color]!]
       }
-      ariaLabel={ui.pencil.color}
-      testId="pencil-color-picker"
+      ariaLabel={ui[name].color}
+      testId={`${name}-color-picker`}
     />
   );
 }

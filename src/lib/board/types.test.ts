@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_STROKE_COLORS,
   NOTE_COLORS,
   SCHEMA_VERSION,
   STROKE_COLORS,
@@ -50,6 +51,11 @@ describe("ferramentas do traço", () => {
     expect(STROKE_TOOLS.every((_, index) => isStrokeTool(index))).toBe(true);
     expect(isStrokeTool(STROKE_TOOLS.length)).toBe(false);
     expect([-1, 1.5, "1", null, undefined].some(isStrokeTool)).toBe(false);
+  });
+
+  it("dá uma cor inicial a cada ferramenta, sem sobrar nem faltar", () => {
+    expect(DEFAULT_STROKE_COLORS).toHaveLength(STROKE_TOOLS.length);
+    expect(DEFAULT_STROKE_COLORS.every(isStrokeColor)).toBe(true);
   });
 
   it("lê a ausência do campo como lápis", () => {

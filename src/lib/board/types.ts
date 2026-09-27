@@ -75,6 +75,44 @@ export type StrokeTool = TupleIndex<typeof STROKE_TOOLS>;
 /** A ferramenta de um traço sem o campo `tool`: o lápis. */
 export const STROKE_TOOL_PENCIL = 0 satisfies StrokeTool;
 
+/** A caneta tinteiro (#108). */
+export const STROKE_TOOL_FOUNTAIN = 1 satisfies StrokeTool;
+
+/** O marca-texto (#109). */
+export const STROKE_TOOL_HIGHLIGHTER = 2 satisfies StrokeTool;
+
+/**
+ * Cor com que o marca-texto nasce: o amarelo (#112).
+ *
+ * Diferente do lápis e da caneta, que nascem em preto: o marca-texto destaca o que já está
+ * no quadro, e o amarelo translúcido é o que se reconhece como destaque. É o índice do
+ * amarelo em {@link NOTE_COLORS}, que {@link STROKE_COLORS} repete na mesma posição.
+ */
+export const DEFAULT_HIGHLIGHTER_COLOR = 0 satisfies StrokeColor;
+
+/**
+ * Uma cor por ferramenta de desenho, na ordem de {@link STROKE_TOOLS} — indexada pelo
+ * próprio {@link StrokeTool}. Derivada da lista, e não escrita à mão, para que uma
+ * ferramenta nova sem cor inicial seja erro de tipo.
+ */
+export type StrokeColors = ColorPerTool<typeof STROKE_TOOLS>;
+
+/**
+ * Genérico só para o mapeamento ser homomórfico: sobre um parâmetro de tipo, `keyof` de uma
+ * tupla mapeia só as posições e devolve uma tupla; sobre o tipo concreto, mapearia também
+ * `map`, `length` e o resto dos membros de array.
+ */
+type ColorPerTool<Tools extends readonly unknown[]> = {
+  readonly [Tool in keyof Tools]: StrokeColor;
+};
+
+/** A cor com que cada ferramenta nasce: lápis e caneta em preto, marca-texto em amarelo. */
+export const DEFAULT_STROKE_COLORS: StrokeColors = [
+  STROKE_COLOR_BLACK,
+  STROKE_COLOR_BLACK,
+  DEFAULT_HIGHLIGHTER_COLOR,
+];
+
 /**
  * A cor com que um post-it nasce.
  *

@@ -5,11 +5,16 @@ import { desvioMaximo, pontosDe } from "@/test-utils/geometry";
 import { SIMPLIFY_TOLERANCE } from "@/lib/canvas/simplify";
 import {
   CANVAS_MAX_ABS_COORDINATE,
+  DEFAULT_HIGHLIGHTER_COLOR,
   NOTE_COLORS,
   NOTE_SIZE,
   SCHEMA_VERSION,
   STROKE_COLOR_BLACK,
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
   type Board,
+  type StrokeColor,
 } from "./types";
 import { selectionSize } from "./selection";
 import { useBoard } from "./useBoard";
@@ -1069,13 +1074,13 @@ describe("useBoard — cor do lápis (#69)", () => {
   it("o lápis nasce preto", () => {
     const { result } = renderHook(() => useBoard());
 
-    expect(result.current.pencilColor).toBe(STROKE_COLOR_BLACK);
+    expect(result.current.strokeColors[STROKE_TOOL_PENCIL]).toBe(STROKE_COLOR_BLACK);
   });
 
   it("a cor trocada vale para o próximo traço", () => {
     const { result } = renderHook(() => useBoard());
 
-    act(() => result.current.setPencilColor(3));
+    act(() => result.current.setStrokeColor(STROKE_TOOL_PENCIL, 3));
     act(() =>
       result.current.addStroke([
         { x: 0, y: 0 },
@@ -1093,7 +1098,7 @@ describe("useBoard — cor do lápis (#69)", () => {
       { x: 50, y: 20 },
     ];
 
-    act(() => result.current.setPencilColor(1));
+    act(() => result.current.setStrokeColor(STROKE_TOOL_PENCIL, 1));
     act(() => result.current.addStroke(traço));
     act(() => result.current.addStroke(traço));
 
@@ -1108,7 +1113,7 @@ describe("useBoard — cor do lápis (#69)", () => {
     ];
 
     act(() => result.current.addStroke(traço));
-    act(() => result.current.setPencilColor(4));
+    act(() => result.current.setStrokeColor(STROKE_TOOL_PENCIL, 4));
 
     expect(defined(result.current.strokes[0], "o traço gravado").color).toBe(STROKE_COLOR_BLACK);
   });
@@ -1120,7 +1125,59 @@ describe("useBoard — cor do lápis (#69)", () => {
 
     act(() => result.current.colorSelection(5));
 
-    expect(result.current.pencilColor).toBe(STROKE_COLOR_BLACK);
+    expect(result.current.strokeColors[STROKE_TOOL_PENCIL]).toBe(STROKE_COLOR_BLACK);
+  });
+});
+
+describe("useBoard — uma cor por ferramenta (#112)", () => {
+  const traço = [
+    { x: 0, y: 0 },
+    { x: 50, y: 20 },
+  ];
+
+  it("lápis e caneta nascem pretos, o marca-texto nasce amarelo", () => {
+    const { result } = renderHook(() => useBoard());
+
+    expect(result.current.strokeColors).toEqual([
+      STROKE_COLOR_BLACK,
+      STROKE_COLOR_BLACK,
+      DEFAULT_HIGHLIGHTER_COLOR,
+    ]);
+    expect(NOTE_COLORS[DEFAULT_HIGHLIGHTER_COLOR]).toBe("yellow");
+  });
+
+  it("trocar a cor de uma ferramenta não mexe nas outras", () => {
+    const { result } = renderHook(() => useBoard());
+
+    const verde = NOTE_COLORS.indexOf("green") as StrokeColor;
+    act(() => result.current.setStrokeColor(STROKE_TOOL_HIGHLIGHTER, verde));
+
+    expect(result.current.strokeColors).toEqual([STROKE_COLOR_BLACK, STROKE_COLOR_BLACK, verde]);
+  });
+
+  it("o traço grava a cor e a ferramenta de quem o desenhou", () => {
+    const { result } = renderHook(() => useBoard());
+    const azul = NOTE_COLORS.indexOf("blue") as StrokeColor;
+    act(() => result.current.setStrokeColor(STROKE_TOOL_FOUNTAIN, azul));
+
+    act(() => result.current.addStroke(traço, STROKE_TOOL_FOUNTAIN));
+    act(() => result.current.addStroke(traço, STROKE_TOOL_HIGHLIGHTER));
+    act(() => result.current.addStroke(traço));
+
+    expect(result.current.strokes.map(({ color, tool }) => ({ color, tool }))).toEqual([
+      { color: azul, tool: STROKE_TOOL_FOUNTAIN },
+      { color: DEFAULT_HIGHLIGHTER_COLOR, tool: STROKE_TOOL_HIGHLIGHTER },
+      { color: STROKE_COLOR_BLACK, tool: undefined },
+    ]);
+  });
+
+  it("repetir a mesma cor não troca a referência", () => {
+    const { result } = renderHook(() => useBoard());
+    const antes = result.current.strokeColors;
+
+    act(() => result.current.setStrokeColor(STROKE_TOOL_PENCIL, STROKE_COLOR_BLACK));
+
+    expect(result.current.strokeColors).toBe(antes);
   });
 });
 
