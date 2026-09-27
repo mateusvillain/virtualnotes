@@ -24,6 +24,7 @@ import {
   type NoteColor,
   type Stroke,
   type StrokeColor,
+  type StrokeTool,
 } from "./types";
 
 /** Comprimento do id de um post-it. Curto porque vai serializado dentro da URL. */
@@ -79,6 +80,8 @@ export interface NewNote {
 /** Dados mínimos para criar um traço; o resto vem dos padrões do contrato. */
 export interface NewStroke {
   color: StrokeColor;
+  /** Ferramenta que desenhou o traço. Ausente é lápis — ver {@link Stroke.tool}. */
+  tool?: StrokeTool;
   /** Coordenadas de canvas, achatadas — ver {@link Stroke.points}. */
   points: number[];
 }
@@ -213,6 +216,7 @@ function sameNote(a: Note, b: Note): boolean {
 function sameStroke(a: Stroke, b: Stroke): boolean {
   return (
     a.color === b.color &&
+    a.tool === b.tool &&
     a.z === b.z &&
     a.points.length === b.points.length &&
     a.points.every((value, index) => value === b.points[index])
@@ -414,6 +418,7 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
     const stroke = normalizeStroke({
       id: createId(new Set(board.strokes.map((existing) => existing.id))),
       color: input.color,
+      tool: input.tool,
       points: input.points,
       // Traço novo nasce na frente, como a note: foi o usuário que acabou de desenhá-lo.
       z: topZ(board.strokes) + 1,
@@ -515,6 +520,7 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
       const stroke = normalizeStroke({
         id,
         color: candidate.color,
+        tool: candidate.tool,
         points: candidate.points,
         z: strokeZ,
       });
@@ -559,7 +565,13 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
       z += 1;
       // Normalizar pelo contrato, como em `addStroke`: um pedaço com coordenada impossível
       // não entra no board, mas não derruba a passada inteira.
-      const stroke = normalizeStroke({ id, color: candidate.color, points: candidate.points, z });
+      const stroke = normalizeStroke({
+        id,
+        color: candidate.color,
+        tool: candidate.tool,
+        points: candidate.points,
+        z,
+      });
       if (stroke === null) continue;
 
       takenIds.add(id);

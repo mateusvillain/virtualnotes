@@ -16,7 +16,9 @@ import {
   STROKE_MAX_COUNT,
   STROKE_MAX_POINTS,
   isNoteColor,
+  STROKE_TOOL_PENCIL,
   isStrokeColor,
+  isStrokeTool,
   type Board,
   type Note,
   type Stroke,
@@ -117,11 +119,16 @@ function normalizePoints(input: unknown): number[] | null {
 /**
  * Normaliza um traço. Devolve `null` quando os campos obrigatórios não têm como ser
  * recuperados — id, cor e ao menos dois pontos.
+ *
+ * A ferramenta não é obrigatória: ausente, ou fora da lista, o traço vira lápis. Um índice
+ * desconhecido não descarta o traço — os pontos e a cor estão intactos, e desenhá-lo como
+ * lápis perde menos que apagá-lo. O lápis é sempre gravado **sem** o campo (#110), para que
+ * o traço custe no link o mesmo que antes de `tool` existir.
  */
 export function normalizeStroke(input: unknown): Stroke | null {
   if (!isPlainObject(input)) return null;
 
-  const { id, color, points, z } = input;
+  const { id, color, tool, points, z } = input;
 
   if (typeof id !== "string" || id.length === 0) return null;
   if (!isStrokeColor(color)) return null;
@@ -132,6 +139,9 @@ export function normalizeStroke(input: unknown): Stroke | null {
   return {
     id,
     color,
+    // Condicional, e não `tool: undefined`: uma chave com `undefined` some no JSON, mas não
+    // em `toEqual` nem em `Object.keys` — e o traço de lápis tem de ser, em tudo, o de antes.
+    ...(isStrokeTool(tool) && tool !== STROKE_TOOL_PENCIL ? { tool } : {}),
     points: normalizedPoints,
     z: isFiniteNumber(z) ? Math.trunc(z) : 0,
   };

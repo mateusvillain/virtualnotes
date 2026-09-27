@@ -14,9 +14,10 @@
  * app que não sabe ler `strokes`, não erraria o dado — erraria o desenho, mostrando o board
  * sem o rabisco que tem. Board sem `strokes` continua sendo lido normalmente (ver
  * `parseBoard`); a versão sobe para que um board **futuro** demais seja recusado, e não
- * mostrado errado em silêncio.
+ * mostrado errado em silêncio. A v3 subiu pela mesma regra, com `tool` (#110): a v2 mostraria
+ * um traço de marca-texto como uma linha fina e opaca de lápis.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /**
  * Cores de post-it, na ordem em que aparecem no seletor. O board guarda o índice desta
@@ -55,6 +56,24 @@ export type StrokeColor = TupleIndex<typeof STROKE_COLORS>;
  * nota, para que os índices delas continuem valendo em todo link já compartilhado.
  */
 export const STROKE_COLOR_BLACK = 6 satisfies StrokeColor;
+
+/**
+ * Ferramentas de desenho, na ordem do índice que o traço guarda (epic #107).
+ *
+ * Mesma lógica da cor: o board guarda o índice, nunca o nome. O lápis é o índice `0` porque
+ * é o que todo traço de antes deste campo era — e por isso o campo é omitido quando o traço
+ * é de lápis: boards antigos não precisam de migração, e um board só com lápis continua
+ * gerando o mesmo link.
+ */
+export const STROKE_TOOLS = ["pencil", "fountain", "highlighter"] as const;
+
+export type StrokeToolName = (typeof STROKE_TOOLS)[number];
+
+/** Índice em {@link STROKE_TOOLS}. É isto que vai serializado no traço. */
+export type StrokeTool = TupleIndex<typeof STROKE_TOOLS>;
+
+/** A ferramenta de um traço sem o campo `tool`: o lápis. */
+export const STROKE_TOOL_PENCIL = 0 satisfies StrokeTool;
 
 /**
  * A cor com que um post-it nasce.
@@ -140,6 +159,11 @@ export interface Stroke {
   /** Índice em {@link STROKE_COLORS}. */
   color: StrokeColor;
   /**
+   * Índice em {@link STROKE_TOOLS}. Ausente é lápis: o contrato nunca grava o `0`, para que
+   * o traço de lápis custe no link o mesmo que custava antes de o campo existir.
+   */
+  tool?: Exclude<StrokeTool, typeof STROKE_TOOL_PENCIL>;
+  /**
    * Coordenadas de canvas, achatadas: `points[0], points[1]` é o primeiro ponto, e assim
    * por diante. Comprimento par, com ao menos dois pontos (quatro números).
    */
@@ -178,4 +202,19 @@ export function isStrokeColor(value: unknown): value is StrokeColor {
     value >= 0 &&
     value < STROKE_COLORS.length
   );
+}
+
+/** Guarda de tipo para o índice de ferramenta vindo de dado não confiável. */
+export function isStrokeTool(value: unknown): value is StrokeTool {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < STROKE_TOOLS.length
+  );
+}
+
+/** A ferramenta de um traço, com a ausência do campo lida como lápis. */
+export function strokeTool(stroke: Pick<Stroke, "tool">): StrokeTool {
+  return stroke.tool ?? STROKE_TOOL_PENCIL;
 }
