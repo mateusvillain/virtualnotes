@@ -18,7 +18,7 @@ import {
   type Rect,
   type Size,
 } from "@/lib/canvas/coords";
-import { STROKE_TOOL_HIGHLIGHTER, type Stroke, type StrokeTool } from "./types";
+import { STROKE_TOOL_HIGHLIGHTER, strokeTool, type Stroke, type StrokeTool } from "./types";
 
 /**
  * Espessura do traço de lápis, em unidades de canvas.
@@ -42,6 +42,26 @@ export const HIGHLIGHTER_WIDTH = 16;
 /** A espessura da tinta de uma ferramenta, em unidades de canvas. */
 export function strokeInkWidth(tool: StrokeTool): number {
   return tool === STROKE_TOOL_HIGHLIGHTER ? HIGHLIGHTER_WIDTH : STROKE_WIDTH;
+}
+
+/**
+ * Quanto a tinta de uma ferramenta passa do traço do lápis, de cada lado da linha (#118).
+ *
+ * Os alvos — o clique, o retângulo de seleção, a borracha — foram calibrados para o lápis, e
+ * o que muda com uma tinta mais larga é só essa sobra: somá-la ao alvo dá ao marca-texto a
+ * mesma folga que o lápis sempre teve, medida a partir da **borda** visível, e deixa o lápis
+ * exatamente como estava (a sobra dele é zero).
+ */
+export function inkOverhang(tool: StrokeTool): number {
+  return (strokeInkWidth(tool) - STROKE_WIDTH) / 2;
+}
+
+/**
+ * Uma largura de alvo calibrada para o lápis, alargada pela sobra da tinta dos dois lados.
+ * É a regra única dos alvos por ferramenta (#118): clique, borracha e o que vier.
+ */
+export function widenByInk(width: number, tool: StrokeTool): number {
+  return width + inkOverhang(tool) * 2;
 }
 
 /**
@@ -111,12 +131,33 @@ export function strokeBounds(stroke: Stroke): Rect | null {
  */
 export function strokeIntersectsRect(stroke: Stroke, rect: Rect): boolean {
   const points = strokePoints(stroke);
+  // A tinta larga (#118) conta: um retângulo que só encosta na borda do marca-texto toca o
+  // que a pessoa vê, mesmo sem chegar à linha do meio.
+  const alvo = inflate(rect, inkOverhang(strokeTool(stroke)));
 
   for (let index = 0; index + 1 < points.length; index += 1) {
-    if (segmentIntersectsRect(points[index]!, points[index + 1]!, rect)) return true;
+    if (segmentIntersectsRect(points[index]!, points[index + 1]!, alvo)) return true;
   }
 
   return false;
+}
+
+/** `rect` alargado por `by` de cada lado. */
+function inflate(rect: Rect, by: number): Rect {
+  return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
+
+/**
+ * A caixa da **tinta** de um traço: {@link strokeBounds} alargada pela sobra da ferramenta
+ * (#118) — a caixa de um marca-texto horizontal, pelos pontos, teria altura zero.
+ *
+ * É onde a barra de ações da seleção se ancora, para não cair em cima do destaque. A
+ * moldura faz a mesma conta à parte, porque durante o redimensionamento o tamanho vem do
+ * gesto, medido pelos pontos, e não do traço gravado.
+ */
+export function strokeInkBounds(stroke: Stroke): Rect | null {
+  const bounds = strokeBounds(stroke);
+  return bounds === null ? null : inflate(bounds, inkOverhang(strokeTool(stroke)));
 }
 
 /**
@@ -138,6 +179,16 @@ export const STROKE_MIN_SIZE = 4;
  */
 export const ERASER_HIT_WIDTH = 16;
 
+/**
+ * A largura do alvo da borracha para a tinta de uma ferramenta (#118): a de sempre, mais a
+ * sobra da tinta dos dois lados. A borracha corta pela linha do meio do traço, e sem isso
+ * teria de passar pelo meio de um marca-texto para apagá-lo — encostar na borda, que é o
+ * que se vê, não bastaria.
+ */
+export function eraserHitWidth(tool: StrokeTool): number {
+  return widenByInk(ERASER_HIT_WIDTH, tool);
+}
+
 /** O retângulo do alvo da borracha: a caixa de `a` a `b`, alargada por `hitWidth`. */
 function eraserRect(a: Point, b: Point, hitWidth: number): Rect {
   const box = rectFromCorners(a, b);
@@ -156,6 +207,9 @@ function eraserRect(a: Point, b: Point, hitWidth: number): Rect {
  * aceite pede. A caixa que envolve os dois pontos, alargada por `hitWidth`, vira a mesma
  * pergunta que a seleção por retângulo já sabe responder; não há geometria nova aqui, só um
  * retângulo mais generoso em volta do gesto.
+ *
+ * `hitWidth` é o alvo **do lápis**: a sobra da tinta larga (#118) já entra por
+ * `strokeIntersectsRect`, e passar `eraserHitWidth` aqui a somaria duas vezes.
  */
 export function strokeIntersectsSegment(
   stroke: Stroke,

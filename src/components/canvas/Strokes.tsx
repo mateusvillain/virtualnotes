@@ -9,7 +9,7 @@ import {
   type StrokeColor,
   type StrokeTool,
 } from "@/lib/board/types";
-import { STROKE_WIDTH, strokeInkWidth } from "@/lib/board/stroke-geometry";
+import { STROKE_WIDTH, strokeInkWidth, widenByInk } from "@/lib/board/stroke-geometry";
 import { createContext, useContext, useRef, type PointerEvent, type ReactNode } from "react";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
@@ -45,6 +45,15 @@ function inkStyle(tool: StrokeTool): { width: number; opacity?: number } {
  * escala aqui dentro, e a camada de tinta voltaria a redesenhar a cada quadro do zoom.
  */
 export const STROKE_HIT_WIDTH = 12;
+
+/**
+ * O alvo de clique de uma ferramenta (#118): o do lápis, mais a sobra da tinta dos dois
+ * lados. O marca-texto ganha a mesma folga que o lápis sempre teve, medida da borda que se
+ * vê — com o alvo do lápis, clicar na metade de fora de um destaque não o selecionaria.
+ */
+function strokeHitWidth(tool: StrokeTool): number {
+  return widenByInk(STROKE_HIT_WIDTH, tool);
+}
 
 interface StrokesProps {
   strokes: readonly Stroke[];
@@ -267,7 +276,7 @@ function StrokeShape({
         points={polylinePoints(stroke.points)}
         fill="none"
         stroke="transparent"
-        strokeWidth={STROKE_HIT_WIDTH}
+        strokeWidth={strokeHitWidth(strokeTool(stroke))}
         strokeLinecap="round"
         strokeLinejoin="round"
         // `stroke` e não `all`: só a faixa em volta da linha recebe o ponteiro. Com `all`, o

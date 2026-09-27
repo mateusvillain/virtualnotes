@@ -20,11 +20,13 @@ import {
 } from "./selection";
 import {
   STROKE_MIN_SIZE,
+  eraserHitWidth,
   flattenPoints,
   pointsFromFlat,
   scaleStrokePoints,
   splitPolylineBySegment,
   strokeBounds,
+  strokeInkBounds,
   strokePoints,
   translateStrokePoints,
 } from "./stroke-geometry";
@@ -37,6 +39,7 @@ import {
   NOTE_SIZE,
   STROKE_TOOL_PENCIL,
   createEmptyBoard,
+  strokeTool,
   type Board,
   type Note,
   type NoteColor,
@@ -696,8 +699,10 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
    * barra para o canto do canvas.
    */
   const selectedRects = useMemo((): Rect[] => {
+    // A caixa da tinta, e não a dos pontos (#118): a barra se ancora fora do que se vê, e
+    // num marca-texto a tinta passa da linha do meio.
     const strokes = selectedStrokes(board.strokes, selection)
-      .map(strokeBounds)
+      .map(strokeInkBounds)
       .filter((rect): rect is Rect => rect !== null);
 
     return [...selected, ...strokes];
@@ -840,7 +845,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
         let changed = false;
         const result: Point[][] = [];
         for (const piece of pieces) {
-          const split = splitPolylineBySegment(piece, a, b);
+          const split = splitPolylineBySegment(piece, a, b, eraserHitWidth(strokeTool(stroke)));
           if (split === null) {
             result.push(piece);
             continue;
