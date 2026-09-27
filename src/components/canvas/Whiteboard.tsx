@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/shell/AppShell";
-import { STROKE_TOOL_HIGHLIGHTER, STROKE_TOOL_PENCIL, type StrokeTool } from "@/lib/board/types";
+import {
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
+  STROKE_TOOL_PENCIL,
+  type StrokeTool,
+} from "@/lib/board/types";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
 import type { Point } from "@/lib/canvas/coords";
@@ -15,6 +20,7 @@ import { HistoryButtons } from "@/components/ui/HistoryButtons";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
 import { NoteButton } from "@/components/ui/NoteButton";
 import { PencilButton } from "@/components/ui/PencilButton";
+import { FountainPenButton } from "@/components/ui/FountainPenButton";
 import { HighlighterButton } from "@/components/ui/HighlighterButton";
 import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
 import { EraserButton } from "@/components/ui/EraserButton";
@@ -45,8 +51,9 @@ type WhiteboardProps = Pick<UseBoardOptions, "initialBoard" | "autosave">;
  * `"erasing"` chegou com a borracha (#98), como uma quarta ferramenta exclusiva das demais
  * — a mesma regra que já valia entre o lápis e a colocação de nota, agora com mais um nome.
  * `"highlighter"` (#117) é mais uma, pela mesma regra: ligar o marca-texto desliga o lápis.
+ * `"fountain"` (#114) também: a caneta tinteiro desliga o lápis, o marca-texto e o resto.
  */
-type BoardMode = "select" | "pencil" | "highlighter" | "erasing" | "placing";
+type BoardMode = "select" | "pencil" | "fountain" | "highlighter" | "erasing" | "placing";
 
 /**
  * O quadro: junta o estado de viewport à superfície navegável, aos controles e aos post-its.
@@ -152,6 +159,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   const [mode, setMode] = useState<BoardMode>("select");
   const selecting = mode === "select";
   const pencil = mode === "pencil";
+  const fountain = mode === "fountain";
   const highlighter = mode === "highlighter";
   const erasing = mode === "erasing";
   /**
@@ -160,9 +168,11 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
    */
   const drawingTool: StrokeTool | null = pencil
     ? STROKE_TOOL_PENCIL
-    : highlighter
-      ? STROKE_TOOL_HIGHLIGHTER
-      : null;
+    : fountain
+      ? STROKE_TOOL_FOUNTAIN
+      : highlighter
+        ? STROKE_TOOL_HIGHLIGHTER
+        : null;
   const placing = mode === "placing";
 
   /**
@@ -177,6 +187,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   }, []);
 
   const togglePencil = useCallback(() => toggleMode("pencil"), [toggleMode]);
+  const toggleFountain = useCallback(() => toggleMode("fountain"), [toggleMode]);
   const toggleHighlighter = useCallback(() => toggleMode("highlighter"), [toggleMode]);
   const toggleEraser = useCallback(() => toggleMode("erasing"), [toggleMode]);
   const togglePlacing = useCallback(() => toggleMode("placing"), [toggleMode]);
@@ -210,10 +221,10 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   );
 
   /*
-    Ligar qualquer uma das duas ferramentas já dispensa a apresentação, antes mesmo de
-    existir nota ou traço.
+    Ligar qualquer ferramenta — nota, desenho ou borracha — já dispensa a apresentação,
+    antes mesmo de existir nota ou traço.
 
-    Quem apertou `N` ou `P` — ou achou o botão — acabou de provar que aprendeu o que a peça
+    Quem apertou `N`, `P`, `F`, `H` ou `E` — ou achou o botão — acabou de provar que aprendeu o que a peça
     tinha para ensinar, e é justamente aí que ela mais atrapalha: o texto fica no meio do
     quadro, exatamente onde a nota fantasma segue o cursor e onde o rabisco vai passar.
 
@@ -259,6 +270,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     onUndo: board.undo,
     onRedo: board.redo,
     onTogglePencil: togglePencil,
+    onToggleFountain: toggleFountain,
     onToggleHighlighter: toggleHighlighter,
     onToggleEraser: toggleEraser,
     onCancel: selectTool,
@@ -304,6 +316,8 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
             nenhum para ela influenciar.
           */}
           {pencil ? strokePalette(STROKE_TOOL_PENCIL) : null}
+          <FountainPenButton active={fountain} onToggle={toggleFountain} />
+          {fountain ? strokePalette(STROKE_TOOL_FOUNTAIN) : null}
           <HighlighterButton active={highlighter} onToggle={toggleHighlighter} />
           {highlighter ? strokePalette(STROKE_TOOL_HIGHLIGHTER) : null}
           <EraserButton active={erasing} onToggle={toggleEraser} />

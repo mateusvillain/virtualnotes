@@ -41,6 +41,7 @@ describe("interface do quadro em cada idioma", () => {
       // para o lápis e para a colocação de nota em quem não tem teclado.
       expect(screen.getByRole("button", { name: ui.note.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.pencil.action })).toBeDefined();
+      expect(screen.getByRole("button", { name: ui.fountain.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.highlighter.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.select.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.undo })).toBeDefined();
@@ -94,6 +95,7 @@ describe("interface do quadro em cada idioma", () => {
         { name: ui.select.action, shortcut: SHORTCUTS.select },
         { name: ui.note.action, shortcut: SHORTCUTS.note },
         { name: ui.pencil.action, shortcut: SHORTCUTS.pencil },
+        { name: ui.fountain.action, shortcut: SHORTCUTS.fountain },
         { name: ui.highlighter.action, shortcut: SHORTCUTS.highlighter },
         { name: ui.eraser.action, shortcut: SHORTCUTS.eraser },
         { name: ui.history.undo, shortcut: SHORTCUTS.undo },

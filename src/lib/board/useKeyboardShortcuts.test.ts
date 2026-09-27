@@ -34,6 +34,7 @@ function opcoes(overrides: Partial<Parameters<typeof useKeyboardShortcuts>[0]>) 
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onTogglePencil: vi.fn(),
+    onToggleFountain: vi.fn(),
     onToggleHighlighter: vi.fn(),
     onToggleEraser: vi.fn(),
     onSelectTool: vi.fn(),
@@ -284,6 +285,28 @@ describe("useKeyboardShortcuts — salvar com Ctrl/⌘+S", () => {
     tecla("p", document.body, { altKey: true });
 
     expect(onTogglePencil).not.toHaveBeenCalled();
+  });
+
+  it("F alterna o modo caneta tinteiro (#114)", () => {
+    const onToggleFountain = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onToggleFountain })));
+
+    tecla("f");
+    tecla("F");
+
+    expect(onToggleFountain).toHaveBeenCalledTimes(2);
+  });
+
+  it("F não alterna com o cursor dentro de um post-it, nem com modificador", () => {
+    const onToggleFountain = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onToggleFountain })));
+
+    tecla("f", elemento("textarea"));
+    tecla("f", document.body, { ctrlKey: true });
+    tecla("f", document.body, { metaKey: true });
+    tecla("f", document.body, { altKey: true });
+
+    expect(onToggleFountain).not.toHaveBeenCalled();
   });
 
   it("H alterna o modo marca-texto (#117)", () => {
