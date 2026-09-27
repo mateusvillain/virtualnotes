@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -32,7 +33,7 @@ import {
 import { EraserCursor } from "./EraserCursor";
 import { NotePlacementPreview } from "./NotePlacement";
 import { SelectionBox } from "./SelectionBox";
-import { StrokePreview } from "./Strokes";
+import { HighlighterPreviewContext, StrokePreview, type DrawingPreview } from "./Strokes";
 import type { ViewportApi } from "@/lib/canvas/useViewport";
 
 /**
@@ -884,7 +885,13 @@ export function Viewport({
             : "cursor-default";
 
   const highlighting = drawingTool === STROKE_TOOL_HIGHLIGHTER;
-  const preview = <StrokePreview points={drawing} color={pencilColor} tool={drawingTool} />;
+  const highlighterPreview = useMemo<DrawingPreview | null>(
+    () =>
+      highlighting && drawing !== null
+        ? { points: drawing, color: pencilColor, tool: drawingTool }
+        : null,
+    [drawing, drawingTool, highlighting, pencilColor],
+  );
 
   return (
     <div
@@ -940,13 +947,17 @@ export function Viewport({
         data-testid="viewport-layer"
       >
         {/*
-          A prévia do marca-texto vem antes do board, e não depois: o traço gravado fica
-          por baixo de toda a tinta (#116), e uma prévia por cima dos rabiscos pularia de
-          camada no instante em que o ponteiro fosse solto.
+          A prévia do marca-texto não é desenhada aqui, e sim dentro da camada de tinta,
+          entre os marca-textos e o resto dos traços (#116): é a altura em que o traço vai
+          ficar, e fora dela ele pularia de camada no instante em que o ponteiro fosse solto.
+          O Provider fica sempre montado — trocá-lo de lugar remontaria o board inteiro.
         */}
-        {highlighting ? preview : null}
-        {children}
-        {highlighting ? null : preview}
+        <HighlighterPreviewContext.Provider value={highlighterPreview}>
+          {children}
+        </HighlighterPreviewContext.Provider>
+        {highlighting ? null : (
+          <StrokePreview points={drawing} color={pencilColor} tool={drawingTool} />
+        )}
         {/*
           Depois dos post-its, e não antes: a nota que está sendo colocada vai nascer na
           frente de todas (a store a cria no topo do z), e uma prévia desenhada por baixo

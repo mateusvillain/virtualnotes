@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { HIGHLIGHTER_OPACITY, StrokePreview, Strokes, polylinePoints } from "./Strokes";
+import {
+  HIGHLIGHTER_OPACITY,
+  HighlighterPreviewContext,
+  StrokePreview,
+  Strokes,
+  polylinePoints,
+} from "./Strokes";
 import { HIGHLIGHTER_WIDTH, STROKE_WIDTH } from "@/lib/board/stroke-geometry";
 import {
   STROKE_COLORS,
@@ -144,6 +150,42 @@ describe("Strokes — marca-texto (#116)", () => {
     );
 
     expect(desenhados()).toEqual(["3,3 4,4", "1,1 2,2", "5,5 6,6"]);
+  });
+
+  it("desenha a prévia do marca-texto entre os destaques e o resto da tinta", () => {
+    render(
+      <HighlighterPreviewContext.Provider
+        value={{
+          points: [
+            { x: 7, y: 7 },
+            { x: 8, y: 8 },
+          ],
+          color: 0,
+          tool: STROKE_TOOL_HIGHLIGHTER,
+        }}
+      >
+        <Strokes
+          strokes={[
+            stroke({ id: "lapis", z: 1, points: [1, 1, 2, 2] }),
+            stroke({ id: "destaque", z: 9, tool: STROKE_TOOL_HIGHLIGHTER, points: [3, 3, 4, 4] }),
+          ]}
+        />
+      </HighlighterPreviewContext.Provider>,
+    );
+
+    const linhas = [...screen.getByTestId("strokes").querySelectorAll("polyline")]
+      .filter((linha) => linha.getAttribute("stroke") !== "transparent")
+      .map((linha) => linha.getAttribute("points"));
+    expect(linhas).toEqual(["3,3 4,4", "7,7 8,8", "1,1 2,2"]);
+    const previa = screen.getByTestId("stroke-preview").querySelector("polyline");
+    expect(previa?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(previa?.getAttribute("opacity")).toBe(String(HIGHLIGHTER_OPACITY));
+  });
+
+  it("sem gesto em curso, não há prévia na camada de tinta", () => {
+    render(<Strokes strokes={[stroke()]} />);
+
+    expect(screen.queryByTestId("stroke-preview")).toBeNull();
   });
 
   it("entre marca-textos, o z continua valendo", () => {

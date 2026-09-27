@@ -25,9 +25,9 @@ import { STROKE_TOOL_HIGHLIGHTER, type Stroke, type StrokeTool } from "./types";
  *
  * Escala com o zoom, como todo conteúdo do canvas: uma linha que mantivesse a espessura na
  * tela engrossaria em relação ao desenho ao afastar, e o rabisco deixaria de ser parte do
- * quadro para virar sobreposição. Mora aqui, e não no componente que desenha, porque a
- * espessura passou a ter leitores geométricos: o alvo de clique e a borracha de cada
- * ferramenta perguntam quanto de tinta há em volta da linha (#116).
+ * quadro para virar sobreposição. Mora aqui, e não no componente que desenha, porque com o
+ * marca-texto (#116) a espessura deixa de ser detalhe de pintura: o alvo de clique e a
+ * borracha precisam saber quanto de tinta há em volta da linha (#118).
  */
 export const STROKE_WIDTH = 2;
 

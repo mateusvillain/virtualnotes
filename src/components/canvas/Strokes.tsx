@@ -10,7 +10,7 @@ import {
   type StrokeTool,
 } from "@/lib/board/types";
 import { STROKE_WIDTH, strokeInkWidth } from "@/lib/board/stroke-geometry";
-import { useRef, type PointerEvent, type ReactNode } from "react";
+import { createContext, useContext, useRef, type PointerEvent, type ReactNode } from "react";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
 
@@ -34,7 +34,7 @@ function inkStyle(tool: StrokeTool): { width: number; opacity?: number } {
 /**
  * Largura do alvo de clique do traço, em unidades de canvas.
  *
- * Seis vezes a tinta. Uma linha de 2 unidades exigiria acerto exato do ponteiro, e errar um
+ * Seis vezes a tinta do lápis. Uma linha de 2 unidades exigiria acerto exato do ponteiro, e errar um
  * rabisco por um pixel é o tipo de coisa que faz a pessoa concluir que traço não é
  * selecionável (#70). O alvo acompanha a forma do traço, e não a caixa dele: um risco na
  * diagonal tem caixa enorme e tinta nenhuma nos cantos, e um alvo retangular roubaria
@@ -318,26 +318,67 @@ export function Strokes({
   const porZ = [...strokes].sort(
     (a, b) => Number(isHighlighter(b)) - Number(isHighlighter(a)) || a.z - b.z,
   );
+  const destaques = porZ.filter(isHighlighter).length;
+
+  const shape = (stroke: Stroke) => (
+    <StrokeShape
+      key={stroke.id}
+      stroke={stroke}
+      selected={selection?.has(stroke.id) ?? false}
+      onSelect={onSelect}
+      // Arrastar move a seleção inteira junto: o gesto começa num traço, mas o
+      // deslocamento vale para todos os que estavam marcados.
+      offset={selection?.has(stroke.id) === true ? offset : null}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+      resizing={resizing?.id === stroke.id ? resizing : null}
+    />
+  );
 
   return (
     <InkLayer testId="strokes">
-      {porZ.map((stroke) => (
-        <StrokeShape
-          key={stroke.id}
-          stroke={stroke}
-          selected={selection?.has(stroke.id) ?? false}
-          onSelect={onSelect}
-          // Arrastar move a seleção inteira junto: o gesto começa num traço, mas o
-          // deslocamento vale para todos os que estavam marcados.
-          offset={selection?.has(stroke.id) === true ? offset : null}
-          onDragStart={onDragStart}
-          onDragMove={onDragMove}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragCancel}
-          resizing={resizing?.id === stroke.id ? resizing : null}
-        />
-      ))}
+      {porZ.slice(0, destaques).map(shape)}
+      <HighlighterPreviewSlot />
+      {porZ.slice(destaques).map(shape)}
     </InkLayer>
+  );
+}
+
+/** O traço em curso, como o `Viewport` o conhece. */
+export interface DrawingPreview {
+  points: readonly Point[];
+  color: StrokeColor;
+  tool: StrokeTool;
+}
+
+/**
+ * A prévia do marca-texto em curso, passada do `Viewport` para a camada de tinta (#116).
+ *
+ * O marca-texto gravado fica acima dos outros marca-textos (o traço novo nasce no topo do
+ * `z`) e abaixo de todo o resto da tinta. Nenhuma camada fora desta cabe nesse vão: por
+ * baixo do board a prévia ficaria sob os destaques que já existem, e por cima dele, sobre os
+ * rabiscos — e ao soltar o ponteiro o traço trocaria de altura na frente de quem desenha.
+ * Então quem sabe do gesto (o `Viewport`) entrega a prévia, e quem sabe da pilha a desenha.
+ *
+ * Contexto, e não prop: o `Viewport` recebe o board como `children` já montado, e a prévia
+ * muda a cada movimento do ponteiro — só o slot que a lê re-renderiza, não a pilha inteira.
+ */
+export const HighlighterPreviewContext = createContext<DrawingPreview | null>(null);
+
+function HighlighterPreviewSlot() {
+  const preview = useContext(HighlighterPreviewContext);
+  if (preview === null || preview.points.length < 2) return null;
+
+  return (
+    <g data-testid="stroke-preview">
+      <InkLine
+        points={preview.points.flatMap((point) => [point.x, point.y])}
+        color={strokeColor(preview.color)}
+        {...inkStyle(preview.tool)}
+      />
+    </g>
   );
 }
 
