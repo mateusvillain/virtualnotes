@@ -33,7 +33,8 @@ interface ToolbarToolProps {
  *
  * O botão corta a ilustração (`overflow-hidden`) na própria base, e quem o monta alinha essa
  * base à borda de baixo da toolbar. Cortar na toolbar inteira cortaria junto o tooltip, que
- * mora ao lado do botão e sai por cima dela.
+ * mora ao lado do botão e sai por cima dela. Sem `rounded`: o canto arredondado morderia a
+ * base cortada da ilustração.
  *
  * O deslocamento (8px) é a diferença entre as variantes `default` e `activated` no Figma
  * (node 1-625). O mesmo para hover, foco e ativo: são três jeitos de dizer "esta aqui", e
@@ -59,7 +60,7 @@ export function ToolbarTool({
     <Tooltip label={label} shortcut={shortcutLabel(shortcut, isMac)} side="top">
       <button
         type="button"
-        className={`group relative flex justify-center overflow-hidden rounded-control pt-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-selection ${className}`}
+        className={`group relative flex justify-center overflow-hidden pt-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-selection ${className}`}
         onClick={onToggle}
         aria-label={label}
         aria-keyshortcuts={ariaKeyShortcuts(shortcut)}
