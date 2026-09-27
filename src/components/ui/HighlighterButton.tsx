@@ -18,7 +18,8 @@ interface HighlighterButtonProps {
  * interface.
  *
  * O mesmo desenho é o cursor do modo, em `.cursor-highlighter` (src/app/globals.css). As
- * duas cópias precisam andar juntas, pela mesma razão do lápis.
+ * duas cópias precisam andar juntas; não dá para ter uma só, porque um `url()` de CSS não
+ * alcança um componente React.
  */
 function HighlighterIcon() {
   return (
@@ -58,6 +59,8 @@ export function HighlighterButton({ active, onToggle }: HighlighterButtonProps) 
       >
         <button
           type="button"
+          // O fundo do estado ligado é o mesmo do `hover`, como no lápis: "ligado" é o botão
+          // com a aparência de quem está sendo apontado.
           className={`${iconButtonClass} ${active ? "bg-canvas text-ink" : ""}`}
           onClick={onToggle}
           aria-label={ui.highlighter.action}

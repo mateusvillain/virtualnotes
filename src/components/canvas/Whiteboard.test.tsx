@@ -4486,6 +4486,22 @@ describe("Whiteboard — marca-texto (#117)", () => {
     expect(screen.queryByTestId("stroke-preview")).toBeNull();
   });
 
+  it("trocar de modo no meio do traço não muda a ferramenta dele", () => {
+    render(<Whiteboard />);
+    ligaMarcaTexto();
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 120, clientY: 55 });
+    fireEvent.keyDown(document, { key: "p" });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+
+    expect(tintas()).toHaveLength(1);
+    expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
+    expect(tintas()[0]?.getAttribute("stroke")).toBe(strokeColor(DEFAULT_HIGHLIGHTER_COLOR));
+  });
+
   it("mostra o cursor do marca-texto, e não o do lápis", () => {
     render(<Whiteboard />);
     ligaMarcaTexto();

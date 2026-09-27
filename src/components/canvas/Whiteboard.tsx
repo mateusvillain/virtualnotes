@@ -267,9 +267,9 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   });
 
   /**
-   * A paleta da ferramenta de desenho ligada, logo abaixo do botão dela (#69, #117). Cada
-   * ferramenta mostra e troca a própria cor — o marca-texto abre no amarelo, o lápis no
-   * preto —, e a caixa é a mesma dos botões para a pilha continuar parecendo um grupo só.
+   * A paleta de uma ferramenta de desenho. Cada uma mostra e troca a própria cor — o
+   * marca-texto abre no amarelo, o lápis no preto —, e a caixa é a mesma dos botões para a
+   * pilha continuar parecendo um grupo só, com um item a mais quando o modo está ligado.
    */
   function strokePalette(tool: StrokeTool) {
     return (
@@ -290,18 +290,18 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
           {/*
             A pilha de ferramentas, da mais usada para a menos: selecionar, criar nota,
-            rabiscar. A seleção no topo porque é a ferramenta de partida — o estado em que o
-            quadro começa e para onde `Esc` sempre volta —, e o rabisco por último porque é
-            o que se faz em volta das notas.
+            rabiscar, destacar, apagar. A seleção no topo porque é a ferramenta de partida — o
+            estado em que o quadro começa e para onde `Esc` sempre volta —, e as de desenho
+            depois, porque é o que se faz em volta das notas. A borracha fecha a pilha: é a
+            que desfaz o que as de cima fizeram.
           */}
           <SelectButton active={selecting} onSelect={selectTool} />
           <NoteButton active={placing} onToggle={togglePlacing} />
           <PencilButton active={pencil} onToggle={togglePencil} />
           {/*
-            Só com o lápis ligado (#69): a paleta escolhe a cor do **próximo** traço, e fora
-            do modo não há gesto nenhum para ela influenciar. Mesma caixa dos botões de
-            ferramenta — borda, fundo e sombra — para a pilha continuar parecendo um grupo
-            só, com um item a mais quando o lápis está ativo.
+            A paleta só aparece com uma ferramenta de desenho ligada (#69, #117), logo abaixo
+            do botão dela: escolhe a cor do **próximo** traço, e fora do modo não há gesto
+            nenhum para ela influenciar.
           */}
           {pencil ? strokePalette(STROKE_TOOL_PENCIL) : null}
           <HighlighterButton active={highlighter} onToggle={toggleHighlighter} />
@@ -346,12 +346,14 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           onSelectionStart={board.beginRectSelection}
           onSelectionRect={board.selectInRect}
           pencil={drawingTool !== null}
+          // Fora de um modo de desenho não há gesto de desenho: o lápis aqui é só o valor que
+          // as duas props exigem, e nunca chega a ser usado.
           pencilColor={board.strokeColors[drawingTool ?? STROKE_TOOL_PENCIL]}
           drawingTool={drawingTool ?? STROKE_TOOL_PENCIL}
           erasing={erasing}
           placing={placing}
           onPlaceNote={placeNote}
-          onStrokeEnd={(points) => board.addStroke(points, drawingTool ?? STROKE_TOOL_PENCIL)}
+          onStrokeEnd={board.addStroke}
           onEraseStart={board.beginErasing}
           onEraseSegment={board.eraseSegment}
           onEraseEnd={board.endErasing}

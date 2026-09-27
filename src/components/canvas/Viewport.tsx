@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -86,8 +85,12 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
   placing?: boolean;
   /** Clique com o modo de colocação ligado, já convertido para coordenadas de canvas. */
   onPlaceNote?: (point: Point) => void;
-  /** Traço concluído, em coordenadas de canvas, ainda sem simplificação. */
-  onStrokeEnd?: (points: Point[]) => void;
+  /**
+   * Traço concluído, em coordenadas de canvas, ainda sem simplificação, com a ferramenta que
+   * estava ligada quando o gesto **começou** (#117) — trocar de modo no meio do traço não
+   * muda o que já está sendo desenhado.
+   */
+  onStrokeEnd?: (points: Point[], tool: StrokeTool) => void;
   /** Começo de uma passada de borracha: o gesto acabou de tomar a superfície. */
   onEraseStart?: () => void;
   /** Trecho da passada de borracha, de onde o ponteiro estava a onde está agora. */
@@ -145,6 +148,9 @@ type DragState =
       pointerId: number;
       /** O traço em curso, em coordenadas de canvas, na ordem em que foi desenhado. */
       points: Point[];
+      /** Ferramenta e cor do instante em que o gesto começou (#117). */
+      tool: StrokeTool;
+      color: StrokeColor;
     }
   | {
       kind: "erase";
@@ -252,7 +258,7 @@ export function Viewport({
    * é a cópia que o React redesenha a cada ponto — sem ela, o rabisco só apareceria depois
    * de solto, e desenhar às cegas não é desenhar.
    */
-  const [drawing, setDrawing] = useState<Point[] | null>(null);
+  const [drawing, setDrawing] = useState<DrawingPreview | null>(null);
   /**
    * Onde o ponteiro está, em pixels de tela relativos ao canto da superfície.
    *
@@ -366,10 +372,11 @@ export function Viewport({
       event.currentTarget.setPointerCapture(event.pointerId);
 
       const point = screenToCanvas(localPoint(event), viewportRef.current);
-      drag.current = { kind: "draw", pointerId: event.pointerId, points: [point] };
-      setDrawing([point]);
+      const style = { tool: drawingTool, color: pencilColor };
+      drag.current = { kind: "draw", pointerId: event.pointerId, points: [point], ...style };
+      setDrawing({ points: [point], ...style });
     },
-    [localPoint],
+    [drawingTool, localPoint, pencilColor],
   );
 
   /**
@@ -705,7 +712,7 @@ export function Viewport({
         // Em coordenadas de canvas desde já: o traço é conteúdo do quadro, e guardá-lo em
         // pixels de tela o prenderia ao zoom e ao pan do instante em que foi desenhado.
         state.points.push(screenToCanvas(localPoint(event), viewportRef.current));
-        setDrawing([...state.points]);
+        setDrawing({ points: [...state.points], tool: state.tool, color: state.color });
         return;
       }
 
@@ -797,7 +804,7 @@ export function Viewport({
       if (state.kind === "draw") {
         // Dois pontos é o mínimo que o contrato aceita, e é também o mínimo que significa
         // alguma coisa: um clique parado com o lápis ligado não é um traço, é um clique.
-        if (state.points.length >= 2) onStrokeEnd?.(state.points);
+        if (state.points.length >= 2) onStrokeEnd?.(state.points, state.tool);
         return;
       }
 
@@ -892,14 +899,9 @@ export function Viewport({
             ? "cursor-crosshair"
             : "cursor-default";
 
-  const highlighting = drawingTool === STROKE_TOOL_HIGHLIGHTER;
-  const highlighterPreview = useMemo<DrawingPreview | null>(
-    () =>
-      highlighting && drawing !== null
-        ? { points: drawing, color: pencilColor, tool: drawingTool }
-        : null,
-    [drawing, drawingTool, highlighting, pencilColor],
-  );
+  // A altura da prévia segue a ferramenta do gesto, e não a do modo agora: são a mesma coisa,
+  // exceto quando o modo muda no meio de um traço (#117).
+  const highlighting = drawing?.tool === STROKE_TOOL_HIGHLIGHTER;
 
   return (
     <div
@@ -960,11 +962,15 @@ export function Viewport({
           ficar, e fora dela ele pularia de camada no instante em que o ponteiro fosse solto.
           O Provider fica sempre montado — trocá-lo de lugar remontaria o board inteiro.
         */}
-        <HighlighterPreviewContext.Provider value={highlighterPreview}>
+        <HighlighterPreviewContext.Provider value={highlighting ? drawing : null}>
           {children}
         </HighlighterPreviewContext.Provider>
         {highlighting ? null : (
-          <StrokePreview points={drawing} color={pencilColor} tool={drawingTool} />
+          <StrokePreview
+            points={drawing?.points ?? null}
+            color={drawing?.color ?? pencilColor}
+            tool={drawing?.tool}
+          />
         )}
         {/*
           Depois dos post-its, e não antes: a nota que está sendo colocada vai nascer na
