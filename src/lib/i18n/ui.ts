@@ -56,10 +56,11 @@ export interface UiCopy {
     black: string;
   };
   /**
-   * Nome do grupo de cores de cada ferramenta de desenho nova (#112). O rótulo do preto é o
-   * de `pencil.black`, que vale para a paleta inteira: é a mesma cor nas três ferramentas.
+   * Nome do grupo de cores da caneta tinteiro (#112). O rótulo do preto é o de
+   * `pencil.black`, que vale para a paleta inteira: é a mesma cor nas três ferramentas.
    */
   fountain: { color: string };
+  /** Nome do grupo de cores do marca-texto (#112). O preto, como na caneta, é `pencil.black`. */
   highlighter: { color: string };
   /** Dica e `aria-label` do botão que liga o modo borracha (#98). */
   eraser: { action: string };

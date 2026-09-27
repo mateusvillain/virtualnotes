@@ -302,7 +302,7 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
   const setStrokeColor = useCallback((tool: StrokeTool, color: StrokeColor) => {
     setStrokeColors((current) => {
       if (current[tool] === color) return current;
-      const next: [StrokeColor, StrokeColor, StrokeColor] = [...current];
+      const next: [...StrokeColors] = [...current];
       next[tool] = color;
       return next;
     });

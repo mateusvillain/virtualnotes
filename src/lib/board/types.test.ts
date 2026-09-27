@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_STROKE_COLORS,
   NOTE_COLORS,
   SCHEMA_VERSION,
   STROKE_COLORS,
-  DEFAULT_STROKE_COLORS,
   STROKE_TOOLS,
   STROKE_TOOL_PENCIL,
   createEmptyBoard,

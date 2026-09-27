@@ -5,13 +5,16 @@ import { desvioMaximo, pontosDe } from "@/test-utils/geometry";
 import { SIMPLIFY_TOLERANCE } from "@/lib/canvas/simplify";
 import {
   CANVAS_MAX_ABS_COORDINATE,
+  DEFAULT_HIGHLIGHTER_COLOR,
   NOTE_COLORS,
   NOTE_SIZE,
-  DEFAULT_HIGHLIGHTER_COLOR,
   SCHEMA_VERSION,
   STROKE_COLOR_BLACK,
+  STROKE_TOOL_FOUNTAIN,
+  STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   type Board,
+  type StrokeColor,
 } from "./types";
 import { selectionSize } from "./selection";
 import { useBoard } from "./useBoard";
@@ -1146,22 +1149,24 @@ describe("useBoard — uma cor por ferramenta (#112)", () => {
   it("trocar a cor de uma ferramenta não mexe nas outras", () => {
     const { result } = renderHook(() => useBoard());
 
-    act(() => result.current.setStrokeColor(2, 2));
+    const verde = NOTE_COLORS.indexOf("green") as StrokeColor;
+    act(() => result.current.setStrokeColor(STROKE_TOOL_HIGHLIGHTER, verde));
 
-    expect(result.current.strokeColors).toEqual([STROKE_COLOR_BLACK, STROKE_COLOR_BLACK, 2]);
+    expect(result.current.strokeColors).toEqual([STROKE_COLOR_BLACK, STROKE_COLOR_BLACK, verde]);
   });
 
   it("o traço grava a cor e a ferramenta de quem o desenhou", () => {
     const { result } = renderHook(() => useBoard());
-    act(() => result.current.setStrokeColor(1, 3));
+    const azul = NOTE_COLORS.indexOf("blue") as StrokeColor;
+    act(() => result.current.setStrokeColor(STROKE_TOOL_FOUNTAIN, azul));
 
-    act(() => result.current.addStroke(traço, 1));
-    act(() => result.current.addStroke(traço, 2));
+    act(() => result.current.addStroke(traço, STROKE_TOOL_FOUNTAIN));
+    act(() => result.current.addStroke(traço, STROKE_TOOL_HIGHLIGHTER));
     act(() => result.current.addStroke(traço));
 
     expect(result.current.strokes.map(({ color, tool }) => ({ color, tool }))).toEqual([
-      { color: 3, tool: 1 },
-      { color: DEFAULT_HIGHLIGHTER_COLOR, tool: 2 },
+      { color: azul, tool: STROKE_TOOL_FOUNTAIN },
+      { color: DEFAULT_HIGHLIGHTER_COLOR, tool: STROKE_TOOL_HIGHLIGHTER },
       { color: STROKE_COLOR_BLACK, tool: undefined },
     ]);
   });
@@ -1170,7 +1175,7 @@ describe("useBoard — uma cor por ferramenta (#112)", () => {
     const { result } = renderHook(() => useBoard());
     const antes = result.current.strokeColors;
 
-    act(() => result.current.setStrokeColor(0, STROKE_COLOR_BLACK));
+    act(() => result.current.setStrokeColor(STROKE_TOOL_PENCIL, STROKE_COLOR_BLACK));
 
     expect(result.current.strokeColors).toBe(antes);
   });
