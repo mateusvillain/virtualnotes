@@ -2,6 +2,7 @@
 
 import { strokeColor } from "@/lib/theme/note-colors";
 import {
+  STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   strokeTool,
@@ -9,7 +10,15 @@ import {
   type StrokeColor,
   type StrokeTool,
 } from "@/lib/board/types";
-import { STROKE_WIDTH, strokeInkWidth, widenByInk } from "@/lib/board/stroke-geometry";
+import {
+  STROKE_WIDTH,
+  fountainOutline,
+  polygonPath,
+  scaleStrokePoints,
+  strokeInkWidth,
+  widenByInk,
+} from "@/lib/board/stroke-geometry";
+import { simplify } from "@/lib/canvas/simplify";
 import { createContext, useContext, useRef, type PointerEvent, type ReactNode } from "react";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
@@ -151,6 +160,49 @@ function InkLine({
 }
 
 /**
+ * A tinta da caneta tinteiro (#113): o contorno da pena caligráfica, preenchido na cor do
+ * traço.
+ *
+ * Forma preenchida, e não linha: a espessura muda ao longo do traço, e um `stroke-width`
+ * vale para a linha inteira. O contorno é calculado dos pontos a cada desenho (#111) — o
+ * board não guarda espessura nenhuma.
+ */
+function FountainInk({
+  points,
+  color,
+  testId,
+}: {
+  points: readonly number[];
+  color: string;
+  testId?: string;
+}) {
+  return <path d={polygonPath(fountainOutline(points))} fill={color} data-testid={testId} />;
+}
+
+/**
+ * A tinta de um traço, na forma da ferramenta dele: o contorno da pena para a caneta
+ * tinteiro, a linha para o resto. É o ponto único onde a ferramenta decide a forma, para o
+ * traço gravado e as prévias não divergirem.
+ */
+function Ink({
+  points,
+  color,
+  tool,
+  testId,
+}: {
+  points: readonly number[];
+  color: string;
+  tool: StrokeTool;
+  testId?: string;
+}) {
+  return tool === STROKE_TOOL_FOUNTAIN ? (
+    <FountainInk points={points} color={color} testId={testId} />
+  ) : (
+    <InkLine points={points} color={color} {...inkStyle(tool)} testId={testId} />
+  );
+}
+
+/**
  * Um traço gravado: a tinta e o alvo de clique, deslocados e escalados pelo gesto em curso.
  *
  * A moldura de seleção **não** está aqui: ela é um retângulo em volta da área do desenho, e
@@ -245,9 +297,19 @@ function StrokeShape({
     `scaleStrokePoints` usa ao gravar, e sem ela o traço saltaria de lugar no instante em
     que o ponteiro é solto.
   */
+  const tool = strokeTool(stroke);
+  /*
+    A caneta tinteiro redimensiona pelos pontos, e não pela escala do SVG (#113): a escala
+    esticaria a tinta junto, e a pena sairia grossa num eixo e fina no outro até o ponteiro
+    ser solto. Reescalando os pontos, o contorno é recalculado com a pena de sempre — que é
+    o que `scaleStrokePoints` grava ao soltar, então nada muda no instante do soltar.
+  */
+  const reshaped = tool === STROKE_TOOL_FOUNTAIN && resizing !== null;
+  const points = reshaped ? scaleStrokePoints(stroke, resizing.from, resizing.size) : stroke.points;
+
   const partes: string[] = [];
   if (offset !== null) partes.push(`translate(${offset.x} ${offset.y})`);
-  if (resizing !== null) {
+  if (resizing !== null && !reshaped) {
     const fatorX = resizing.from.w === 0 ? 1 : resizing.size.w / resizing.from.w;
     const fatorY = resizing.from.h === 0 ? 1 : resizing.size.h / resizing.from.h;
     partes.push(
@@ -266,17 +328,12 @@ function StrokeShape({
       data-resizing={resizing !== null}
       transform={partes.length === 0 ? undefined : partes.join(" ")}
     >
-      <InkLine
-        points={stroke.points}
-        color={strokeColor(stroke.color)}
-        {...inkStyle(strokeTool(stroke))}
-        testId="stroke"
-      />
+      <Ink points={points} color={strokeColor(stroke.color)} tool={tool} testId="stroke" />
       <polyline
-        points={polylinePoints(stroke.points)}
+        points={polylinePoints(points)}
         fill="none"
         stroke="transparent"
-        strokeWidth={strokeHitWidth(strokeTool(stroke))}
+        strokeWidth={strokeHitWidth(tool)}
         strokeLinecap="round"
         strokeLinejoin="round"
         // `stroke` e não `all`: só a faixa em volta da linha recebe o ponteiro. Com `all`, o
@@ -382,10 +439,10 @@ function HighlighterPreviewSlot() {
 
   return (
     <g data-testid="stroke-preview">
-      <InkLine
+      <Ink
         points={preview.points.flatMap((point) => [point.x, point.y])}
         color={strokeColor(preview.color)}
-        {...inkStyle(preview.tool)}
+        tool={preview.tool}
       />
     </g>
   );
@@ -419,12 +476,18 @@ interface StrokePreviewProps {
 export function StrokePreview({ points, color, tool = STROKE_TOOL_PENCIL }: StrokePreviewProps) {
   if (points === null || points.length < 2) return null;
 
+  // A caneta tinteiro pinta a prévia pelos pontos já simplificados, como `addStroke` vai
+  // gravar (#113). A espessura dela sai da direção de cada trecho, e os pontos crus do
+  // ponteiro tremem de um pixel para o outro: sem isto, a prévia sairia serrilhada e o traço
+  // mudaria de cara ao ser solto. O lápis não precisa — a linha dele não depende da direção.
+  const shown = tool === STROKE_TOOL_FOUNTAIN ? simplify(points) : points;
+
   return (
     <InkLayer testId="stroke-preview">
-      <InkLine
-        points={points.flatMap((point) => [point.x, point.y])}
+      <Ink
+        points={shown.flatMap((point) => [point.x, point.y])}
         color={strokeColor(color)}
-        {...inkStyle(tool)}
+        tool={tool}
       />
     </InkLayer>
   );
