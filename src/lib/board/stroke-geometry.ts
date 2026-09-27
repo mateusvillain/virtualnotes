@@ -172,7 +172,15 @@ export function fountainOutline(flat: readonly number[]): Point[] {
     const out = outgoing ?? incoming!;
 
     const tangent = unit({ x: into.x + out.x, y: into.y + out.y }) ?? into;
-    const half = (fountainWidth(into) + fountainWidth(out)) / 4;
+    // Na bissetriz, a borda fica mais perto da linha do que a meia-largura: numa junta de
+    // 90°, a tinta sairia com ~0,71 da espessura. Dividir pelo cosseno do meio ângulo (a
+    // mitra) devolve a espessura na junta; o teto na meia pena impede que uma volta fechada
+    // estique a borda para longe — e mantém a tinta dentro do alcance dos alvos (#115).
+    const cos = into.x * tangent.x + into.y * tangent.y;
+    const half = Math.min(
+      (fountainWidth(into) + fountainWidth(out)) / 4 / Math.max(cos, Number.EPSILON),
+      FOUNTAIN_MAX_WIDTH / 2,
+    );
     const normal = { x: -tangent.y * half, y: tangent.x * half };
 
     left.push({ x: point.x + normal.x, y: point.y + normal.y });

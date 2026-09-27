@@ -302,10 +302,13 @@ function StrokeShape({
     A caneta tinteiro redimensiona pelos pontos, e não pela escala do SVG (#113): a escala
     esticaria a tinta junto, e a pena sairia grossa num eixo e fina no outro até o ponteiro
     ser solto. Reescalando os pontos, o contorno é recalculado com a pena de sempre — que é
-    o que `scaleStrokePoints` grava ao soltar, então nada muda no instante do soltar.
+    o que `endResize` grava ao soltar. Arredondados como lá: a espessura sai da direção de
+    cada trecho, e a fração que a gravação descarta mudaria o ângulo dos trechos curtos.
   */
   const reshaped = tool === STROKE_TOOL_FOUNTAIN && resizing !== null;
-  const points = reshaped ? scaleStrokePoints(stroke, resizing.from, resizing.size) : stroke.points;
+  const points = reshaped
+    ? scaleStrokePoints(stroke, resizing.from, resizing.size).map(Math.round)
+    : stroke.points;
 
   const partes: string[] = [];
   if (offset !== null) partes.push(`translate(${offset.x} ${offset.y})`);
@@ -476,19 +479,20 @@ interface StrokePreviewProps {
 export function StrokePreview({ points, color, tool = STROKE_TOOL_PENCIL }: StrokePreviewProps) {
   if (points === null || points.length < 2) return null;
 
-  // A caneta tinteiro pinta a prévia pelos pontos já simplificados, como `addStroke` vai
-  // gravar (#113). A espessura dela sai da direção de cada trecho, e os pontos crus do
-  // ponteiro tremem de um pixel para o outro: sem isto, a prévia sairia serrilhada e o traço
-  // mudaria de cara ao ser solto. O lápis não precisa — a linha dele não depende da direção.
-  const shown = tool === STROKE_TOOL_FOUNTAIN ? simplify(points) : points;
+  // A caneta tinteiro pinta a prévia pelos pontos como o board vai gravá-los (#113):
+  // simplificados, como em `addStroke`, e inteiros, como em `parseBoard`. A espessura dela
+  // sai da direção de cada trecho, e os pontos crus do ponteiro tremem de um pixel para o
+  // outro: sem isto, a prévia sairia serrilhada e o traço mudaria de cara ao ser solto. O
+  // lápis não precisa — a linha dele não depende da direção.
+  const flat = points.flatMap((point) => [point.x, point.y]);
+  const shown =
+    tool === STROKE_TOOL_FOUNTAIN
+      ? simplify(points).flatMap((point) => [Math.round(point.x), Math.round(point.y)])
+      : flat;
 
   return (
     <InkLayer testId="stroke-preview">
-      <Ink
-        points={shown.flatMap((point) => [point.x, point.y])}
-        color={strokeColor(color)}
-        tool={tool}
-      />
+      <Ink points={shown} color={strokeColor(color)} tool={tool} />
     </InkLayer>
   );
 }
