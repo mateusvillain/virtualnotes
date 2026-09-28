@@ -1,8 +1,9 @@
 /**
  * Aparência dos botões de ícone flutuantes sobre o quadro — o IconButton do Figma (1-124, #133).
  *
- * Zoom (#9) e compartilhar (#46) são a mesma classe de controle: 40px, ícone de 24px, sem
- * rótulo escrito. Mora num lugar só porque a alternativa já aconteceu — a string estava
+ * Zoom (#9) e compartilhar (#46) são a mesma classe de controle: 32px, ícone de 20px, sem
+ * rótulo escrito. Menor que os 40px do Figma de propósito: nos cantos, 40px faziam as
+ * pílulas pesarem mais que o próprio quadro. Mora num lugar só porque a alternativa já aconteceu — a string estava
  * copiada em dois arquivos, e ajustar o tema de um deixaria o outro para trás sem ninguém
  * perceber.
  *
@@ -12,7 +13,7 @@
  * ponteiro sai.
  */
 export const iconButtonClass =
-  "flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-control-active active:bg-control-active aria-pressed:bg-control-active disabled:pointer-events-none disabled:opacity-40";
+  "flex h-8 w-8 items-center justify-center rounded-full text-ink transition-colors hover:bg-control-active active:bg-control-active aria-pressed:bg-control-active disabled:pointer-events-none disabled:opacity-40";
 
 /**
  * Aparência dos botões e links de texto que aparecem em painéis sobre o quadro.
