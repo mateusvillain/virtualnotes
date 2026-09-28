@@ -17,6 +17,7 @@ import { useTouchPrimary } from "@/lib/dom/useTouchPrimary";
 import { useCopy, usePaste } from "@/lib/dom/useClipboard";
 import { ColorPicker } from "@/components/postit/ColorPicker";
 import { HistoryButtons } from "@/components/ui/HistoryButtons";
+import { pillSurfaceClass } from "@/components/ui/iconButton";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
 import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -256,7 +257,40 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   return (
     <AppShell
       leadingActions={
-        <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
+        /*
+          Novo quadro e compartilhar numa pílula só (#138, Figma 1-2): as duas ações que tiram o
+          quadro da tela — uma o descarta, a outra o publica. Ficam longe do histórico e do
+          zoom, que são o que se usa durante o trabalho.
+
+          Grade, e não uma linha: os painéis dos dois botões descem abaixo da pílula, um por
+          linha (`col-span-full`), e os dois podem estar abertos ao mesmo tempo — "salvar e
+          começar" abre o do compartilhar com o do novo quadro ainda na tela. Os botões ficam
+          fixos na linha 1, cada um na sua coluna, sobre o fundo da pílula; a terceira coluna
+          (`1fr`) é o que deixa um painel mais largo que a pílula sem esticá-la.
+
+          `m-1` em cada botão: 4px até a borda da pílula e 8px entre eles, como no Figma.
+        */
+        <div
+          className="grid grid-cols-[auto_auto_1fr] items-start gap-y-2"
+          data-testid="leading-pill"
+        >
+          <div
+            aria-hidden="true"
+            className={`col-start-1 col-end-3 row-start-1 self-stretch ${pillSurfaceClass}`}
+          />
+          <NewBoardButton
+            hasContent={hasContent}
+            onNewBoard={startNewBoard}
+            share={share.share}
+            triggerClassName="col-start-1 row-start-1 m-1"
+          />
+          <ShareButton
+            state={share.state}
+            share={share.share}
+            dismiss={share.dismiss}
+            triggerClassName="col-start-2 row-start-1 m-1"
+          />
+        </div>
       }
       toolbar={
         <>
@@ -295,18 +329,12 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
         </>
       }
       trailingActions={
-        // Desfazer à esquerda de salvar: o canto deixa de ser uma ação só e vira um grupo,
-        // com o histórico antes porque é o que se usa durante o trabalho e o salvar depois,
-        // porque é o que o encerra. `gap-2` é o mesmo respiro da pilha do canto oposto.
-        <div className="flex items-start gap-2">
-          <HistoryButtons
-            canUndo={board.canUndo}
-            canRedo={board.canRedo}
-            onUndo={board.undo}
-            onRedo={board.redo}
-          />
-          <ShareButton state={share.state} share={share.share} dismiss={share.dismiss} />
-        </div>
+        <HistoryButtons
+          canUndo={board.canUndo}
+          canRedo={board.canRedo}
+          onUndo={board.undo}
+          onRedo={board.redo}
+        />
       }
       controls={
         // No toque a pinça faz o mesmo trabalho, e o painel só disputaria o canto onde o

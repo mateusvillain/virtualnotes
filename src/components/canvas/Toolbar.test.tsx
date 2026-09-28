@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { UI } from "@/lib/i18n/ui";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
-import { TOOLBAR_TOOLS, Toolbar, toolbarSurfaceClass } from "./Toolbar";
+import { pillSurfaceClass } from "@/components/ui/iconButton";
+import { TOOLBAR_TOOLS, Toolbar } from "./Toolbar";
 
 const ui = UI.en;
 
@@ -77,7 +78,7 @@ describe("Toolbar", () => {
     );
     const bloco = screen.getByTestId("toolbar-palette");
 
-    expect(bloco.className).toContain(toolbarSurfaceClass);
+    expect(bloco.className).toContain(pillSurfaceClass);
     // 220 de cores + 2 × 7 de respiro + 2 de borda = 236.
     expect(bloco.className).toContain("px-[7px]");
     expect(bloco.className).toContain("h-11");

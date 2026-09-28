@@ -31,3 +31,12 @@ export const panelButtonClass =
  */
 export const subtleButtonClass =
   "rounded-control px-2 py-1.5 text-sm text-ink-muted transition-colors hover:bg-canvas hover:text-ink";
+
+/**
+ * O vidro das pílulas da moldura: a toolbar inferior e o bloco de cores (#137, #140) e os
+ * grupos dos cantos (#138, #139). Branco a 90% com desfoque de 4px e borda a meio tom, como
+ * no Figma (1-2, 1-625) — sem a sombra dos painéis, porque a pílula encosta no quadro e não
+ * flutua sobre ele.
+ */
+export const pillSurfaceClass =
+  "rounded-full border border-border/50 bg-surface/90 backdrop-blur-xs";

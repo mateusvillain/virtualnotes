@@ -19,6 +19,8 @@ interface NewBoardButtonProps {
   onNewBoard: () => void;
   /** A mesma ação de compartilhar do resto da interface (#46), e não um segundo caminho. */
   share: ShareApi["share"];
+  /** Onde o botão se encaixa no layout de quem o monta — a pílula do canto (#138). */
+  triggerClassName?: string;
 }
 
 /** Ícone de documento novo: uma folha com um `+`. */
@@ -51,7 +53,12 @@ function NewBoardIcon() {
  * Quem pediu para salvar e não conseguiu continua com o quadro: limpar depois de uma falha
  * deixaria a pessoa sem o board **e** sem o link, que é pior do que não ter oferecido nada.
  */
-export function NewBoardButton({ hasContent, onNewBoard, share }: NewBoardButtonProps) {
+export function NewBoardButton({
+  hasContent,
+  onNewBoard,
+  share,
+  triggerClassName = "",
+}: NewBoardButtonProps) {
   const ui = useUi();
   const [asking, setAsking] = useState(false);
   /** Esperando o link que o usuário pediu antes de limpar. */
@@ -111,8 +118,11 @@ export function NewBoardButton({ hasContent, onNewBoard, share }: NewBoardButton
   }, [asking, close]);
 
   return (
-    <div className="flex flex-col items-start gap-2">
-      <div className="rounded-control border border-border bg-surface p-1 shadow-control">
+    // `contents`: o botão e o painel entram direto no layout de quem monta. Na pílula do
+    // canto (#138) o botão fica na linha dela e o painel desce para baixo, empilhado com o do
+    // compartilhar — os dois podem estar abertos juntos, no "salvar e começar".
+    <div className="contents">
+      <div className={triggerClassName}>
         <Tooltip label={ui.newBoard.action} align="start">
           <button
             ref={buttonRef}
@@ -139,7 +149,7 @@ export function NewBoardButton({ hasContent, onNewBoard, share }: NewBoardButton
       {asking ? (
         <div
           id={panelId}
-          className="flex w-72 flex-col gap-3 rounded-control border border-border bg-surface p-3 shadow-control"
+          className="col-span-full flex w-72 flex-col gap-3 justify-self-start rounded-control border border-border bg-surface p-3 shadow-control"
         >
           <p className="text-xs text-ink">{ui.newBoard.warning}</p>
 

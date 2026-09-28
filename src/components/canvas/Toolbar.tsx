@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType, ReactNode, SVGProps } from "react";
+import { pillSurfaceClass } from "@/components/ui/iconButton";
 import { ToolbarTool } from "@/components/ui/ToolbarTool";
 import { EraserIllustration } from "@/components/ui/tools/EraserIllustration";
 import { FountainPenIllustration } from "@/components/ui/tools/FountainPenIllustration";
@@ -22,15 +23,6 @@ interface ToolbarProps {
    */
   palette?: ReactNode;
 }
-
-/**
- * O vidro das peças da base da tela: a pílula das ferramentas e, acima dela, o bloco de
- * cores (#140). Branco a 90% com desfoque de 4px e borda a meio tom, como no Figma (1-625) —
- * sem a sombra dos controles do canto, porque aqui a peça encosta no quadro e as ilustrações
- * já fazem o volume.
- */
-export const toolbarSurfaceClass =
-  "rounded-full border border-border/50 bg-surface/90 backdrop-blur-xs";
 
 interface ToolbarEntry {
   mode: ToolMode;
@@ -115,7 +107,7 @@ export function Toolbar({ active, onToggle, palette }: ToolbarProps) {
         // Mesmo vidro da pílula: as duas peças são uma toolbar só, em dois andares. 44px de
         // altura e 236 de largura contando a borda (Figma): 220 de cores, 7px de cada lado.
         <div
-          className={`flex h-11 items-center px-[7px] ${toolbarSurfaceClass}`}
+          className={`flex h-11 items-center px-[7px] ${pillSurfaceClass}`}
           data-testid="toolbar-palette"
         >
           {palette}
@@ -124,7 +116,7 @@ export function Toolbar({ active, onToggle, palette }: ToolbarProps) {
       <div
         role="group"
         aria-label={ui.toolbar.label}
-        className={`flex h-22 items-stretch gap-3 pl-6 pr-7 ${toolbarSurfaceClass}`}
+        className={`flex h-22 items-stretch gap-3 pl-6 pr-7 ${pillSurfaceClass}`}
         data-testid="toolbar"
       >
         {tool(note!)}

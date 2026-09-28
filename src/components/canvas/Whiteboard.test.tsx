@@ -4912,3 +4912,28 @@ describe("Whiteboard — bloco de cores acima da toolbar (#140)", () => {
     expect(canto.querySelector('[role="radiogroup"]')).toBeNull();
   });
 });
+
+describe("Whiteboard — canto superior esquerdo (#138)", () => {
+  it("põe novo quadro e compartilhar na mesma pílula, nessa ordem", () => {
+    render(<Whiteboard />);
+    const pilula = screen.getByTestId("leading-pill");
+
+    const botoes = [...pilula.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"));
+    expect(botoes).toEqual([UI.en.newBoard.action, UI.en.save.action]);
+  });
+
+  it("os dois painéis descem abaixo da pílula, cada um numa linha, e podem estar abertos juntos", async () => {
+    const user = userEvent.setup();
+    render(<Whiteboard />);
+    duploCliqueNoFundo(300, 300);
+    fireEvent.keyDown(screen.getByTestId("post-it-editor"), { key: "Escape" });
+
+    await user.click(screen.getByRole("button", { name: UI.en.newBoard.action }));
+    fireEvent.keyDown(document, { key: "s", metaKey: true });
+
+    const pilula = screen.getByTestId("leading-pill");
+    const paineis = [...pilula.querySelectorAll(".col-span-full")];
+    // O aviso do novo quadro e o "salvando" do compartilhar, os dois abaixo da pílula.
+    expect(paineis.length).toBeGreaterThanOrEqual(2);
+  });
+});
