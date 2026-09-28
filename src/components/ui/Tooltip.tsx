@@ -80,6 +80,20 @@ export function Tooltip({
 }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+
+  /**
+   * O gatilho está desabilitado agora — `disabled` ou `aria-disabled`.
+   *
+   * Lido do DOM, e não recebido por prop: o gatilho já diz isso de si mesmo, e uma prop
+   * repetida seria mais um par de valores que podem divergir, como o `label` e o
+   * `aria-label` (ver acima).
+   */
+  const triggerDisabled = useCallback(
+    () =>
+      wrapperRef.current?.firstElementChild?.matches(":disabled, [aria-disabled='true']") ?? false,
+    [],
+  );
 
   useEffect(() => trackInputModality(), []);
 
@@ -88,26 +102,52 @@ export function Tooltip({
     setOpen(false);
   }, []);
 
-  const scheduleOpen = useCallback((event: PointerEvent) => {
-    // Só ponteiros que de fato pairam. No toque não existe "passar o cursor": o
-    // `pointerenter` chega junto com o toque, e a caixa apareceria por cima do que a pessoa
-    // acabou de tocar. Lista do que vale, e não do que não vale, para um tipo de ponteiro
-    // novo não abrir a caixa por descuido.
-    if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+  const scheduleOpen = useCallback(
+    (event: PointerEvent) => {
+      // Só ponteiros que de fato pairam. No toque não existe "passar o cursor": o
+      // `pointerenter` chega junto com o toque, e a caixa apareceria por cima do que a pessoa
+      // acabou de tocar. Lista do que vale, e não do que não vale, para um tipo de ponteiro
+      // novo não abrir a caixa por descuido.
+      if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+      // Ação desabilitada não tem dica: o nome de algo que não dá para fazer agora só convida
+      // a um clique que não vai acontecer, e o esmaecido do botão já diz o que há para dizer.
+      if (triggerDisabled()) return;
 
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setOpen(true), TOOLTIP_DELAY_MS);
-  }, []);
+      clearTimeout(timer.current);
+      // Pode ter desabilitado durante a espera: a dica sai só se o gatilho ainda vale.
+      timer.current = setTimeout(() => {
+        if (!triggerDisabled()) setOpen(true);
+      }, TOOLTIP_DELAY_MS);
+    },
+    [triggerDisabled],
+  );
 
   const openIfKeyboard = useCallback(() => {
     // Tocar e clicar também dão foco ao botão. Sem olhar de onde o gesto veio, o toque
     // abriria a caixa sobre o que acabou de ser tocado, e o clique a deixaria aberta depois
     // de o botão já ter agido.
     if (!lastInputWasKeyboard()) return;
+    if (triggerDisabled()) return;
 
     clearTimeout(timer.current);
     setOpen(true);
-  }, []);
+  }, [triggerDisabled]);
+
+  /*
+    Aberta sobre um gatilho que desabilita — o último desfazer da pilha, clicado pelo
+    teclado —, a dica fecha junto. Observando o atributo, e não o próximo render: quem
+    desabilita o botão é o pai, e o `Tooltip` não tem como saber quando isso acontece.
+  */
+  useEffect(() => {
+    const trigger = wrapperRef.current?.firstElementChild;
+    if (!open || trigger === null || trigger === undefined) return;
+
+    const observer = new MutationObserver(() => {
+      if (triggerDisabled()) cancel();
+    });
+    observer.observe(trigger, { attributes: true, attributeFilter: ["disabled", "aria-disabled"] });
+    return () => observer.disconnect();
+  }, [cancel, open, triggerDisabled]);
 
   // O timer pendente morre com o componente: sem isto, um botão desmontado logo depois do
   // hover abriria uma caixa sobre uma árvore que não existe mais.
@@ -132,6 +172,7 @@ export function Tooltip({
       `focusin`/`focusout`, que sobem na árvore.
     */
     <span
+      ref={wrapperRef}
       className="relative inline-flex"
       onPointerEnter={scheduleOpen}
       onPointerLeave={cancel}

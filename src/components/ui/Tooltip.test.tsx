@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Tooltip, TOOLTIP_DELAY_MS } from "./Tooltip";
@@ -207,5 +207,46 @@ describe("Tooltip", () => {
     // Engolir os eventos do gatilho quebraria em silêncio um controle que já os tratava.
     expect(onPointerEnter).toHaveBeenCalled();
     expect(onFocus).toHaveBeenCalled();
+  });
+
+  it("não abre sobre um botão desabilitado, nem pelo mouse nem pelo teclado", async () => {
+    render(
+      <>
+        <Tooltip label="Desfazer">
+          <button type="button" aria-label="Desfazer" disabled />
+        </Tooltip>
+        <Tooltip label="Refazer">
+          <button type="button" aria-label="Refazer" aria-disabled="true" />
+        </Tooltip>
+      </>,
+    );
+
+    // `disabled` não recebe ponteiro nem foco; o hover chega pelo invólucro.
+    fireEvent.pointerEnter(screen.getByLabelText("Desfazer").parentElement!, {
+      pointerType: "mouse",
+    });
+    await userEvent.tab();
+    await vi.advanceTimersByTimeAsync(TOOLTIP_DELAY_MS);
+
+    expect(screen.queryByText("Desfazer")).toBeNull();
+    expect(screen.queryByText("Refazer")).toBeNull();
+  });
+
+  it("fecha se o botão desabilitar com a dica aberta", async () => {
+    function Alternavel({ disabled }: { disabled: boolean }) {
+      return (
+        <Tooltip label="Desfazer">
+          <button type="button" aria-label="Desfazer" disabled={disabled} />
+        </Tooltip>
+      );
+    }
+    const { rerender } = render(<Alternavel disabled={false} />);
+
+    await userEvent.tab();
+    await screen.findByText("Desfazer");
+
+    rerender(<Alternavel disabled />);
+
+    await waitFor(() => expect(screen.queryByText("Desfazer")).toBeNull());
   });
 });
