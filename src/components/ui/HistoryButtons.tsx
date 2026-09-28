@@ -26,7 +26,7 @@ function UndoIcon({ flipped = false }: { flipped?: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className={`h-6 w-6 ${flipped ? "scale-x-[-1]" : ""}`}
+      className={`h-5 w-5 ${flipped ? "scale-x-[-1]" : ""}`}
       fill="none"
       stroke="currentColor"
       strokeWidth={1.75}

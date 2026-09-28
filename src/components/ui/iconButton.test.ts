@@ -5,8 +5,8 @@ import { iconButtonClass } from "./iconButton";
 describe("iconButtonClass", () => {
   const classes = iconButtonClass.split(" ");
 
-  it("tem 40px e é circular", () => {
-    expect(classes).toEqual(expect.arrayContaining(["h-10", "w-10", "rounded-full"]));
+  it("tem 32px e é circular", () => {
+    expect(classes).toEqual(expect.arrayContaining(["h-8", "w-8", "rounded-full"]));
   });
 
   it("usa o mesmo fundo no hover, no clique e no ligado", () => {
