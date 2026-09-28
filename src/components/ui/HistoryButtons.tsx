@@ -1,6 +1,6 @@
 "use client";
 
-import { iconButtonClass } from "@/components/ui/iconButton";
+import { iconButtonClass, pillSurfaceClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useIsMac } from "@/lib/dom/useIsMac";
 import { useUi } from "@/lib/i18n/LocaleProvider";
@@ -41,7 +41,7 @@ function UndoIcon({ flipped = false }: { flipped?: boolean }) {
 }
 
 /**
- * Desfazer e refazer, no canto de publicar (issue #87).
+ * Desfazer e refazer, no canto superior direito, ao lado do zoom (issues #87, #139).
  *
  * Os atalhos resolvem para quem tem teclado; os botões são o que torna desfazer alcançável
  * no toque, onde não há `Ctrl+Z`, e o que anuncia que a capacidade existe. É a mesma razão
@@ -61,7 +61,9 @@ export function HistoryButtons({ canUndo, canRedo, onUndo, onRedo }: HistoryButt
   const isMac = useIsMac();
 
   return (
-    <div className="flex items-center rounded-control border border-border bg-surface p-1 shadow-control">
+    // Pílula do canto superior direito (#139): 4px até a borda e 8px entre os dois, como no
+    // Figma (1-2).
+    <div className={`flex items-center gap-2 p-1 ${pillSurfaceClass}`}>
       <Tooltip label={ui.history.undo} shortcut={shortcutLabel(SHORTCUTS.undo, isMac)}>
         <button
           type="button"

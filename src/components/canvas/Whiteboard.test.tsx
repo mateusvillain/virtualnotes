@@ -4937,3 +4937,48 @@ describe("Whiteboard — canto superior esquerdo (#138)", () => {
     expect(paineis.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("Whiteboard — canto superior direito (#139)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("põe o histórico e o zoom lado a lado, no mesmo canto", () => {
+    aparelhoDeToque(false);
+    render(<Whiteboard />);
+
+    const desfazer = screen.getByRole("button", { name: UI.en.history.undo });
+    const zoom = screen.getByTestId("zoom-pill");
+    const canto = zoom.parentElement!;
+
+    expect(canto.contains(desfazer)).toBe(true);
+    // O histórico antes do zoom: o zoom fica na ponta, como no Figma.
+    expect(desfazer.compareDocumentPosition(zoom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // O canto de cima, e não mais o de baixo.
+    expect(canto.closest(".top-0")).not.toBeNull();
+  });
+
+  it("os sinais de − e + são ícones, e não texto", () => {
+    aparelhoDeToque(false);
+    render(<Whiteboard />);
+
+    for (const nome of [UI.en.zoom.in, UI.en.zoom.out]) {
+      const botao = screen.getByRole("button", { name: nome });
+      expect(botao.querySelector("svg")).not.toBeNull();
+      expect(botao.textContent).toBe("");
+    }
+  });
+
+  it("no toque só a pílula do histórico aparece", () => {
+    aparelhoDeToque(true);
+    render(<Whiteboard />);
+
+    expect(screen.getByRole("button", { name: UI.en.history.undo })).toBeDefined();
+    expect(screen.queryByTestId("zoom-pill")).toBeNull();
+  });
+
+  it("deixa o canto inferior direito livre", () => {
+    aparelhoDeToque(false);
+    const { container } = render(<Whiteboard />);
+
+    expect(container.querySelector(".bottom-0.justify-end")).toBeNull();
+  });
+});
