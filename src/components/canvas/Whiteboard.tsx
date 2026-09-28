@@ -329,24 +329,25 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
         </>
       }
       trailingActions={
-        <HistoryButtons
-          canUndo={board.canUndo}
-          canRedo={board.canRedo}
-          onUndo={board.undo}
-          onRedo={board.redo}
-        />
-      }
-      controls={
-        // No toque a pinça faz o mesmo trabalho, e o painel só disputaria o canto onde o
-        // polegar descansa — justamente em quem tem menos tela sobrando (#57).
-        touchPrimary ? undefined : (
-          <ViewportControls
-            viewport={controls.viewport}
-            zoomBy={controls.zoomBy}
-            reset={controls.reset}
-            anchor={center}
+        // Histórico e zoom lado a lado (#139, Figma 1-2): o que se usa durante o trabalho,
+        // longe do canto que descarta e publica o quadro. No toque a pinça faz o trabalho do
+        // zoom, e a pílula só disputaria espaço em quem tem menos tela sobrando (#57).
+        <div className="flex items-start gap-2">
+          <HistoryButtons
+            canUndo={board.canUndo}
+            canRedo={board.canRedo}
+            onUndo={board.undo}
+            onRedo={board.redo}
           />
-        )
+          {touchPrimary ? null : (
+            <ViewportControls
+              viewport={controls.viewport}
+              zoomBy={controls.zoomBy}
+              reset={controls.reset}
+              anchor={center}
+            />
+          )}
+        </div>
       }
     >
       <div ref={areaRef} className="absolute inset-0">

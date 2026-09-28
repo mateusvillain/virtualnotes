@@ -17,30 +17,20 @@ describe("AppShell", () => {
     expect(screen.getByRole("heading", { name: "Virtual Notes" }).className).toContain("sr-only");
   });
 
-  it("põe os controles no canto inferior direito, fora da borda", () => {
-    const { container } = render(<AppShell controls={<button type="button">zoom</button>} />);
-    const faixa = container.querySelector(".shadow-control")?.parentElement;
+  it("põe os cantos de cima a 24px da borda, acima da barra de seleção (#139)", () => {
+    render(
+      <AppShell
+        leadingActions={<button type="button">esquerda</button>}
+        trailingActions={<button type="button">direita</button>}
+      />,
+    );
+    const faixa = screen.getByRole("button", { name: "esquerda" }).parentElement!.parentElement!;
 
-    expect(faixa?.className).toContain("bottom-0");
-    expect(faixa?.className).toContain("justify-end");
-    // O respiro da borda vem do padding da faixa, não de um deslocamento do próprio bloco.
-    expect(faixa?.className).toContain("p-4");
-  });
-
-  it("em tela estreita sobe os controles acima da toolbar central (#137)", () => {
-    const { container } = render(<AppShell controls={<button type="button">zoom</button>} />);
-    const faixa = container.querySelector(".shadow-control")?.parentElement;
-
-    // Abaixo de ~640px o canto direito alcança a pílula central.
-    expect(faixa?.className).toContain("max-sm:bottom-40");
-  });
-
-  it("mantém os controles acima da barra de seleção", () => {
-    const { container } = render(<AppShell controls={<button type="button">zoom</button>} />);
-    const faixa = container.querySelector(".shadow-control")?.parentElement;
-
+    expect(faixa.className).toContain("top-0");
+    expect(faixa.className).toContain("justify-between");
+    expect(faixa.className).toContain("p-6");
     // A SelectionToolbar é z-20 e segue os post-its: pode cair justamente sob os controles.
-    expect(faixa?.className).toContain("z-30");
+    expect(faixa.className).toContain("z-30");
   });
 
   it("centra a toolbar na borda de baixo, com o que vem acima empilhado em coluna", () => {
@@ -68,13 +58,5 @@ describe("AppShell", () => {
     render(<AppShell>conteúdo do quadro</AppShell>);
 
     expect(screen.getByText("conteúdo do quadro")).toBeDefined();
-  });
-
-  it("só reserva a faixa de controles quando há controles", () => {
-    const { container, rerender } = render(<AppShell />);
-    expect(container.querySelector(".shadow-control")).toBeNull();
-
-    rerender(<AppShell controls={<button type="button">zoom</button>} />);
-    expect(screen.getByRole("button", { name: "zoom" })).toBeDefined();
   });
 });
