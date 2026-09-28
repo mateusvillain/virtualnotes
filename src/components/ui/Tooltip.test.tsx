@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Tooltip, TOOLTIP_DELAY_MS } from "./Tooltip";
@@ -144,6 +144,20 @@ describe("Tooltip", () => {
     expect(await screen.findByText("⌘S")).toBeDefined();
   });
 
+  it("põe o atalho num badge de tecla (#134)", async () => {
+    render(
+      <Tooltip label="Salvar quadro" shortcut="⌘S">
+        <button type="button" aria-label="Salvar quadro" />
+      </Tooltip>,
+    );
+
+    await userEvent.tab();
+    const atalho = await screen.findByText("⌘S");
+
+    expect(atalho.tagName).toBe("KBD");
+    expect(atalho.getAttribute("data-testid")).toBe("tooltip-shortcut");
+  });
+
   it("não mostra atalho nenhum nos botões que não têm um", async () => {
     const { button } = renderTooltip();
 
@@ -151,6 +165,18 @@ describe("Tooltip", () => {
     await screen.findByText("Salvar quadro");
 
     expect(button.parentElement?.textContent).toBe("Salvar quadro");
+    expect(screen.queryByTestId("tooltip-shortcut")).toBeNull();
+  });
+
+  it("é escura, com texto claro e cantos arredondados, como no Figma (#134)", async () => {
+    renderTooltip();
+
+    await userEvent.tab();
+    const caixa = (await screen.findByText("Salvar quadro")).parentElement!;
+
+    expect(caixa.className).toContain("bg-ink");
+    expect(caixa.className).toContain("text-surface");
+    expect(caixa.className).toContain("rounded-control");
   });
 
   it("não anuncia o atalho ao leitor de tela: ele mora na mesma caixa aria-hidden do nome", async () => {
@@ -181,5 +207,46 @@ describe("Tooltip", () => {
     // Engolir os eventos do gatilho quebraria em silêncio um controle que já os tratava.
     expect(onPointerEnter).toHaveBeenCalled();
     expect(onFocus).toHaveBeenCalled();
+  });
+
+  it("não abre sobre um botão desabilitado, nem pelo mouse nem pelo teclado", async () => {
+    render(
+      <>
+        <Tooltip label="Desfazer">
+          <button type="button" aria-label="Desfazer" disabled />
+        </Tooltip>
+        <Tooltip label="Refazer">
+          <button type="button" aria-label="Refazer" aria-disabled="true" />
+        </Tooltip>
+      </>,
+    );
+
+    // `disabled` não recebe ponteiro nem foco; o hover chega pelo invólucro.
+    fireEvent.pointerEnter(screen.getByLabelText("Desfazer").parentElement!, {
+      pointerType: "mouse",
+    });
+    await userEvent.tab();
+    await vi.advanceTimersByTimeAsync(TOOLTIP_DELAY_MS);
+
+    expect(screen.queryByText("Desfazer")).toBeNull();
+    expect(screen.queryByText("Refazer")).toBeNull();
+  });
+
+  it("fecha se o botão desabilitar com a dica aberta", async () => {
+    function Alternavel({ disabled }: { disabled: boolean }) {
+      return (
+        <Tooltip label="Desfazer">
+          <button type="button" aria-label="Desfazer" disabled={disabled} />
+        </Tooltip>
+      );
+    }
+    const { rerender } = render(<Alternavel disabled={false} />);
+
+    await userEvent.tab();
+    await screen.findByText("Desfazer");
+
+    rerender(<Alternavel disabled />);
+
+    await waitFor(() => expect(screen.queryByText("Desfazer")).toBeNull());
   });
 });

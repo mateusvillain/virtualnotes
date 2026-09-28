@@ -117,10 +117,15 @@ describe("interface do quadro em cada idioma", () => {
           const button = screen.getByRole("button", { name });
           expect(button.getAttribute("aria-keyshortcuts")).toBe(ariaKeyShortcuts(shortcut));
 
-          await userEvent.hover(button);
+          await userEvent.hover(button.parentElement!);
           await vi.advanceTimersByTimeAsync(TOOLTIP_DELAY_MS);
-          expect(await screen.findByText(shortcutLabel(shortcut, mac))).toBeDefined();
-          await userEvent.unhover(button);
+          if ((button as HTMLButtonElement).disabled) {
+            // Desfazer e refazer nascem desabilitados, com a pilha vazia: sem dica (#134).
+            expect(screen.queryByText(shortcutLabel(shortcut, mac))).toBeNull();
+          } else {
+            expect(await screen.findByText(shortcutLabel(shortcut, mac))).toBeDefined();
+          }
+          await userEvent.unhover(button.parentElement!);
         }
 
         vi.useRealTimers();
