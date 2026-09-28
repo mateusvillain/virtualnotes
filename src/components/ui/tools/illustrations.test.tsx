@@ -27,11 +27,14 @@ describe("ilustrações das ferramentas", () => {
     },
   );
 
-  it("todo gradiente referenciado existe e nenhum id se repete entre as cinco", () => {
+  it("todo gradiente referenciado existe e nenhum id se repete, nem com cada uma duas vezes", () => {
     const { container } = render(
       <>
         {ILLUSTRATIONS.map(([name, Illustration]) => (
           <Illustration key={name} />
+        ))}
+        {ILLUSTRATIONS.map(([name, Illustration]) => (
+          <Illustration key={`${name}-2`} />
         ))}
       </>,
     );
