@@ -2728,7 +2728,7 @@ describe("Whiteboard — desfazer e refazer (#86, #87)", () => {
   });
 });
 
-describe("Whiteboard — ferramenta de seleção (#83)", () => {
+describe("Whiteboard — ferramenta de seleção (#83, #137)", () => {
   function botao(nome: string): HTMLElement {
     return screen.getByLabelText(nome);
   }
@@ -2737,40 +2737,58 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     return botao(nome).getAttribute("aria-pressed") === "true";
   }
 
-  const SELECAO = UI.en.select.action;
   const NOTA = UI.en.note.action;
   const LAPIS = UI.en.pencil.action;
+  const FERRAMENTAS = [
+    NOTA,
+    LAPIS,
+    UI.en.fountain.action,
+    UI.en.highlighter.action,
+    UI.en.eraser.action,
+  ];
 
   /**
-   * A ferramenta de partida do quadro.
-   *
-   * O estado sempre existiu — era ele que fazia arrastar o fundo desenhar o retângulo de
-   * seleção —, mas nascia sem representação: os três botões apareciam apagados enquanto uma
-   * das três estava, de fato, valendo.
+   * A seleção não tem botão desde a toolbar inferior (#137): ela é o que vale com nenhuma
+   * ferramenta ligada. "Seleção ativa" é, então, toda a toolbar apagada e a superfície fora
+   * dos modos de desenho, nota e borracha.
    */
+  function selecaoAtiva(): boolean {
+    const surface = screen.getByTestId("viewport-surface");
+    return (
+      FERRAMENTAS.every((nome) => !ativo(nome)) &&
+      surface.dataset.pencil === "false" &&
+      surface.dataset.placing === "false"
+    );
+  }
+
   it("o quadro começa com a seleção ativa, sem ninguém ter clicado", () => {
     render(<Whiteboard />);
 
-    expect(ativo(SELECAO)).toBe(true);
-    expect(ativo(NOTA)).toBe(false);
-    expect(ativo(LAPIS)).toBe(false);
+    expect(selecaoAtiva()).toBe(true);
+  });
+
+  it("não há botão de seleção na tela", () => {
+    render(<Whiteboard />);
+
+    expect(screen.queryByRole("button", { name: /^(select|seleção)$/i })).toBeNull();
+    expect(screen.getByRole("group", { name: UI.en.toolbar.label })).toBeDefined();
   });
 
   it("V escolhe a seleção", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
-    expect(ativo(SELECAO)).toBe(false);
+    expect(selecaoAtiva()).toBe(false);
 
     fireEvent.keyDown(document, { key: "v" });
 
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
     expect(ativo(LAPIS)).toBe(false);
   });
 
   /**
    * `V` escolhe, e não alterna. A ferramenta de partida não tem para onde ser desligada —
    * alternar aqui exigiria de volta o estado "nenhuma ferramenta", que é justamente o que
-   * esta issue veio tirar.
+   * a #83 veio tirar.
    */
   it("V de novo não desliga a seleção", () => {
     render(<Whiteboard />);
@@ -2778,27 +2796,43 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     fireEvent.keyDown(document, { key: "v" });
     fireEvent.keyDown(document, { key: "v" });
 
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
   });
 
-  it("o botão escolhe a seleção, como a tecla", async () => {
-    const user = userEvent.setup();
+  /**
+   * Critério da #137: os atalhos continuam valendo com a toolbar no lugar da pilha. Cada
+   * tecla acende a sua ferramenta — e só ela —, e `V` e `Esc` apagam a toolbar inteira.
+   */
+  it.each([
+    ["n", NOTA],
+    ["p", LAPIS],
+    ["f", UI.en.fountain.action],
+    ["h", UI.en.highlighter.action],
+    ["e", UI.en.eraser.action],
+  ])("%s acende %s na toolbar, e V e Esc voltam à seleção", (tecla, nome) => {
     render(<Whiteboard />);
-    fireEvent.keyDown(document, { key: "p" });
 
-    await user.click(botao(SELECAO));
+    for (const saida of ["v", "Escape"]) {
+      fireEvent.keyDown(document, { key: tecla });
+      expect(FERRAMENTAS.filter(ativo)).toEqual([nome]);
 
-    expect(ativo(SELECAO)).toBe(true);
-    expect(screen.getByTestId("viewport-surface").dataset.pencil).toBe("false");
+      fireEvent.keyDown(document, { key: saida });
+      expect(selecaoAtiva()).toBe(true);
+    }
   });
 
-  it("clicar no botão já ativo não muda nada", async () => {
+  /** Sem botão de seleção, o caminho pela toolbar é clicar de novo na ferramenta ligada. */
+  it.each(FERRAMENTAS)("clicar em %s já ligada volta para a seleção", async (nome) => {
     const user = userEvent.setup();
     render(<Whiteboard />);
 
-    await user.click(botao(SELECAO));
+    await user.click(botao(nome));
+    expect(ativo(nome)).toBe(true);
+    expect(selecaoAtiva()).toBe(false);
 
-    expect(ativo(SELECAO)).toBe(true);
+    await user.click(botao(nome));
+
+    expect(selecaoAtiva()).toBe(true);
   });
 
   /** Uma ferramenta de cada vez: escolher o cursor larga as outras duas. */
@@ -2807,34 +2841,33 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
 
     fireEvent.keyDown(document, { key: "n" });
     fireEvent.keyDown(document, { key: "v" });
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
     expect(ativo(NOTA)).toBe(false);
-    expect(screen.getByTestId("viewport-surface").dataset.placing).toBe("false");
 
     fireEvent.keyDown(document, { key: "p" });
     fireEvent.keyDown(document, { key: "v" });
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
     expect(ativo(LAPIS)).toBe(false);
   });
 
   /**
-   * Desligar uma ferramenta deixou de ser uma ação sem destino: `P` no lápis ligado, `Esc` e
-   * `V` chegam todos ao mesmo lugar, que agora tem nome.
+   * Desligar uma ferramenta não é uma ação sem destino: `P` no lápis ligado, `Esc` e `V`
+   * chegam todos ao mesmo lugar.
    */
   it("largar o lápis leva à seleção, por qualquer um dos três caminhos", () => {
     render(<Whiteboard />);
 
     fireEvent.keyDown(document, { key: "p" });
     fireEvent.keyDown(document, { key: "p" });
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
 
     fireEvent.keyDown(document, { key: "p" });
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
 
     fireEvent.keyDown(document, { key: "p" });
     fireEvent.keyDown(document, { key: "v" });
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
   });
 
   it("colocar uma nota devolve a seleção", () => {
@@ -2845,7 +2878,7 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 200, clientY: 200 });
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 200 });
 
-    expect(ativo(SELECAO)).toBe(true);
+    expect(selecaoAtiva()).toBe(true);
   });
 
   it("V não dispara com o cursor dentro do texto de uma nota", () => {
@@ -2856,7 +2889,7 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     fireEvent.keyDown(screen.getByTestId("post-it-editor"), { key: "v" });
 
     // A tecla pertence a quem está escrevendo: `v` no meio de uma frase é a letra.
-    expect(ativo(SELECAO)).toBe(false);
+    expect(selecaoAtiva()).toBe(false);
   });
 
   it("V com modificador segurado é do navegador, não do quadro", () => {
@@ -2867,7 +2900,7 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     fireEvent.keyDown(document, { key: "v", metaKey: true });
 
     // `Ctrl+V` é colar, e roubá-la seria pior do que não ter atalho.
-    expect(ativo(SELECAO)).toBe(false);
+    expect(selecaoAtiva()).toBe(false);
   });
 
   /**
@@ -2880,7 +2913,6 @@ describe("Whiteboard — ferramenta de seleção (#83)", () => {
     render(<Whiteboard />);
 
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
-    expect(screen.queryByText(UI.en.select.action)).toBeNull();
   });
 });
 
@@ -4168,6 +4200,24 @@ describe("Whiteboard — remover e duplicar no toque (#99)", () => {
 
     expect(botaoRemover()).not.toBeNull();
     expect(botaoDuplicar()).not.toBeNull();
+  });
+
+  // #137: a barra divide a base da tela com a toolbar. Na mesma coluna, logo antes dela, ela
+  // fica acima — e nunca por cima.
+  it("fica na coluna da toolbar, acima dela", () => {
+    aparelhoDeToque(true);
+    render(<Whiteboard />);
+    criaPostIt(300, 300);
+
+    const toolbar = screen.getByTestId("toolbar");
+    const coluna = toolbar.parentElement!;
+    const barra = [...coluna.children].find((filho) => filho.contains(botaoRemover()));
+
+    expect(barra).toBeDefined();
+    expect(coluna.className).toContain("flex-col");
+    expect([...coluna.children].indexOf(barra!)).toBeLessThan(
+      [...coluna.children].indexOf(toolbar),
+    );
   });
 
   // Critério de aceite: a barra de cor esconde uma seleção só de traço de propósito (#70),
