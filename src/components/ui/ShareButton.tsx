@@ -12,8 +12,12 @@ import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 /** Quanto tempo o botão de copiar confirma a cópia antes de voltar ao normal. */
 const COPIED_FEEDBACK_MS = 2000;
 
+/**
+ * Caixa de cada painel abaixo do botão. `col-span-full`: na pílula do canto (#138) cada
+ * painel ocupa uma linha inteira abaixo dela, alinhado à esquerda — para dentro da tela.
+ */
 const panelClass =
-  "rounded-control border border-border bg-surface px-3 py-2 text-xs shadow-control";
+  "col-span-full justify-self-start rounded-control border border-border bg-surface px-3 py-2 text-xs shadow-control";
 
 /**
  * Ícone de salvar: uma nuvem com a seta para cima.
@@ -77,7 +81,12 @@ function announcement(status: ShareApi["state"]["status"], ui: UiCopy): string {
  * outro documento, então o botão continua sendo a ação principal mesmo com um link na
  * tela.
  */
-export function ShareButton({ state, share, dismiss }: ShareApi) {
+interface ShareButtonProps extends ShareApi {
+  /** Onde o botão se encaixa no layout de quem o monta — a pílula do canto (#138). */
+  triggerClassName?: string;
+}
+
+export function ShareButton({ state, share, dismiss, triggerClassName = "" }: ShareButtonProps) {
   const ui = useUi();
   const isMac = useIsMac();
   /**
@@ -118,7 +127,9 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
   }, [dismiss]);
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    // `contents`, como o `NewBoardButton`: na pílula do canto esquerdo (#138) o botão fica na
+    // linha dela e os painéis descem para baixo, abrindo para dentro da tela.
+    <div className="contents">
       {/*
         Região de anúncio persistente, e só com texto.
         Uma live region que nasce junto do conteúdo costuma não ser lida, e envolver o
@@ -128,8 +139,8 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
         {announcement(state.status, ui)}
       </p>
 
-      <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-        <Tooltip label={ui.save.action} shortcut={shortcutLabel(SHORTCUTS.save, isMac)} align="end">
+      <div className={triggerClassName}>
+        <Tooltip label={ui.save.action} shortcut={shortcutLabel(SHORTCUTS.save, isMac)}>
           <button
             ref={shareRef}
             type="button"
@@ -166,7 +177,7 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
       ) : null}
 
       {url === null ? null : (
-        <div className="flex flex-col items-end gap-1">
+        <div className="col-span-full flex flex-col items-start gap-1 justify-self-start">
           <div className="flex items-center gap-2 rounded-control border border-border bg-surface p-1 pl-3 shadow-control">
             <input
               readOnly
@@ -182,7 +193,7 @@ export function ShareButton({ state, share, dismiss }: ShareApi) {
             >
               {copied ? ui.save.copied : ui.save.copy}
             </button>
-            <Tooltip label={ui.save.closeLink} align="end">
+            <Tooltip label={ui.save.closeLink}>
               <button
                 type="button"
                 className={iconButtonClass}
