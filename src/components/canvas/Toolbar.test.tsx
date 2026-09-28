@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { UI } from "@/lib/i18n/ui";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
-import { TOOLBAR_TOOLS, Toolbar } from "./Toolbar";
+import { TOOLBAR_TOOLS, Toolbar, toolbarSurfaceClass } from "./Toolbar";
 
 const ui = UI.en;
 
@@ -67,5 +67,25 @@ describe("Toolbar", () => {
     // `h-22` em border-box: a borda entra nos 88px, em vez de somar 2px por fora.
     expect(className).toContain("h-22");
     expect(className).not.toContain("box-content");
+  });
+
+  it("o bloco de cores tem o mesmo vidro da pílula e 236px de largura no Figma", () => {
+    render(
+      <LocaleProvider locale="en">
+        <Toolbar active="pencil" onToggle={vi.fn()} palette={<span>cores</span>} />
+      </LocaleProvider>,
+    );
+    const bloco = screen.getByTestId("toolbar-palette");
+
+    expect(bloco.className).toContain(toolbarSurfaceClass);
+    // 220 de cores + 2 × 7 de respiro + 2 de borda = 236.
+    expect(bloco.className).toContain("px-[7px]");
+    expect(bloco.className).toContain("h-11");
+  });
+
+  it("sem paleta, não desenha o bloco", () => {
+    renderToolbar("placing");
+
+    expect(screen.queryByTestId("toolbar-palette")).toBeNull();
   });
 });

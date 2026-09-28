@@ -16,7 +16,32 @@ interface ColorRadioGroupProps {
   ariaLabel: string;
   /** `data-testid` do grupo; cada quadradinho usa `${testId}-swatch-${índice}`. */
   testId: string;
+  /**
+   * Quadradinhos com borda (post-it) ou círculos sem borda (paleta do traço na toolbar, #140).
+   *
+   * No círculo a cor marcada cresce de 24 para 28px, como no Figma (1-625), e ganha um anel
+   * cinza afastado 2px. Só o tamanho não bastava: 4px a mais num pastel claro sobre fundo
+   * branco é pouco sinal (WCAG 1.4.11 pede 3:1 para o indicador), e o anel em
+   * `--color-ink-muted` passa disso sobre o branco em qualquer uma das sete cores. Cinza, e
+   * não a cor de seleção, para o foco por teclado (`ring-selection`) continuar distinguível
+   * de "marcada".
+   */
+  shape?: "square" | "circle";
 }
+
+/** Aparência de cada opção, por formato e estado. */
+const SWATCH = {
+  square: {
+    base: "h-6 w-6 rounded-control border transition-shadow",
+    selected: "border-selection ring-2 ring-selection",
+    idle: "border-border hover:border-ink-muted",
+  },
+  circle: {
+    base: "rounded-full transition-[width,height] duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-selection focus-visible:ring-offset-2 motion-reduce:transition-none",
+    selected: "h-7 w-7 ring-2 ring-ink-muted ring-offset-2",
+    idle: "h-6 w-6",
+  },
+} as const;
 
 /** Índice do próximo item, dando a volta nas pontas. */
 function wrap(index: number, length: number): number {
@@ -51,6 +76,7 @@ export function ColorRadioGroup({
   colorLabel,
   ariaLabel,
   testId,
+  shape = "square",
 }: ColorRadioGroupProps) {
   const groupRef = useRef<HTMLDivElement>(null);
   /**
@@ -104,7 +130,7 @@ export function ColorRadioGroup({
       ref={groupRef}
       role="radiogroup"
       aria-label={ariaLabel}
-      className="flex items-center gap-1"
+      className={`flex items-center ${shape === "circle" ? "gap-2" : "gap-1"}`}
       data-testid={testId}
     >
       {Array.from({ length: count }, (_, color) => {
@@ -121,10 +147,8 @@ export function ColorRadioGroup({
             onClick={() => onChange(color)}
             onKeyDown={(event) => handleKeyDown(event, color)}
             onFocus={() => setFocused(color)}
-            className={`h-6 w-6 rounded-control border transition-shadow ${
-              selected
-                ? "border-selection ring-2 ring-selection"
-                : "border-border hover:border-ink-muted"
+            className={`${SWATCH[shape].base} ${
+              selected ? SWATCH[shape].selected : SWATCH[shape].idle
             }`}
             style={{ backgroundColor: swatchColor(color) }}
             data-testid={`${testId}-swatch-${color}`}

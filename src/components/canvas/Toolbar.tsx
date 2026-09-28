@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { ToolbarTool } from "@/components/ui/ToolbarTool";
 import { EraserIllustration } from "@/components/ui/tools/EraserIllustration";
 import { FountainPenIllustration } from "@/components/ui/tools/FountainPenIllustration";
@@ -16,6 +16,11 @@ interface ToolbarProps {
   active: ToolMode | null;
   /** Liga a ferramenta, ou volta para a seleção se ela já era a ativa. */
   onToggle: (mode: ToolMode) => void;
+  /**
+   * O bloco de cores do traço (#140), acima da pílula. Quem decide se ele aparece é quem
+   * sabe qual ferramenta desenha — só Lápis, Caneta tinteiro e Marca-texto têm cor.
+   */
+  palette?: ReactNode;
 }
 
 /**
@@ -76,10 +81,14 @@ export const TOOLBAR_TOOLS: readonly ToolbarEntry[] = [
  * de todos é a borda de baixo da pílula (`items-stretch` numa altura fixa). Assim o tooltip,
  * que sai por cima, não é cortado junto. 88px de altura contando a borda, como no Figma.
  *
+ * O bloco de cores (#140) fica fora do grupo das ferramentas: é um `radiogroup` com nome
+ * próprio, e o leitor de tela anuncia os dois como coisas separadas — escolher a ferramenta e
+ * escolher a cor dela.
+ *
  * A nota fica a 24px do lápis, como as de traço entre si: os 12px da coluna do lápis mais o
  * `gap-3`.
  */
-export function Toolbar({ active, onToggle }: ToolbarProps) {
+export function Toolbar({ active, onToggle, palette }: ToolbarProps) {
   const ui = useUi();
   const [note, ...strokes] = TOOLBAR_TOOLS;
 
@@ -99,14 +108,28 @@ export function Toolbar({ active, onToggle }: ToolbarProps) {
   }
 
   return (
-    <div
-      role="group"
-      aria-label={ui.toolbar.label}
-      className={`flex h-22 items-stretch gap-3 pl-6 pr-7 ${toolbarSurfaceClass}`}
-      data-testid="toolbar"
-    >
-      {tool(note!)}
-      <div className="flex items-stretch">{strokes.map(tool)}</div>
+    // 9px entre o bloco de cores e a pílula, como no Figma (1-625). Coluna ancorada embaixo:
+    // o bloco aparecer não empurra a pílula, só cresce para cima.
+    <div className="flex flex-col items-center gap-[9px]">
+      {palette === undefined ? null : (
+        // Mesmo vidro da pílula: as duas peças são uma toolbar só, em dois andares. 44px de
+        // altura e 236 de largura contando a borda (Figma): 220 de cores, 7px de cada lado.
+        <div
+          className={`flex h-11 items-center px-[7px] ${toolbarSurfaceClass}`}
+          data-testid="toolbar-palette"
+        >
+          {palette}
+        </div>
+      )}
+      <div
+        role="group"
+        aria-label={ui.toolbar.label}
+        className={`flex h-22 items-stretch gap-3 pl-6 pr-7 ${toolbarSurfaceClass}`}
+        data-testid="toolbar"
+      >
+        {tool(note!)}
+        <div className="flex items-stretch">{strokes.map(tool)}</div>
+      </div>
     </div>
   );
 }

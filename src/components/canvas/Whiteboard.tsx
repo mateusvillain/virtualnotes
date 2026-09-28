@@ -253,33 +253,10 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     onNudge: board.nudgeSelection,
   });
 
-  /**
-   * A paleta de uma ferramenta de desenho. Cada uma mostra e troca a própria cor — o
-   * marca-texto abre no amarelo, o lápis no preto —, na mesma caixa dos botões do canto.
-   */
-  function strokePalette(tool: StrokeTool) {
-    return (
-      <div className="rounded-control border border-border bg-surface p-1 shadow-control">
-        <StrokeColorPicker
-          tool={tool}
-          value={board.strokeColors[tool]}
-          onChange={(color) => board.setStrokeColor(tool, color)}
-        />
-      </div>
-    );
-  }
-
   return (
     <AppShell
       leadingActions={
-        <div className="flex flex-col items-start gap-2">
-          <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
-          {/*
-            A paleta só aparece com uma ferramenta de desenho ligada (#69, #117): escolhe a cor
-            do **próximo** traço, e fora do modo não há gesto nenhum para ela influenciar.
-          */}
-          {drawingTool === null ? null : strokePalette(drawingTool)}
-        </div>
+        <NewBoardButton hasContent={hasContent} onNewBoard={startNewBoard} share={share.share} />
       }
       toolbar={
         <>
@@ -298,7 +275,23 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
               onDuplicate={board.duplicateSelection}
             />
           )}
-          <Toolbar active={mode === "select" ? null : mode} onToggle={toggleMode} />
+          <Toolbar
+            active={mode === "select" ? null : mode}
+            onToggle={toggleMode}
+            // A paleta só aparece com uma ferramenta de desenho ligada (#69, #117, #140):
+            // escolhe a cor do **próximo** traço, e fora do modo não há gesto nenhum para ela
+            // influenciar. Cada ferramenta mostra a própria cor — o marca-texto abre no
+            // amarelo, o lápis no preto.
+            palette={
+              drawingTool === null ? undefined : (
+                <StrokeColorPicker
+                  tool={drawingTool}
+                  value={board.strokeColors[drawingTool]}
+                  onChange={(color) => board.setStrokeColor(drawingTool, color)}
+                />
+              )
+            }
+          />
         </>
       }
       trailingActions={
