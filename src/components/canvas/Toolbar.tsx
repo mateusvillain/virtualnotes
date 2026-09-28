@@ -105,9 +105,9 @@ export function Toolbar({ active, onToggle, palette }: ToolbarProps) {
     <div className="flex flex-col items-center gap-[9px]">
       {palette === undefined ? null : (
         // Mesmo vidro da pílula: as duas peças são uma toolbar só, em dois andares. 44px de
-        // altura e 236 de largura contando a borda (Figma): 220 de cores, 7px de cada lado.
+        // altura e 236 de largura (Figma): 220 de cores e 8px de cada lado.
         <div
-          className={`flex h-11 items-center px-[7px] ${pillSurfaceClass}`}
+          className={`flex h-11 items-center px-2 ${pillSurfaceClass}`}
           data-testid="toolbar-palette"
         >
           {palette}

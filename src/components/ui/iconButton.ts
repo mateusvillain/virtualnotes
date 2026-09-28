@@ -38,6 +38,10 @@ export const subtleButtonClass =
  * grupos dos cantos (#138, #139). Branco a 90% com desfoque de 4px e borda a meio tom, como
  * no Figma (1-2, 1-625) — sem a sombra dos painéis, porque a pílula encosta no quadro e não
  * flutua sobre ele.
+ *
+ * A borda é um anel interno (`ring-inset`), e não `border`: desenhada por dentro, ela não soma
+ * 2px à medida. Com `border`, uma pílula de botões de 32px e 4px de respiro teria 42 de
+ * altura, e não 40 — e as dos cantos desalinhariam entre si.
  */
 export const pillSurfaceClass =
-  "rounded-full border border-border/50 bg-surface/90 backdrop-blur-xs";
+  "rounded-full bg-surface/90 ring-1 ring-inset ring-border/50 backdrop-blur-xs";
