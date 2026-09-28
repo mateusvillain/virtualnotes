@@ -44,7 +44,7 @@ describe("interface do quadro em cada idioma", () => {
       expect(screen.getByRole("button", { name: ui.fountain.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.highlighter.action })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.eraser.action })).toBeDefined();
-      expect(screen.getByRole("toolbar", { name: ui.toolbar.label })).toBeDefined();
+      expect(screen.getByRole("group", { name: ui.toolbar.label })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.undo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.history.redo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.zoom.in })).toBeDefined();

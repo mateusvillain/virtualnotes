@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { UI } from "@/lib/i18n/ui";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
-import { Toolbar } from "./Toolbar";
+import { TOOLBAR_TOOLS, Toolbar } from "./Toolbar";
 
 const ui = UI.en;
 
@@ -20,7 +20,7 @@ function renderToolbar(active: Parameters<typeof Toolbar>[0]["active"] = null) {
 describe("Toolbar", () => {
   it("mostra as cinco ferramentas na ordem do Figma", () => {
     renderToolbar();
-    const toolbar = screen.getByRole("toolbar", { name: ui.toolbar.label });
+    const toolbar = screen.getByRole("group", { name: ui.toolbar.label });
 
     const nomes = [...toolbar.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"));
     expect(nomes).toEqual([
@@ -41,17 +41,31 @@ describe("Toolbar", () => {
     }
   });
 
-  it.each([
-    [ui.note.action, "placing"],
-    [ui.pencil.action, "pencil"],
-    [ui.fountain.action, "fountain"],
-    [ui.highlighter.action, "highlighter"],
-    [ui.eraser.action, "erasing"],
-  ])("%s pede o modo %s", async (nome, modo) => {
-    const { onToggle } = renderToolbar();
+  it.each(TOOLBAR_TOOLS.map(({ name, mode }) => [ui[name].action, mode]))(
+    "%s pede o modo %s",
+    async (nome, modo) => {
+      const { onToggle } = renderToolbar();
 
-    await userEvent.click(screen.getByRole("button", { name: nome }));
+      await userEvent.click(screen.getByRole("button", { name: nome }));
 
-    expect(onToggle).toHaveBeenCalledWith(modo);
+      expect(onToggle).toHaveBeenCalledWith(modo);
+    },
+  );
+
+  it("é um grupo, e não uma toolbar com navegação por setas que ele não tem", () => {
+    renderToolbar();
+
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    // Cada ferramenta é um ponto de Tab próprio, como os botões do resto da moldura.
+    for (const button of screen.getAllByRole("button")) expect(button.tabIndex).toBe(0);
+  });
+
+  it("mede 88px contando a borda, como no Figma", () => {
+    renderToolbar();
+    const className = screen.getByTestId("toolbar").className;
+
+    // `h-22` em border-box: a borda entra nos 88px, em vez de somar 2px por fora.
+    expect(className).toContain("h-22");
+    expect(className).not.toContain("box-content");
   });
 });

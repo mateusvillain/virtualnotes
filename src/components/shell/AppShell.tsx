@@ -81,7 +81,11 @@ export function AppShell({
       {controls === undefined ? null : (
         // Acima do quadro **e** da barra de seleção (`z-20`): um controle da aplicação não
         // pode ser coberto por um overlay que segue os post-its.
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-end p-4">
+        //
+        // Em tela estreita (abaixo de `sm`) a faixa sobe acima da toolbar e do bloco de cores
+        // (24 + 88 + 9 + 44 = 165px): com menos de ~640px de largura o canto direito encosta
+        // na pílula central, e os dois dividiriam os mesmos pixels.
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-end p-4 max-sm:bottom-40">
           <div className="pointer-events-auto rounded-control border border-border bg-surface p-1 shadow-control">
             {controls}
           </div>
