@@ -1,9 +1,10 @@
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 /**
  * Ilustração: Caneta tinteiro. Proporção 72×368 — ver `README.md` nesta pasta.
  */
 export function FountainPenIllustration(props: SVGProps<SVGSVGElement>) {
+  const id = useId();
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -12,15 +13,15 @@ export function FountainPenIllustration(props: SVGProps<SVGSVGElement>) {
       aria-hidden="true"
       {...props}
     >
-      <path fill="url(#tool-fountain-pen-a)" d="M72 136H0v232h72z" />
-      <path fill="url(#tool-fountain-pen-b)" d="M19 92Q16 52 36 0q20 52 17 92z" />
+      <path fill={`url(#${id}-a)`} d="M72 136H0v232h72z" />
+      <path fill={`url(#${id}-b)`} d="M19 92Q16 52 36 0q20 52 17 92z" />
       <path fill="#5E4716" d="M36.799 65v27h-1.6V65zm0-61v55h-1.6V4z" />
       <path fill="#3D2E0D" d="M35.998 65.6a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2" />
-      <path fill="url(#tool-fountain-pen-c)" d="m4 136 10-44h44l10 44z" />
-      <path fill="url(#tool-fountain-pen-d)" d="M72 128H0v10h72z" />
+      <path fill={`url(#${id}-c)`} d="m4 136 10-44h44l10 44z" />
+      <path fill={`url(#${id}-d)`} d="M72 128H0v10h72z" />
       <defs>
         <linearGradient
-          id="tool-fountain-pen-a"
+          id={`${id}-a`}
           x1="0"
           x2="72"
           y1="136"
@@ -33,7 +34,7 @@ export function FountainPenIllustration(props: SVGProps<SVGSVGElement>) {
           <stop offset="1" stopColor="#D4D4D4" />
         </linearGradient>
         <linearGradient
-          id="tool-fountain-pen-b"
+          id={`${id}-b`}
           x1="18.609"
           x2="53.392"
           y1="0"
@@ -46,7 +47,7 @@ export function FountainPenIllustration(props: SVGProps<SVGSVGElement>) {
           <stop offset="1" stopColor="#8A6A24" />
         </linearGradient>
         <linearGradient
-          id="tool-fountain-pen-c"
+          id={`${id}-c`}
           x1="4"
           x2="68"
           y1="92"
@@ -58,7 +59,7 @@ export function FountainPenIllustration(props: SVGProps<SVGSVGElement>) {
           <stop offset="1" stopColor="#101010" />
         </linearGradient>
         <linearGradient
-          id="tool-fountain-pen-d"
+          id={`${id}-d`}
           x1="0"
           x2="72"
           y1="128"
