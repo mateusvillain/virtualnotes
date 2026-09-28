@@ -146,12 +146,24 @@ export function Tooltip({
           // tela. (`role="presentation"` não serviria: `span` não tem role implícito, e
           // `presentation` não remove o conteúdo de texto.)
           aria-hidden="true"
-          className={`pointer-events-none absolute z-40 flex items-center gap-2 whitespace-nowrap rounded-control border border-border bg-surface px-2 py-1 text-xs text-ink shadow-control ${
+          // Escura sobre o quadro claro, como no Figma (1-139, #134): a dica é a única peça da
+          // moldura que some sozinha, e o contraste invertido diz que ela não é um controle.
+          className={`pointer-events-none absolute z-40 flex items-center gap-2 whitespace-nowrap rounded-control bg-ink p-2 text-xs text-surface ${
             side === "bottom" ? "top-full mt-2" : "bottom-full mb-2"
           } ${ALIGNMENT[align]}`}
         >
           <span>{label}</span>
-          {shortcut ? <span className="text-ink-muted">{shortcut}</span> : null}
+          {shortcut ? (
+            // O atalho num badge de tecla, e não em texto esmaecido: é algo que se aperta, e
+            // o desenho de tecla diz isso antes de a pessoa ler. Uma tecla só por atalho —
+            // `⌘S` e `Ctrl+Shift+Z` são a forma escrita que `shortcutLabel` já decidiu.
+            <kbd
+              className="min-w-4 rounded-sm bg-surface/15 px-1 text-center font-mono text-xs text-surface"
+              data-testid="tooltip-shortcut"
+            >
+              {shortcut}
+            </kbd>
+          ) : null}
         </span>
       ) : null}
     </span>

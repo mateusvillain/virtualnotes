@@ -144,6 +144,20 @@ describe("Tooltip", () => {
     expect(await screen.findByText("⌘S")).toBeDefined();
   });
 
+  it("põe o atalho num badge de tecla (#134)", async () => {
+    render(
+      <Tooltip label="Salvar quadro" shortcut="⌘S">
+        <button type="button" aria-label="Salvar quadro" />
+      </Tooltip>,
+    );
+
+    await userEvent.tab();
+    const atalho = await screen.findByText("⌘S");
+
+    expect(atalho.tagName).toBe("KBD");
+    expect(atalho.getAttribute("data-testid")).toBe("tooltip-shortcut");
+  });
+
   it("não mostra atalho nenhum nos botões que não têm um", async () => {
     const { button } = renderTooltip();
 
@@ -151,6 +165,18 @@ describe("Tooltip", () => {
     await screen.findByText("Salvar quadro");
 
     expect(button.parentElement?.textContent).toBe("Salvar quadro");
+    expect(screen.queryByTestId("tooltip-shortcut")).toBeNull();
+  });
+
+  it("é escura, com texto claro e cantos arredondados, como no Figma (#134)", async () => {
+    renderTooltip();
+
+    await userEvent.tab();
+    const caixa = (await screen.findByText("Salvar quadro")).parentElement!;
+
+    expect(caixa.className).toContain("bg-ink");
+    expect(caixa.className).toContain("text-surface");
+    expect(caixa.className).toContain("rounded-control");
   });
 
   it("não anuncia o atalho ao leitor de tela: ele mora na mesma caixa aria-hidden do nome", async () => {
