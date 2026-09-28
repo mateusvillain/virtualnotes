@@ -16,12 +16,12 @@ interface ViewportControlsProps extends Pick<ViewportApi, "viewport" | "zoomBy" 
   anchor: () => Point;
 }
 
-/** Traço de 24px, no mesmo peso dos outros ícones da moldura. `plus` soma o traço vertical. */
+/** Traço de 20px, no mesmo peso dos outros ícones da moldura. `plus` soma o traço vertical. */
 function ZoomIcon({ plus = false }: { plus?: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-6 w-6"
+      className="h-5 w-5"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.75}
@@ -62,7 +62,7 @@ export function ViewportControls({ viewport, zoomBy, reset, anchor }: ViewportCo
       <Tooltip label={ui.zoom.reset}>
         <button
           type="button"
-          // 32px de altura dentro da pílula de 48, com a mesma tinta de hover do IconButton.
+          // Da altura dos botões de ícone (32px), com a mesma tinta de hover deles.
           className="h-8 min-w-14 rounded-full px-2 text-sm tabular-nums text-ink transition-colors hover:bg-control-active active:bg-control-active"
           onClick={reset}
           aria-label={ui.zoom.reset}
