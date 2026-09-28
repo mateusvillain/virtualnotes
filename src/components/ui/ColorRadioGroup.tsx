@@ -19,9 +19,12 @@ interface ColorRadioGroupProps {
   /**
    * Quadradinhos com borda (post-it) ou círculos sem borda (paleta do traço na toolbar, #140).
    *
-   * No círculo a cor marcada cresce de 24 para 28px, como no Figma (1-625): numa fila de
-   * pastéis sobre fundo branco, o anel das duas paletas quadradas brigaria com a cor, e o
-   * tamanho diz "esta" sem somar mais uma cor à fila.
+   * No círculo a cor marcada cresce de 24 para 28px, como no Figma (1-625), e ganha um anel
+   * cinza afastado 2px. Só o tamanho não bastava: 4px a mais num pastel claro sobre fundo
+   * branco é pouco sinal (WCAG 1.4.11 pede 3:1 para o indicador), e o anel em
+   * `--color-ink-muted` passa disso sobre o branco em qualquer uma das sete cores. Cinza, e
+   * não a cor de seleção, para o foco por teclado (`ring-selection`) continuar distinguível
+   * de "marcada".
    */
   shape?: "square" | "circle";
 }
@@ -35,7 +38,7 @@ const SWATCH = {
   },
   circle: {
     base: "rounded-full transition-[width,height] duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-selection focus-visible:ring-offset-2 motion-reduce:transition-none",
-    selected: "h-7 w-7",
+    selected: "h-7 w-7 ring-2 ring-ink-muted ring-offset-2",
     idle: "h-6 w-6",
   },
 } as const;

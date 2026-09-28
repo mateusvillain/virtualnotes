@@ -27,6 +27,14 @@ describe("AppShell", () => {
     expect(faixa?.className).toContain("p-4");
   });
 
+  it("em tela estreita sobe os controles acima da toolbar central (#137)", () => {
+    const { container } = render(<AppShell controls={<button type="button">zoom</button>} />);
+    const faixa = container.querySelector(".shadow-control")?.parentElement;
+
+    // Abaixo de ~640px o canto direito alcança a pílula central.
+    expect(faixa?.className).toContain("max-sm:bottom-40");
+  });
+
   it("mantém os controles acima da barra de seleção", () => {
     const { container } = render(<AppShell controls={<button type="button">zoom</button>} />);
     const faixa = container.querySelector(".shadow-control")?.parentElement;

@@ -104,6 +104,9 @@ describe("StrokeColorPicker — círculos da toolbar (#140)", () => {
     for (const cor of cores()) expect(cor.className).toContain("rounded-full");
     expect(cores()[6]?.className).toContain("h-7 w-7");
     expect(cores()[0]?.className).toContain("h-6 w-6");
+    // O tamanho sozinho é pouco sinal num pastel: a marcada leva também o anel (WCAG 1.4.11).
+    expect(cores()[6]?.className).toMatch(/(^|\s)ring-2(\s|$)/);
+    expect(cores()[0]?.className).not.toMatch(/(^|\s)ring-2(\s|$)/);
   });
 
   it("as setas continuam andando entre as cores", async () => {

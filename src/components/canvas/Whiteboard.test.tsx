@@ -2771,7 +2771,7 @@ describe("Whiteboard — ferramenta de seleção (#83, #137)", () => {
     render(<Whiteboard />);
 
     expect(screen.queryByRole("button", { name: /^(select|seleção)$/i })).toBeNull();
-    expect(screen.getByRole("toolbar", { name: UI.en.toolbar.label })).toBeDefined();
+    expect(screen.getByRole("group", { name: UI.en.toolbar.label })).toBeDefined();
   });
 
   it("V escolhe a seleção", () => {
@@ -2797,6 +2797,28 @@ describe("Whiteboard — ferramenta de seleção (#83, #137)", () => {
     fireEvent.keyDown(document, { key: "v" });
 
     expect(selecaoAtiva()).toBe(true);
+  });
+
+  /**
+   * Critério da #137: os atalhos continuam valendo com a toolbar no lugar da pilha. Cada
+   * tecla acende a sua ferramenta — e só ela —, e `V` e `Esc` apagam a toolbar inteira.
+   */
+  it.each([
+    ["n", NOTA],
+    ["p", LAPIS],
+    ["f", UI.en.fountain.action],
+    ["h", UI.en.highlighter.action],
+    ["e", UI.en.eraser.action],
+  ])("%s acende %s na toolbar, e V e Esc voltam à seleção", (tecla, nome) => {
+    render(<Whiteboard />);
+
+    for (const saida of ["v", "Escape"]) {
+      fireEvent.keyDown(document, { key: tecla });
+      expect(FERRAMENTAS.filter(ativo)).toEqual([nome]);
+
+      fireEvent.keyDown(document, { key: saida });
+      expect(selecaoAtiva()).toBe(true);
+    }
   });
 
   /** Sem botão de seleção, o caminho pela toolbar é clicar de novo na ferramenta ligada. */

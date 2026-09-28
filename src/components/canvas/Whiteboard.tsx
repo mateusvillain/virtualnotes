@@ -8,6 +8,7 @@ import {
   STROKE_TOOL_PENCIL,
   type StrokeTool,
 } from "@/lib/board/types";
+import type { BoardMode, ToolMode } from "@/lib/board/modes";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
 import type { Point } from "@/lib/canvas/coords";
@@ -25,33 +26,10 @@ import { Board } from "./Board";
 import { Viewport } from "./Viewport";
 import { SelectionActions } from "./SelectionActions";
 import { SelectionToolbar } from "./SelectionToolbar";
-import { Toolbar, type ToolbarMode } from "./Toolbar";
+import { Toolbar } from "./Toolbar";
 import { ViewportControls } from "./ViewportControls";
 
 type WhiteboardProps = Pick<UseBoardOptions, "initialBoard" | "autosave">;
-
-/**
- * A ferramenta ativa no quadro.
- *
- * As ferramentas são exclusivas entre si por natureza — um gesto de ponteiro faz uma coisa
- * de cada vez —, e este tipo é onde isso fica dito. É a mesma escolha que o `DragState` do
- * `Viewport` faz para os gestos.
- *
- * `"select"` no lugar do antigo `"none"` (#83). O estado sempre existiu: era ele que fazia
- * arrastar o fundo desenhar o retângulo de seleção. O que faltava era nome e rosto — sem
- * eles, sair do lápis era uma ação sem destino, e a ferramenta mais usada do quadro era a
- * única sem representação na tela. Não há mais "nenhuma": há sempre uma ferramenta, e a
- * de partida é a de selecionar.
- *
- * `"erasing"` chegou com a borracha (#98), como uma quarta ferramenta exclusiva das demais
- * — a mesma regra que já valia entre o lápis e a colocação de nota, agora com mais um nome.
- * `"highlighter"` (#117) é mais uma, pela mesma regra: ligar o marca-texto desliga o lápis.
- * `"fountain"` (#114) também: a caneta tinteiro desliga o lápis, o marca-texto e o resto.
- *
- * Desde a toolbar inferior (#137) a seleção voltou a não ter botão, mas continua tendo nome:
- * é o que vale com nenhuma ferramenta da toolbar ligada, e o destino de `V` e `Esc`.
- */
-type BoardMode = "select" | ToolbarMode;
 
 /**
  * O quadro: junta o estado de viewport à superfície navegável, aos controles e aos post-its.
@@ -179,7 +157,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
    * seleção. É a mesma tecla fazendo as duas coisas, como sempre fez; o que mudou é que o
    * destino tem nome.
    */
-  const toggleMode = useCallback((wanted: Exclude<BoardMode, "select">) => {
+  const toggleMode = useCallback((wanted: ToolMode) => {
     setMode((current) => (current === wanted ? "select" : wanted));
   }, []);
 
