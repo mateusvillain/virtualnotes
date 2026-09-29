@@ -21,6 +21,7 @@ import {
 } from "@/lib/board/types";
 import { MAX_SCALE, MIN_SCALE, scaleAsPercent } from "@/lib/canvas/coords";
 import { strokeColor } from "@/lib/theme/note-colors";
+import { DRAW_CURSOR_MIN_SIZE } from "./DrawCursor";
 import { Whiteboard } from "./Whiteboard";
 import { UI } from "@/lib/i18n/ui";
 
@@ -1775,12 +1776,12 @@ describe("Whiteboard — navegar com a rodinha apertada", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
     const surface = screen.getByTestId("viewport-surface");
-    expect(surface.className).toContain("cursor-pencil");
+    expect(surface.className).toContain("cursor-none");
 
     fireEvent.pointerDown(surface, { pointerId: 1, button: 1, clientX: 0, clientY: 0 });
 
     expect(surface.className).toContain("cursor-grabbing");
-    expect(surface.className).not.toContain("cursor-pencil");
+    expect(surface.className).not.toContain("cursor-none");
   });
 
   it("desloca o quadro como segurar espaço", () => {
@@ -3147,15 +3148,16 @@ describe("Whiteboard — modo lápis", () => {
     expect(postIt(0).style.left).toBe(antes);
   });
 
-  it("o cursor do quadro vira lápis com o modo ligado", () => {
+  it("o cursor do quadro vira o círculo do traço com o modo ligado", () => {
     render(<Whiteboard />);
     const surface = screen.getByTestId("viewport-surface");
     expect(surface.className).toContain("cursor-default");
 
     fireEvent.keyDown(document, { key: "p" });
 
-    // O modo muda o que arrastar faz, e o cursor é o que anuncia isso antes do gesto.
-    expect(surface.className).toContain("cursor-pencil");
+    // O modo muda o que arrastar faz, e o cursor é o que anuncia isso antes do gesto: o do
+    // sistema some, e o círculo da espessura segue o ponteiro no lugar dele.
+    expect(surface.className).toContain("cursor-none");
     expect(surface.className).not.toContain("cursor-default");
   });
 
@@ -4576,13 +4578,19 @@ describe("Whiteboard — marca-texto (#117)", () => {
     expect(tintas()[0]?.getAttribute("stroke")).toBe(strokeColor(DEFAULT_HIGHLIGHTER_COLOR));
   });
 
-  it("mostra o cursor do marca-texto, e não o do lápis", () => {
+  it("o círculo do cursor tem a largura do marca-texto", () => {
     render(<Whiteboard />);
     ligaMarcaTexto();
 
     const surface = screen.getByTestId("viewport-surface");
-    expect(surface.className).toContain("cursor-highlighter");
-    expect(surface.className).not.toContain("cursor-pencil");
+    fireEvent.pointerMove(surface, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 200,
+      clientY: 200,
+    });
+
+    expect(screen.getByTestId("draw-cursor").style.width).toBe(`${HIGHLIGHTER_WIDTH}px`);
   });
 });
 
@@ -4805,13 +4813,25 @@ describe("Whiteboard — caneta tinteiro (#114)", () => {
     expect(screen.queryByTestId("stroke-preview")).toBeNull();
   });
 
-  it("mostra o cursor da caneta", () => {
+  it("o círculo do cursor tem a pena na parte mais larga", () => {
     render(<Whiteboard />);
     ligaCaneta();
 
     const surface = screen.getByTestId("viewport-surface");
-    expect(surface.className).toContain("cursor-fountain");
-    expect(surface.className).not.toContain("cursor-pencil");
+    fireEvent.pointerMove(surface, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 200,
+      clientY: 200,
+    });
+
+    // A 1× a pena é mais fina que o mínimo de tela; a 6×, o círculo é a pena inteira.
+    expect(screen.getByTestId("draw-cursor").style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+    fireEvent.click(screen.getByTestId("stroke-settings-button"));
+    fireEvent.change(screen.getByRole("slider", { name: UI.en.toolbar.size }), {
+      target: { value: String(STROKE_SIZES.length - 1) },
+    });
+    expect(screen.getByTestId("draw-cursor").style.width).toBe(`${FOUNTAIN_MAX_WIDTH * 6}px`);
   });
 });
 
@@ -5071,6 +5091,84 @@ describe("Whiteboard — painel de traço (#162)", () => {
     fireEvent.click(rabisco());
     expect(slider(UI.en.toolbar.size).getAttribute("aria-valuetext")).toBe("1×");
     expect(slider(UI.en.toolbar.opacity).getAttribute("aria-valuetext")).toBe("35%");
+  });
+});
+
+describe("Whiteboard — círculo do cursor de desenho", () => {
+  function circulo(): HTMLElement | null {
+    return screen.queryByTestId("draw-cursor");
+  }
+
+  function aponta(pointerType = "mouse"): void {
+    fireEvent.pointerMove(screen.getByTestId("viewport-surface"), {
+      pointerId: 1,
+      pointerType,
+      clientX: 200,
+      clientY: 200,
+    });
+  }
+
+  it("aparece só com uma ferramenta de desenho ligada e o ponteiro no quadro", () => {
+    render(<Whiteboard />);
+    aponta();
+    expect(circulo()).toBeNull();
+
+    fireEvent.keyDown(document, { key: "p" });
+    expect(circulo()).toBeNull();
+
+    aponta();
+    const noPonto = defined(circulo() ?? undefined, "o círculo");
+    // Centrado no ponteiro.
+    const tamanho = Number.parseFloat(noPonto.style.width);
+    expect(Number.parseFloat(noPonto.style.left)).toBe(200 - tamanho / 2);
+
+    fireEvent.pointerLeave(screen.getByTestId("viewport-surface"));
+    expect(circulo()).toBeNull();
+  });
+
+  it("some ao desligar a ferramenta e não volta ao religar sem mexer o ponteiro", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+
+    fireEvent.keyDown(document, { key: "p" });
+    expect(circulo()).toBeNull();
+
+    fireEvent.keyDown(document, { key: "p" });
+    expect(circulo()).toBeNull();
+  });
+
+  it("cresce e encolhe com a espessura escolhida", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "h" });
+    aponta();
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH}px`);
+
+    fireEvent.click(screen.getByTestId("stroke-settings-button"));
+    const slider = screen.getByRole("slider", { name: UI.en.toolbar.size });
+    fireEvent.change(slider, { target: { value: String(STROKE_SIZES.length - 1) } });
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 6}px`);
+
+    fireEvent.change(slider, { target: { value: "0" } });
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 0.5}px`);
+  });
+
+  it("tem um tamanho mínimo, para o lápis fino não sumir debaixo do ponteiro", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+
+    // O lápis a 1× tem 2 unidades de tinta; no zoom de 100%, o mínimo de tela ganha.
+    expect(circulo()?.style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+  });
+
+  it("no toque não aparece: não há cursor para acompanhar", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+
+    aponta("touch");
+
+    expect(circulo()).toBeNull();
   });
 });
 

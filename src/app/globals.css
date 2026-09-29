@@ -118,53 +118,6 @@ body {
 }
 
 /**
- * Cursor do modo lápis (issue #68).
- *
- * O modo muda o que arrastar faz, então ele precisa se anunciar antes do gesto — é o mesmo
- * cuidado que a mãozinha já toma com a barra de espaço segurada. Nenhum cursor do sistema
- * diz "isto desenha": `crosshair` é a mira da seleção e `cell` é de planilha, então o
- * desenho vem inline, no mesmo traço dos ícones da interface.
- *
- * O ponto quente fica na ponta do lápis, embaixo à esquerda, e não no canto do ícone: é
- * dali que a linha sai. `crosshair` é o reserva para quem não carregar a imagem.
- *
- * O desenho é o do antigo ícone do botão do lápis, que saiu com a toolbar ilustrada (#137):
- * o cursor precisa ser pequeno e de traço, e a ilustração da toolbar não serve para isso. A
- * cor precisa vir literal porque `var()` não atravessa um data URI.
- * `%2318181b` é `--color-ink`; se o token mudar, este valor muda junto.
- */
-.cursor-pencil {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.5 3.5 20 7 8 19l-4.5 1L4.5 15.5z'/%3E%3Cpath d='M14.5 5.5 18 9'/%3E%3C/svg%3E")
-      4 20,
-    crosshair;
-}
-
-/**
- * Cursor do modo caneta tinteiro (#114): o desenho do antigo ícone do botão (o `pen-tool` do
- * Lucide), com o ponto quente na ponta da pena, em cima à esquerda. As mesmas regras do
- * `.cursor-pencil` acima valem aqui — cor literal de `--color-ink`.
- */
-.cursor-fountain {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z'/%3E%3Cpath d='m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18'/%3E%3Cpath d='m2.3 2.3 7.286 7.286'/%3E%3Ccircle cx='11' cy='11' r='2'/%3E%3C/svg%3E")
-      2 2,
-    crosshair;
-}
-
-/**
- * Cursor do modo marca-texto (#117): o desenho do antigo ícone do botão, com o ponto quente
- * na ponta chanfrada, embaixo à esquerda. As mesmas regras do `.cursor-pencil` acima valem
- * aqui — cor literal de `--color-ink`.
- */
-.cursor-highlighter {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 11-6 6v3h9l3-3'/%3E%3Cpath d='m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4'/%3E%3C/svg%3E")
-      4 20,
-    crosshair;
-}
-
-/**
  * Entrada da apresentação do quadro vazio.
  *
  * Um fade curto com um passo para cima, e não um simples aparecer: a peça nasce junto com
