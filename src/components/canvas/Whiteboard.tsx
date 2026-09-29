@@ -20,6 +20,8 @@ import { HistoryButtons } from "@/components/ui/HistoryButtons";
 import { pillSurfaceClass } from "@/components/ui/iconButton";
 import { NewBoardButton } from "@/components/ui/NewBoardButton";
 import { StrokeColorPicker } from "@/components/ui/StrokeColorPicker";
+import { StrokeSettings } from "@/components/ui/StrokeSettings";
+import { strokeColor } from "@/lib/theme/note-colors";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { useShareBoard } from "@/lib/board/useShareBoard";
 import { Onboarding } from "./Onboarding";
@@ -149,6 +151,8 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
       : highlighter
         ? STROKE_TOOL_HIGHLIGHTER
         : null;
+  /** A ferramenta cujos valores de traço a moldura mostra: a ligada, ou o lápis fora de um modo de desenho. */
+  const strokeTool = drawingTool ?? STROKE_TOOL_PENCIL;
   const placing = mode === "placing";
 
   /**
@@ -312,19 +316,32 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           <Toolbar
             active={mode === "select" ? null : mode}
             onToggle={toggleMode}
-            // A paleta só aparece com uma ferramenta de desenho ligada (#69, #117, #140):
-            // escolhe a cor do **próximo** traço, e fora do modo não há gesto nenhum para ela
-            // influenciar. Cada ferramenta mostra a própria cor — o marca-texto abre no
-            // amarelo, o lápis no preto.
-            palette={
-              drawingTool === null ? undefined : (
+            // Os controles de traço só valem com uma ferramenta de desenho ligada (#154): a
+            // cor, a espessura e a opacidade são do **próximo** traço, e fora do modo não há
+            // gesto nenhum para elas influenciarem. Cada ferramenta mostra os próprios
+            // valores — o marca-texto abre no amarelo a 35%, o lápis no preto cheio. Fora de
+            // um modo de desenho, os botões desabilitados mostram os do lápis.
+            stroke={{
+              enabled: drawingTool !== null,
+              color: strokeColor(board.strokeColors[strokeTool]),
+              colorPicker: (
                 <StrokeColorPicker
-                  tool={drawingTool}
-                  value={board.strokeColors[drawingTool]}
-                  onChange={(color) => board.setStrokeColor(drawingTool, color)}
+                  tool={strokeTool}
+                  value={board.strokeColors[strokeTool]}
+                  onChange={(color) => board.setStrokeColor(strokeTool, color)}
                 />
-              )
-            }
+              ),
+              settings: (
+                <StrokeSettings
+                  tool={strokeTool}
+                  size={board.strokeSizes[strokeTool]}
+                  opacity={board.strokeOpacities[strokeTool]}
+                  color={strokeColor(board.strokeColors[strokeTool])}
+                  onSizeChange={(size) => board.setStrokeSize(strokeTool, size)}
+                  onOpacityChange={(opacity) => board.setStrokeOpacity(strokeTool, opacity)}
+                />
+              ),
+            }}
           />
         </>
       }
@@ -361,9 +378,11 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           onSelectionRect={board.selectInRect}
           pencil={drawingTool !== null}
           // Fora de um modo de desenho não há gesto de desenho: o lápis aqui é só o valor que
-          // as duas props exigem, e nunca chega a ser usado.
-          pencilColor={board.strokeColors[drawingTool ?? STROKE_TOOL_PENCIL]}
-          drawingTool={drawingTool ?? STROKE_TOOL_PENCIL}
+          // as props exigem, e nunca chega a ser usado.
+          pencilColor={board.strokeColors[strokeTool]}
+          drawingTool={strokeTool}
+          strokeSize={board.strokeSizes[strokeTool]}
+          strokeOpacity={board.strokeOpacities[strokeTool]}
           erasing={erasing}
           placing={placing}
           onPlaceNote={placeNote}

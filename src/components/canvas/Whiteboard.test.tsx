@@ -17,6 +17,7 @@ import {
   SCHEMA_VERSION,
   STROKE_COLORS,
   STROKE_COLOR_BLACK,
+  STROKE_SIZES,
 } from "@/lib/board/types";
 import { MAX_SCALE, MIN_SCALE, scaleAsPercent } from "@/lib/canvas/coords";
 import { strokeColor } from "@/lib/theme/note-colors";
@@ -28,6 +29,22 @@ import { UI } from "@/lib/i18n/ui";
  * digitar, sair. É aqui que os critérios da #13 e da #14 param de ser contrato entre
  * componentes e viram comportamento observável.
  */
+/**
+ * O bloco de cores da ferramenta `nome` (#160). Ele só aparece aberto pelo círculo da seção
+ * Color Controls, e este atalho o abre se ainda estiver fechado — `null` com o círculo
+ * desabilitado, sem ferramenta de traço ligada.
+ */
+function blocoDeCores(nome: "pencil" | "fountain" | "highlighter"): HTMLElement | null {
+  const testId = `${nome}-color-picker`;
+  const aberto = screen.queryByTestId(testId);
+  if (aberto !== null) return aberto;
+
+  const circulo = screen.getByTestId("stroke-color-button") as HTMLButtonElement;
+  if (circulo.disabled || circulo.getAttribute("aria-expanded") === "true") return null;
+  fireEvent.click(circulo);
+  return screen.queryByTestId(testId);
+}
+
 function duploCliqueNoFundo(x: number, y: number): void {
   fireEvent.doubleClick(screen.getByTestId("viewport-surface"), { clientX: x, clientY: y });
 }
@@ -4309,7 +4326,7 @@ describe("Whiteboard — cor do lápis (#69)", () => {
   }
 
   function paleta(): HTMLElement | null {
-    return screen.queryByTestId("pencil-color-picker");
+    return blocoDeCores("pencil");
   }
 
   /** A paleta, exigindo que ela exista — para os testes que já ligaram o lápis antes. */
@@ -4419,7 +4436,7 @@ describe("Whiteboard — marca-texto (#117)", () => {
   }
 
   function paleta(): HTMLElement | null {
-    return screen.queryByTestId("highlighter-color-picker");
+    return blocoDeCores("highlighter");
   }
 
   it("H liga e desliga o modo, e o botão anuncia o estado", () => {
@@ -4655,7 +4672,7 @@ describe("Whiteboard — caneta tinteiro (#114)", () => {
   }
 
   function paleta(): HTMLElement | null {
-    return screen.queryByTestId("fountain-color-picker");
+    return blocoDeCores("fountain");
   }
 
   it("F liga e desliga o modo, e o botão anuncia o estado", () => {
@@ -4839,49 +4856,73 @@ describe("Whiteboard — alvo da caneta tinteiro (#115)", () => {
   });
 });
 
-describe("Whiteboard — bloco de cores acima da toolbar (#140)", () => {
+describe("Whiteboard — bloco de cores pelo círculo (#160)", () => {
+  function circulo(): HTMLButtonElement {
+    return screen.getByTestId("stroke-color-button") as HTMLButtonElement;
+  }
+
   function bloco(): HTMLElement | null {
-    return screen.queryByTestId("toolbar-palette");
+    return screen.queryByTestId("stroke-color-panel");
   }
 
   it.each([
     ["p", "pencil"],
     ["f", "fountain"],
     ["h", "highlighter"],
-  ])("aparece com %s, acima da toolbar, com a paleta da ferramenta", (tecla, nome) => {
+  ])("com %s, o círculo abre acima da toolbar a paleta da ferramenta", (tecla, nome) => {
     render(<Whiteboard />);
 
     fireEvent.keyDown(document, { key: tecla });
+    expect(bloco()).toBeNull();
 
-    const pilula = defined(bloco() ?? undefined, "o bloco de cores");
-    expect(pilula.querySelector(`[data-testid="${nome}-color-picker"]`)).not.toBeNull();
-    // Antes da toolbar na mesma coluna: na tela, logo acima dela.
-    const toolbar = screen.getByTestId("toolbar");
-    expect(pilula.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(pilula.parentElement).toBe(toolbar.parentElement);
+    fireEvent.click(circulo());
+
+    const painel = defined(bloco() ?? undefined, "o bloco de cores");
+    expect(painel.querySelector(`[data-testid="${nome}-color-picker"]`)).not.toBeNull();
+    expect(screen.getByTestId("toolbar").contains(painel)).toBe(true);
+    expect(circulo().getAttribute("aria-expanded")).toBe("true");
   });
 
   it.each([
     ["n", "a nota"],
     ["e", "a borracha"],
-  ])("não aparece com %s (%s)", (tecla) => {
+  ])("com %s (%s) o círculo fica desabilitado", (tecla) => {
     render(<Whiteboard />);
 
     fireEvent.keyDown(document, { key: tecla });
 
+    expect(circulo().disabled).toBe(true);
     expect(bloco()).toBeNull();
   });
 
-  it("some ao desligar a ferramenta e ao trocar para a borracha", () => {
+  it("fecha ao desligar a ferramenta e ao trocar para a borracha", () => {
     render(<Whiteboard />);
 
     fireEvent.keyDown(document, { key: "p" });
+    fireEvent.click(circulo());
     fireEvent.keyDown(document, { key: "p" });
     expect(bloco()).toBeNull();
 
     fireEvent.keyDown(document, { key: "h" });
+    fireEvent.click(circulo());
     fireEvent.keyDown(document, { key: "e" });
     expect(bloco()).toBeNull();
+
+    // Religar não reabre sozinho: o painel fechou de verdade.
+    fireEvent.keyDown(document, { key: "h" });
+    expect(bloco()).toBeNull();
+  });
+
+  it("escolher uma cor pinta o círculo e deixa o bloco aberto", async () => {
+    const user = userEvent.setup();
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: "p" });
+    await user.click(circulo());
+    await user.click(screen.getByRole("radio", { name: UI.en.note.colors.blue }));
+
+    expect(bloco()).not.toBeNull();
+    expect(screen.getByTestId("stroke-color-swatch").style.backgroundColor).toBe(strokeColor(3));
   });
 
   it("trocar de ferramenta mostra a cor da ferramenta nova", async () => {
@@ -4889,6 +4930,7 @@ describe("Whiteboard — bloco de cores acima da toolbar (#140)", () => {
     render(<Whiteboard />);
 
     fireEvent.keyDown(document, { key: "p" });
+    await user.click(circulo());
     await user.click(screen.getByRole("radio", { name: UI.en.note.colors.blue }));
     fireEvent.keyDown(document, { key: "h" });
 
@@ -4903,13 +4945,102 @@ describe("Whiteboard — bloco de cores acima da toolbar (#140)", () => {
     );
   });
 
+  it("Esc fecha o bloco sem desligar a ferramenta", async () => {
+    const user = userEvent.setup();
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: "p" });
+    await user.click(circulo());
+    await user.keyboard("{Escape}");
+
+    expect(bloco()).toBeNull();
+    expect(
+      screen.getByRole("button", { name: UI.en.pencil.action }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(document.activeElement).toBe(circulo());
+  });
+
   it("não fica mais no canto de cima", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
+    fireEvent.click(circulo());
 
     const novoQuadro = screen.getByRole("button", { name: UI.en.newBoard.action });
     const canto = novoQuadro.closest(".top-0")!;
     expect(canto.querySelector('[role="radiogroup"]')).toBeNull();
+  });
+});
+
+describe("Whiteboard — painel de traço (#162)", () => {
+  function rabisco(): HTMLButtonElement {
+    return screen.getByTestId("stroke-settings-button") as HTMLButtonElement;
+  }
+
+  function rabisca(de: [number, number], ate: [number, number]): void {
+    const surface = screen.getByTestId("viewport-surface");
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: de[0], clientY: de[1] });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: ate[0], clientY: ate[1] });
+  }
+
+  function slider(nome: string): HTMLInputElement {
+    return screen.getByRole("slider", { name: nome }) as HTMLInputElement;
+  }
+
+  it("o rabisco abre o painel, e abrir um painel fecha o outro", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+
+    fireEvent.click(rabisco());
+    expect(screen.queryByTestId("stroke-settings-panel")).not.toBeNull();
+    expect(screen.getByRole("group", { name: UI.en.pencil.stroke })).toBeDefined();
+
+    fireEvent.click(screen.getByTestId("stroke-color-button"));
+    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+    expect(screen.queryByTestId("stroke-color-panel")).not.toBeNull();
+
+    fireEvent.click(rabisco());
+    expect(screen.queryByTestId("stroke-color-panel")).toBeNull();
+
+    fireEvent.click(rabisco());
+    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+  });
+
+  it("com a nota, a borracha ou sem ferramenta, o rabisco fica desabilitado", () => {
+    render(<Whiteboard />);
+    expect(rabisco().disabled).toBe(true);
+
+    fireEvent.keyDown(document, { key: "p" });
+    fireEvent.click(rabisco());
+    fireEvent.keyDown(document, { key: "n" });
+
+    expect(rabisco().disabled).toBe(true);
+    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+  });
+
+  it("os valores escolhidos valem para o próximo traço, e só da ferramenta ligada", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    fireEvent.click(rabisco());
+
+    fireEvent.change(slider(UI.en.toolbar.size), {
+      target: { value: String(STROKE_SIZES.length - 1) },
+    });
+    fireEvent.change(slider(UI.en.toolbar.opacity), { target: { value: "9" } });
+    expect(slider(UI.en.toolbar.size).getAttribute("aria-valuetext")).toBe("6×");
+    expect(slider(UI.en.toolbar.opacity).getAttribute("aria-valuetext")).toBe("50%");
+
+    rabisca([100, 100], [300, 100]);
+    const [grosso] = screen.getAllByTestId("stroke");
+    expect(grosso?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH * 6));
+    expect(grosso?.getAttribute("opacity")).toBe("0.5");
+
+    // O marca-texto guarda os dele: trocar de ferramenta mostra os valores da nova.
+    fireEvent.keyDown(document, { key: "h" });
+    fireEvent.click(rabisco());
+    expect(slider(UI.en.toolbar.size).getAttribute("aria-valuetext")).toBe("1×");
+    expect(slider(UI.en.toolbar.opacity).getAttribute("aria-valuetext")).toBe("35%");
   });
 });
 

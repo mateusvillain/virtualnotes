@@ -28,6 +28,8 @@ import {
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   type StrokeColor,
+  type StrokeOpacity,
+  type StrokeSize,
   type StrokeTool,
 } from "@/lib/board/types";
 import { EraserCursor } from "./EraserCursor";
@@ -80,6 +82,13 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
    * que altura ela é desenhada: o marca-texto por baixo da tinta, como vai ficar ao soltar.
    */
   drawingTool?: StrokeTool;
+  /**
+   * Espessura e opacidade da ferramenta ligada (#162), em índices, como o traço as grava.
+   * Ausentes, o padrão da ferramenta. Chegam à prévia pelo mesmo caminho da cor, para o
+   * traço em curso já ter a cara do traço que vai ficar.
+   */
+  strokeSize?: StrokeSize;
+  strokeOpacity?: StrokeOpacity;
   /** Modo borracha ligado: arrastar ou tocar apaga o traço que encostar (#98). */
   erasing?: boolean;
   /** Modo de colocação ligado: uma nota translúcida segue o cursor e o clique a fixa (#73). */
@@ -203,6 +212,8 @@ export function Viewport({
   pencil = false,
   pencilColor = STROKE_COLOR_BLACK,
   drawingTool = STROKE_TOOL_PENCIL,
+  strokeSize,
+  strokeOpacity,
   erasing = false,
   placing = false,
   onPlaceNote,
@@ -373,11 +384,11 @@ export function Viewport({
       event.currentTarget.setPointerCapture(event.pointerId);
 
       const point = screenToCanvas(localPoint(event), viewportRef.current);
-      const style = { tool: drawingTool, color: pencilColor };
+      const style = { tool: drawingTool, color: pencilColor, w: strokeSize, o: strokeOpacity };
       drag.current = { kind: "draw", pointerId: event.pointerId, points: [point], ...style };
       setDrawing({ points: [point], ...style });
     },
-    [drawingTool, localPoint, pencilColor],
+    [drawingTool, localPoint, pencilColor, strokeOpacity, strokeSize],
   );
 
   /**
