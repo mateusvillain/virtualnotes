@@ -52,6 +52,11 @@ interface TooltipProps {
    * medir nada em tempo de execução.
    */
   align?: "center" | "start" | "end";
+  /**
+   * Não mostra a caixa agora. Para o gatilho que abriu um painel no mesmo lado (#155): a dica
+   * cairia por cima dele, repetindo o nome do que já está aberto na frente de quem o usa.
+   */
+  suppressed?: boolean;
   /** O botão que dispara o tooltip. */
   children: ReactNode;
 }
@@ -76,6 +81,7 @@ export function Tooltip({
   shortcut,
   side = "bottom",
   align = "center",
+  suppressed = false,
   children,
 }: TooltipProps) {
   const [open, setOpen] = useState(false);
@@ -180,7 +186,7 @@ export function Tooltip({
       onBlur={cancel}
     >
       {children}
-      {open ? (
+      {open && !suppressed ? (
         <span
           // Escondida da árvore de acessibilidade porque o texto repete o `aria-label` do
           // botão: exposta, a mesma frase apareceria duas vezes na navegação por leitor de

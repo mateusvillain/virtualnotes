@@ -42,7 +42,16 @@ export interface UiCopy {
    * Nome da toolbar inferior de ferramentas (#137). Não há mais botão de seleção: ela é o que
    * vale com nenhuma ferramenta ligada, e `V`/`Esc` levam até ela.
    */
-  toolbar: { label: string };
+  toolbar: {
+    label: string;
+    /** O círculo de cor da seção Color Controls (#154), que abre o bloco de cores. */
+    color: string;
+    /** O botão de rabisco (#154), que abre o painel de espessura e opacidade. */
+    stroke: string;
+    /** Rótulos dos dois sliders do painel de traço (#161). */
+    size: string;
+    opacity: string;
+  };
   /** Nomes dos botões de desfazer e refazer (#87) — as mesmas ações de `Ctrl+Z` e `Ctrl+Shift+Z`. */
   history: { undo: string; redo: string };
   pencil: {
@@ -56,6 +65,8 @@ export interface UiCopy {
      * uma fosse ajustada e a outra não.
      */
     color: string;
+    /** Nome do painel de espessura e opacidade desta ferramenta (#161). */
+    stroke: string;
     black: string;
   };
   fountain: {
@@ -66,12 +77,16 @@ export interface UiCopy {
      * `pencil.black`, que vale para a paleta inteira: é a mesma cor nas três ferramentas.
      */
     color: string;
+    /** Nome do painel de espessura e opacidade desta ferramenta (#161). */
+    stroke: string;
   };
   highlighter: {
     /** Dica e `aria-label` do botão que liga o modo marca-texto (#117). */
     action: string;
     /** Nome do grupo de cores do marca-texto (#112). O preto, como na caneta, é `pencil.black`. */
     color: string;
+    /** Nome do painel de espessura e opacidade desta ferramenta (#161). */
+    stroke: string;
   };
   /** Dica e `aria-label` do botão que liga o modo borracha (#98). */
   eraser: { action: string };
@@ -127,11 +142,25 @@ export const UI: Record<Locale, UiCopy> = {
       cancel: "Cancel",
     },
     zoom: { out: "Zoom out", reset: "Reset zoom to 100%", in: "Zoom in" },
-    toolbar: { label: "Tools" },
+    toolbar: {
+      label: "Tools",
+      color: "Stroke colour",
+      stroke: "Stroke and opacity",
+      size: "Stroke",
+      opacity: "Opacity",
+    },
     history: { undo: "Undo", redo: "Redo" },
-    pencil: { action: "Pencil", color: "Pencil colour", black: "Black" },
-    fountain: { action: "Fountain pen", color: "Fountain pen colour" },
-    highlighter: { action: "Highlighter", color: "Highlighter colour" },
+    pencil: { action: "Pencil", color: "Pencil colour", stroke: "Pencil stroke", black: "Black" },
+    fountain: {
+      action: "Fountain pen",
+      color: "Fountain pen colour",
+      stroke: "Fountain pen stroke",
+    },
+    highlighter: {
+      action: "Highlighter",
+      color: "Highlighter colour",
+      stroke: "Highlighter stroke",
+    },
     eraser: { action: "Eraser" },
     selectionActions: { remove: "Delete selection", duplicate: "Duplicate selection" },
     note: {
@@ -185,11 +214,25 @@ export const UI: Record<Locale, UiCopy> = {
       cancel: "Cancelar",
     },
     zoom: { out: "Diminuir zoom", reset: "Voltar o zoom para 100%", in: "Aumentar zoom" },
-    toolbar: { label: "Ferramentas" },
+    toolbar: {
+      label: "Ferramentas",
+      color: "Cor do traço",
+      stroke: "Espessura e opacidade",
+      size: "Espessura",
+      opacity: "Opacidade",
+    },
     history: { undo: "Desfazer", redo: "Refazer" },
-    pencil: { action: "Lápis", color: "Cor do lápis", black: "Preto" },
-    fountain: { action: "Caneta tinteiro", color: "Cor da caneta tinteiro" },
-    highlighter: { action: "Marca-texto", color: "Cor do marca-texto" },
+    pencil: { action: "Lápis", color: "Cor do lápis", stroke: "Traço do lápis", black: "Preto" },
+    fountain: {
+      action: "Caneta tinteiro",
+      color: "Cor da caneta tinteiro",
+      stroke: "Traço da caneta tinteiro",
+    },
+    highlighter: {
+      action: "Marca-texto",
+      color: "Cor do marca-texto",
+      stroke: "Traço do marca-texto",
+    },
     eraser: { action: "Borracha" },
     selectionActions: { remove: "Apagar seleção", duplicate: "Duplicar seleção" },
     note: {
