@@ -122,9 +122,10 @@ export const DEFAULT_STROKE_COLORS: StrokeColors = [
  * três ferramentas o mesmo slider, e a caneta tinteiro escala o fio e a largura da pena
  * juntos, sem perder a proporção da pena caligráfica.
  *
- * O traço guarda o índice, pela mesma razão da cor. Por isso a lista só cresce nas pontas
- * com cuidado: inserir um valor no meio mudaria a espessura de todo traço já compartilhado.
- * Valores de partida, ajustáveis em revisão enquanto nenhum link os usa.
+ * O traço guarda o índice, pela mesma razão da cor. Por isso a lista só cresce no **fim**:
+ * inserir um valor no começo ou no meio deslocaria os índices seguintes e mudaria a
+ * espessura de todo traço já compartilhado. Valores de partida, ajustáveis em revisão
+ * enquanto nenhum link os usa.
  */
 export const STROKE_SIZES = [0.5, 0.75, 1, 1.5, 2, 3, 4, 6] as const;
 

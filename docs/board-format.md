@@ -36,7 +36,8 @@ Stroke = { id: string; color: 0..6; tool?: 1..2; w?: 0..7; o?: 0..19; points: nu
   `DEFAULT_STROKE_OPACITIES`). O padrão é medido pela ferramenta já normalizada — 35% some de
   um traço de marca-texto, mas fica num de lápis, onde é escolha. Índice fora da lista vira o
   padrão, sem descartar o traço. Assim todo traço de antes dos campos continua gerando o mesmo
-  link. As listas guardam posição: um valor novo só entra nas pontas, nunca no meio.
+  link. As listas guardam posição: um valor novo só entra no **fim** — no começo ou no meio,
+  deslocaria os índices seguintes e mudaria o desenho de todo traço já compartilhado.
 - `points` — coordenadas de canvas **achatadas**: `[x0, y0, x1, y1, …]`, e não uma lista de
   `{x, y}`. Comprimento par, com ao menos dois pontos (quatro números). É a mesma lógica da
   cor por índice — o traço é o rabisco inteiro, e cada ponto dele custa bytes de link — mas
