@@ -28,6 +28,13 @@ export const SHORTCUTS = {
   fountain: { key: "F" },
   highlighter: { key: "H" },
   eraser: { key: "E" },
+  /**
+   * Afinar e engrossar o traço da ferramenta ligada, um passo por vez. `[` e `]` porque é a
+   * convenção dos editores de desenho (Photoshop, Krita, Figma): quem já tem no dedo não
+   * precisa aprender outra.
+   */
+  strokeThinner: { key: "[" },
+  strokeThicker: { key: "]" },
   undo: { mod: true, key: "Z" },
   redo: { mod: true, shift: true, key: "Z" },
   save: { mod: true, key: "S" },

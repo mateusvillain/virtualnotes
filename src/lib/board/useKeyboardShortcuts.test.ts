@@ -42,6 +42,8 @@ function opcoes(overrides: Partial<Parameters<typeof useKeyboardShortcuts>[0]>) 
     // Por padrão o quadro tinha algo marcado: quem exercita a seleção vazia diz isso no
     // próprio caso.
     onNudge: vi.fn(() => true),
+    // Idem: por padrão havia uma ferramenta de desenho ligada.
+    onStrokeSize: vi.fn(() => true),
     ...overrides,
   };
 }
@@ -677,5 +679,39 @@ describe("useKeyboardShortcuts — salvar com Ctrl/⌘+S", () => {
     tecla("ArrowRight");
 
     expect(onNudge).toHaveBeenLastCalledWith({ x: 1, y: 0 });
+  });
+});
+
+describe("[ e ] mudam a espessura", () => {
+  it("[ afina e ] engrossa, um passo por tecla", () => {
+    const onStrokeSize = vi.fn(() => true);
+    renderHook(() => useKeyboardShortcuts(opcoes({ onStrokeSize })));
+
+    expect(tecla("[")).toBe(true);
+    expect(tecla("]")).toBe(true);
+
+    expect(onStrokeSize.mock.calls).toEqual([[-1], [1]]);
+  });
+
+  it("sem ferramenta de desenho, a tecla segue adiante", () => {
+    const onStrokeSize = vi.fn(() => false);
+    renderHook(() => useKeyboardShortcuts(opcoes({ onStrokeSize })));
+
+    expect(tecla("]")).toBe(false);
+  });
+
+  it("não dispara num campo de texto nem com modificador", () => {
+    const onStrokeSize = vi.fn(() => true);
+    renderHook(() => useKeyboardShortcuts(opcoes({ onStrokeSize })));
+
+    tecla("]", elemento("input"));
+    // O jsdom não calcula `isContentEditable`; o post-it em edição, no navegador, sim.
+    const editavel = elemento("div", true);
+    Object.defineProperty(editavel, "isContentEditable", { value: true });
+    tecla("]", editavel);
+    tecla("]", document.body, { metaKey: true });
+    tecla("[", document.body, { ctrlKey: true });
+
+    expect(onStrokeSize).not.toHaveBeenCalled();
   });
 });

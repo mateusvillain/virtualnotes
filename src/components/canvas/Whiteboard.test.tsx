@@ -5153,6 +5153,45 @@ describe("Whiteboard — círculo do cursor de desenho", () => {
     expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 0.5}px`);
   });
 
+  it("[ e ] afinam e engrossam o traço da ferramenta ligada, parando nas pontas", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "h" });
+    aponta();
+
+    fireEvent.keyDown(document, { key: "]" });
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 1.5}px`);
+
+    for (let i = 0; i < 10; i++) fireEvent.keyDown(document, { key: "]" });
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 6}px`);
+
+    for (let i = 0; i < 10; i++) fireEvent.keyDown(document, { key: "[" });
+    expect(circulo()?.style.width).toBe(`${HIGHLIGHTER_WIDTH * 0.5}px`);
+
+    // O painel mostra o mesmo valor, e o lápis continua no dele.
+    fireEvent.click(screen.getByTestId("stroke-settings-button"));
+    expect(
+      screen.getByRole("slider", { name: UI.en.toolbar.size }).getAttribute("aria-valuetext"),
+    ).toBe("0.5×");
+    fireEvent.keyDown(document, { key: "p" });
+    expect(
+      screen.getByRole("slider", { name: UI.en.toolbar.size }).getAttribute("aria-valuetext"),
+    ).toBe("1×");
+  });
+
+  it("sem ferramenta de desenho, [ e ] não fazem nada", () => {
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document, { key: "]" });
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+
+    expect(circulo()?.style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+    fireEvent.click(screen.getByTestId("stroke-settings-button"));
+    expect(
+      screen.getByRole("slider", { name: UI.en.toolbar.size }).getAttribute("aria-valuetext"),
+    ).toBe("1×");
+  });
+
   it("tem um tamanho mínimo, para o lápis fino não sumir debaixo do ponteiro", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });

@@ -151,6 +151,13 @@ describe("Toolbar", () => {
       expect(screen.queryByTestId("sliders")).toBeNull();
     });
 
+    it("o rabisco anuncia os atalhos de espessura", () => {
+      renderToolbar("pencil", { enabled: true });
+
+      const traco = screen.getByRole("button", { name: ui.toolbar.stroke });
+      expect(traco.getAttribute("aria-keyshortcuts")).toBe("[ ]");
+    });
+
     it("o bloco de cores tem raio cheio e o painel de traço, 8px", async () => {
       const user = userEvent.setup();
       renderToolbar("pencil", { enabled: true });
