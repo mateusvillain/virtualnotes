@@ -21,7 +21,6 @@ import {
 } from "@/lib/board/types";
 import { MAX_SCALE, MIN_SCALE, scaleAsPercent } from "@/lib/canvas/coords";
 import { strokeColor } from "@/lib/theme/note-colors";
-import { DRAW_CURSOR_MIN_SIZE } from "./DrawCursor";
 import { Whiteboard } from "./Whiteboard";
 import { UI } from "@/lib/i18n/ui";
 
@@ -4825,8 +4824,7 @@ describe("Whiteboard — caneta tinteiro (#114)", () => {
       clientY: 200,
     });
 
-    // A 1× a pena é mais fina que o mínimo de tela; a 6×, o círculo é a pena inteira.
-    expect(screen.getByTestId("draw-cursor").style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+    expect(screen.getByTestId("draw-cursor").style.width).toBe(`${FOUNTAIN_MAX_WIDTH}px`);
     fireEvent.click(screen.getByTestId("stroke-settings-button"));
     fireEvent.change(screen.getByRole("slider", { name: UI.en.toolbar.size }), {
       target: { value: String(STROKE_SIZES.length - 1) },
@@ -5185,20 +5183,39 @@ describe("Whiteboard — círculo do cursor de desenho", () => {
     fireEvent.keyDown(document, { key: "p" });
     aponta();
 
-    expect(circulo()?.style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+    expect(circulo()?.style.width).toBe(`${STROKE_WIDTH}px`);
     fireEvent.click(screen.getByTestId("stroke-settings-button"));
     expect(
       screen.getByRole("slider", { name: UI.en.toolbar.size }).getAttribute("aria-valuetext"),
     ).toBe("1×");
   });
 
-  it("tem um tamanho mínimo, para o lápis fino não sumir debaixo do ponteiro", () => {
+  it("no lápis, acompanha a espessura até a ponta mais fina, sem mínimo", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+    expect(circulo()?.style.width).toBe(`${STROKE_WIDTH}px`);
+
+    fireEvent.keyDown(document, { key: "[" });
+    fireEvent.keyDown(document, { key: "[" });
+    expect(circulo()?.style.width).toBe(`${STROKE_WIDTH * 0.5}px`);
+
+    // O traço sai com a mesma largura que o círculo mostrava.
+    const surface = screen.getByTestId("viewport-surface");
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 300, clientY: 100 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 300, clientY: 100 });
+    expect(screen.getByTestId("stroke").getAttribute("stroke-width")).toBe(
+      String(STROKE_WIDTH * 0.5),
+    );
+  });
+
+  it("o contorno fica por dentro e não soma ao diâmetro", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
     aponta();
 
-    // O lápis a 1× tem 2 unidades de tinta; no zoom de 100%, o mínimo de tela ganha.
-    expect(circulo()?.style.width).toBe(`${DRAW_CURSOR_MIN_SIZE}px`);
+    expect(circulo()?.style.boxShadow).toContain("inset");
   });
 
   it("no toque não aparece: não há cursor para acompanhar", () => {
