@@ -5210,6 +5210,39 @@ describe("Whiteboard — círculo do cursor de desenho", () => {
     );
   });
 
+  it("com o círculo pequeno demais, ganha uma mira em volta, sem mudar de tamanho", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+
+    // Lápis a 1×: 2px na tela, abaixo do limite.
+    expect(screen.queryByTestId("draw-cursor-aim")).not.toBeNull();
+    expect(circulo()?.style.width).toBe(`${STROKE_WIDTH}px`);
+
+    // Lápis a 4× (8px) já se enxerga sozinho.
+    for (let i = 0; i < 4; i++) fireEvent.keyDown(document, { key: "]" });
+    expect(circulo()?.style.width).toBe(`${STROKE_WIDTH * 4}px`);
+    expect(screen.queryByTestId("draw-cursor-aim")).toBeNull();
+  });
+
+  it("o marca-texto não tem mira", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "h" });
+    aponta();
+
+    expect(screen.queryByTestId("draw-cursor-aim")).toBeNull();
+  });
+
+  it("a mira sai junto com o círculo", () => {
+    render(<Whiteboard />);
+    fireEvent.keyDown(document, { key: "p" });
+    aponta();
+
+    fireEvent.pointerLeave(screen.getByTestId("viewport-surface"));
+
+    expect(screen.queryByTestId("draw-cursor-aim")).toBeNull();
+  });
+
   it("o contorno fica por dentro e não soma ao diâmetro", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
