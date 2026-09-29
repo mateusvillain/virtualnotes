@@ -36,6 +36,8 @@ import { createBoardStore, type NewStroke } from "./store";
 import { useLocalPersistence } from "./useLocalPersistence";
 import {
   DEFAULT_STROKE_COLORS,
+  DEFAULT_STROKE_OPACITIES,
+  DEFAULT_STROKE_SIZES,
   NOTE_SIZE,
   STROKE_TOOL_PENCIL,
   createEmptyBoard,
@@ -46,6 +48,10 @@ import {
   type Stroke,
   type StrokeColor,
   type StrokeColors,
+  type StrokeOpacities,
+  type StrokeOpacity,
+  type StrokeSize,
+  type StrokeSizes,
   type StrokeTool,
 } from "./types";
 
@@ -69,6 +75,30 @@ const PASTE_OFFSET = 20;
  */
 function strokeLike(stroke: Stroke, points: number[]): NewStroke {
   return { color: stroke.color, tool: stroke.tool, w: stroke.w, o: stroke.o, points };
+}
+
+/**
+ * Um valor de sessão por ferramenta de desenho — a cor, a espessura e a opacidade do
+ * próximo traço (#159) —, com um setter que troca o de uma sem mexer nas outras.
+ *
+ * O setter mantém a referência quando o valor não muda: repetir a escolha atual não
+ * re-renderiza quem lê a lista.
+ */
+function usePerTool<Values extends readonly unknown[]>(
+  initial: Values,
+): [Values, (tool: StrokeTool, value: Values[number]) => void] {
+  const [values, setValues] = useState<Values>(initial);
+
+  const setValue = useCallback((tool: StrokeTool, value: Values[number]) => {
+    setValues((current) => {
+      if (current[tool] === value) return current;
+      const next = [...current];
+      next[tool] = value;
+      return next as unknown as Values;
+    });
+  }, []);
+
+  return [values, setValue];
 }
 
 /** Mapa vazio compartilhado: evita recriar uma instância nova a cada passada sem toque. */
@@ -113,6 +143,22 @@ export interface BoardApi {
   strokeColors: StrokeColors;
   /** Troca a cor do próximo traço de uma ferramenta. */
   setStrokeColor: (tool: StrokeTool, color: StrokeColor) => void;
+  /**
+   * Espessura do próximo traço de cada ferramenta (#159), indexada por {@link StrokeTool}.
+   * Mesmo modelo da cor: todas nascem na base (ver {@link DEFAULT_STROKE_SIZES}), e a troca
+   * vale só para os traços seguintes daquela ferramenta.
+   */
+  strokeSizes: StrokeSizes;
+  /** Troca a espessura do próximo traço de uma ferramenta. */
+  setStrokeSize: (tool: StrokeTool, size: StrokeSize) => void;
+  /**
+   * Opacidade do próximo traço de cada ferramenta (#159), indexada por {@link StrokeTool}.
+   * Lápis e caneta nascem cheios e o marca-texto a 35% (ver
+   * {@link DEFAULT_STROKE_OPACITIES}).
+   */
+  strokeOpacities: StrokeOpacities;
+  /** Troca a opacidade do próximo traço de uma ferramenta. */
+  setStrokeOpacity: (tool: StrokeTool, opacity: StrokeOpacity) => void;
   /**
    * Descarta o board atual e começa um quadro vazio (#58).
    *
@@ -295,21 +341,15 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
   const [resizing, setResizing] = useState<Resizing | null>(null);
   const [erasing, setErasing] = useState<ReadonlyMap<string, number[][] | null>>(EMPTY_ERASING);
   /**
-   * Cor do próximo traço de cada ferramenta (#69, #112). Cada uma nasce com a sua na sessão,
-   * e vale para todos os traços seguintes daquela ferramenta até ser trocada de novo — não é
-   * campo do board, então nem persiste no link nem entra no histórico de desfazer: é escolha
-   * de interface sobre o que o **próximo** gesto vai fazer, não conteúdo do quadro já feito.
+   * Cor, espessura e opacidade do próximo traço de cada ferramenta (#69, #112, #159). Cada
+   * uma nasce com a sua na sessão, e vale para todos os traços seguintes daquela ferramenta
+   * até ser trocada de novo — não é campo do board, então nem persiste no link nem entra no
+   * histórico de desfazer: é escolha de interface sobre o que o **próximo** gesto vai
+   * fazer, não conteúdo do quadro já feito. O traço desenhado, esse sim, grava as três.
    */
-  const [strokeColors, setStrokeColors] = useState<StrokeColors>(DEFAULT_STROKE_COLORS);
-
-  const setStrokeColor = useCallback((tool: StrokeTool, color: StrokeColor) => {
-    setStrokeColors((current) => {
-      if (current[tool] === color) return current;
-      const next: [...StrokeColors] = [...current];
-      next[tool] = color;
-      return next;
-    });
-  }, []);
+  const [strokeColors, setStrokeColor] = usePerTool(DEFAULT_STROKE_COLORS);
+  const [strokeSizes, setStrokeSize] = usePerTool(DEFAULT_STROKE_SIZES);
+  const [strokeOpacities, setStrokeOpacity] = usePerTool(DEFAULT_STROKE_OPACITIES);
 
   /**
    * Cópias em ref do que os callbacks de gesto precisam ler.
@@ -906,13 +946,17 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
   const addStroke = useCallback(
     (points: readonly Point[], tool: StrokeTool = STROKE_TOOL_PENCIL) => {
       const simplified = simplify(points);
+      // O padrão da ferramenta vai explícito e sai na normalização (#153): quem grava não
+      // precisa saber qual é o padrão, e o traço de sempre continua sem os campos.
       store.addStroke({
         color: strokeColors[tool],
         tool,
+        w: strokeSizes[tool],
+        o: strokeOpacities[tool],
         points: simplified.flatMap((point) => [point.x, point.y]),
       });
     },
-    [strokeColors, store],
+    [strokeColors, strokeSizes, strokeOpacities, store],
   );
 
   const resetBoard = useCallback(() => {
@@ -957,6 +1001,10 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
     addStroke,
     strokeColors,
     setStrokeColor,
+    strokeSizes,
+    setStrokeSize,
+    strokeOpacities,
+    setStrokeOpacity,
     getBoard: store.getBoard,
     resetBoard,
     editingId,
