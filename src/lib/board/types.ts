@@ -15,9 +15,10 @@
  * sem o rabisco que tem. Board sem `strokes` continua sendo lido normalmente (ver
  * `parseBoard`); a versão sobe para que um board **futuro** demais seja recusado, e não
  * mostrado errado em silêncio. A v3 subiu pela mesma regra, com `tool` (#110): a v2 mostraria
- * um traço de marca-texto como uma linha fina e opaca de lápis.
+ * um traço de marca-texto como uma linha fina e opaca de lápis. A v4 também, com `w` e `o`
+ * (#153): a v3 mostraria um traço grosso ou translúcido na espessura e opacidade padrão.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * Cores de post-it, na ordem em que aparecem no seletor. O board guarda o índice desta
@@ -95,15 +96,17 @@ export const DEFAULT_HIGHLIGHTER_COLOR = 0 satisfies StrokeColor;
  * próprio {@link StrokeTool}. Derivada da lista, e não escrita à mão, para que uma
  * ferramenta nova sem cor inicial seja erro de tipo.
  */
-export type StrokeColors = ColorPerTool<typeof STROKE_TOOLS>;
+export type StrokeColors = PerTool<typeof STROKE_TOOLS, StrokeColor>;
 
 /**
+ * Um valor por ferramenta de desenho, na ordem de {@link STROKE_TOOLS}.
+ *
  * Genérico só para o mapeamento ser homomórfico: sobre um parâmetro de tipo, `keyof` de uma
  * tupla mapeia só as posições e devolve uma tupla; sobre o tipo concreto, mapearia também
  * `map`, `length` e o resto dos membros de array.
  */
-type ColorPerTool<Tools extends readonly unknown[]> = {
-  readonly [Tool in keyof Tools]: StrokeColor;
+type PerTool<Tools extends readonly unknown[], Value> = {
+  readonly [Tool in keyof Tools]: Value;
 };
 
 /** A cor com que cada ferramenta nasce: lápis e caneta em preto, marca-texto em amarelo. */
@@ -111,6 +114,68 @@ export const DEFAULT_STROKE_COLORS: StrokeColors = [
   STROKE_COLOR_BLACK,
   STROKE_COLOR_BLACK,
   DEFAULT_HIGHLIGHTER_COLOR,
+];
+
+/**
+ * Espessuras do traço (#153): multiplicadores da espessura-base de cada ferramenta, e não
+ * espessuras absolutas. O lápis tem 2 unidades e o marca-texto 16; uma escala comum dá às
+ * três ferramentas o mesmo slider, e a caneta tinteiro escala o fio e a largura da pena
+ * juntos, sem perder a proporção da pena caligráfica.
+ *
+ * O traço guarda o índice, pela mesma razão da cor. Por isso a lista só cresce nas pontas
+ * com cuidado: inserir um valor no meio mudaria a espessura de todo traço já compartilhado.
+ * Valores de partida, ajustáveis em revisão enquanto nenhum link os usa.
+ */
+export const STROKE_SIZES = [0.5, 0.75, 1, 1.5, 2, 3, 4, 6] as const;
+
+/** Índice em {@link STROKE_SIZES}. É isto que vai serializado no traço. */
+export type StrokeSize = TupleIndex<typeof STROKE_SIZES>;
+
+/** A espessura-base da ferramenta, sem multiplicar: o `1×`. */
+export const STROKE_SIZE_BASE = 2 satisfies StrokeSize;
+
+/** A espessura com que cada ferramenta nasce: todas na base. */
+export const DEFAULT_STROKE_SIZES: StrokeSizes = [
+  STROKE_SIZE_BASE,
+  STROKE_SIZE_BASE,
+  STROKE_SIZE_BASE,
+];
+
+/** Uma espessura por ferramenta de desenho, na ordem de {@link STROKE_TOOLS}. */
+export type StrokeSizes = PerTool<typeof STROKE_TOOLS, StrokeSize>;
+
+/**
+ * Opacidades do traço, em porcentagem (#153): de 5% a 100%, de 5 em 5. Zero fica de fora
+ * de propósito — um traço invisível não é um traço, é um clique perdido que ninguém consegue
+ * achar para apagar.
+ *
+ * Em porcentagem inteira, e não em fração, para a lista ler como o slider mostra. O traço
+ * guarda o índice, e a mesma regra de {@link STROKE_SIZES} vale para mexer na lista.
+ */
+export const STROKE_OPACITIES = [
+  5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
+] as const;
+
+/** Índice em {@link STROKE_OPACITIES}. É isto que vai serializado no traço. */
+export type StrokeOpacity = TupleIndex<typeof STROKE_OPACITIES>;
+
+/** Opacidade cheia: onde o lápis e a caneta tinteiro nascem. */
+export const STROKE_OPACITY_FULL = 19 satisfies StrokeOpacity;
+
+/**
+ * Opacidade com que o marca-texto nasce: 35%, a que ele sempre teve (#116). Translúcido o
+ * bastante para o texto de baixo continuar legível.
+ */
+export const DEFAULT_HIGHLIGHTER_OPACITY = 6 satisfies StrokeOpacity;
+
+/** Uma opacidade por ferramenta de desenho, na ordem de {@link STROKE_TOOLS}. */
+export type StrokeOpacities = PerTool<typeof STROKE_TOOLS, StrokeOpacity>;
+
+/** A opacidade com que cada ferramenta nasce: lápis e caneta cheios, marca-texto a 35%. */
+export const DEFAULT_STROKE_OPACITIES: StrokeOpacities = [
+  STROKE_OPACITY_FULL,
+  STROKE_OPACITY_FULL,
+  DEFAULT_HIGHLIGHTER_OPACITY,
 ];
 
 /**
@@ -202,6 +267,16 @@ export interface Stroke {
    */
   tool?: Exclude<StrokeTool, typeof STROKE_TOOL_PENCIL>;
   /**
+   * Índice em {@link STROKE_SIZES}. Ausente é a espessura padrão da ferramenta, e o contrato
+   * nunca grava o padrão (#153) — o traço de sempre custa no link o que custava na v3.
+   */
+  w?: StrokeSize;
+  /**
+   * Índice em {@link STROKE_OPACITIES}. Ausente é a opacidade padrão da ferramenta
+   * ({@link DEFAULT_STROKE_OPACITIES}); como `w`, o padrão nunca é gravado.
+   */
+  o?: StrokeOpacity;
+  /**
    * Coordenadas de canvas, achatadas: `points[0], points[1]` é o primeiro ponto, e assim
    * por diante. Comprimento par, com ao menos dois pontos (quatro números).
    */
@@ -252,7 +327,41 @@ export function isStrokeTool(value: unknown): value is StrokeTool {
   );
 }
 
+/** Guarda de tipo para o índice de espessura vindo de dado não confiável. */
+export function isStrokeSize(value: unknown): value is StrokeSize {
+  return isIndexOf(value, STROKE_SIZES);
+}
+
+/** Guarda de tipo para o índice de opacidade vindo de dado não confiável. */
+export function isStrokeOpacity(value: unknown): value is StrokeOpacity {
+  return isIndexOf(value, STROKE_OPACITIES);
+}
+
+function isIndexOf(value: unknown, list: readonly unknown[]): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < list.length;
+}
+
 /** A ferramenta de um traço, com a ausência do campo lida como lápis. */
 export function strokeTool(stroke: Pick<Stroke, "tool">): StrokeTool {
   return stroke.tool ?? STROKE_TOOL_PENCIL;
+}
+
+/** O índice de espessura de um traço, com a ausência do campo lida como o padrão da ferramenta. */
+export function strokeSize(stroke: Pick<Stroke, "tool" | "w">): StrokeSize {
+  return stroke.w ?? DEFAULT_STROKE_SIZES[strokeTool(stroke)];
+}
+
+/** O índice de opacidade de um traço, com a ausência do campo lida como o padrão da ferramenta. */
+export function strokeOpacity(stroke: Pick<Stroke, "tool" | "o">): StrokeOpacity {
+  return stroke.o ?? DEFAULT_STROKE_OPACITIES[strokeTool(stroke)];
+}
+
+/** O multiplicador da espessura-base da ferramenta: `1` para o traço padrão. */
+export function strokeSizeScale(stroke: Pick<Stroke, "tool" | "w">): number {
+  return STROKE_SIZES[strokeSize(stroke)];
+}
+
+/** A opacidade de um traço, de 0 a 1: pronta para o atributo `opacity` do SVG. */
+export function strokeOpacityValue(stroke: Pick<Stroke, "tool" | "o">): number {
+  return STROKE_OPACITIES[strokeOpacity(stroke)] / 100;
 }

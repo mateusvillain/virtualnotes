@@ -1579,3 +1579,59 @@ describe("useBoard — ferramenta do traço (#110)", () => {
     expect(hook.result.current.strokes.every((s) => s.tool === 2)).toBe(true);
   });
 });
+
+/**
+ * Espessura e opacidade viajam com o traço pelos mesmos caminhos que a ferramenta (#153):
+ * um campo esquecido num deles mudaria o desenho do traço copiado em silêncio.
+ */
+describe("useBoard — espessura e opacidade do traço (#153)", () => {
+  const comTraçoGrosso: Board = {
+    version: SCHEMA_VERSION,
+    notes: [],
+    strokes: [{ id: "g", color: 0, w: 7, o: 9, points: [0, 0, 100, 0], z: 1 }],
+  };
+
+  const estilos = (strokes: readonly { w?: number; o?: number }[]) =>
+    strokes.map(({ w, o }) => ({ w, o }));
+
+  it("duplicar preserva espessura e opacidade", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comTraçoGrosso, autosave: false }));
+    act(() => hook.result.current.selectEverything());
+
+    act(() => hook.result.current.duplicateSelection());
+
+    expect(estilos(hook.result.current.strokes)).toEqual([
+      { w: 7, o: 9 },
+      { w: 7, o: 9 },
+    ]);
+  });
+
+  it("copiar e colar preserva espessura e opacidade", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comTraçoGrosso, autosave: false }));
+    act(() => hook.result.current.selectEverything());
+    const texto = defined(hook.result.current.copySelection() ?? undefined, "o recorte");
+
+    act(() => {
+      hook.result.current.pasteFromClipboard(texto);
+    });
+
+    expect(estilos(hook.result.current.strokes)).toEqual([
+      { w: 7, o: 9 },
+      { w: 7, o: 9 },
+    ]);
+  });
+
+  it("os pedaços que a borracha deixa continuam com espessura e opacidade", () => {
+    const hook = renderHook(() => useBoard({ initialBoard: comTraçoGrosso, autosave: false }));
+
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x: 50, y: 0 }, { x: 50, y: 0 }));
+    act(() => hook.result.current.endErasing());
+
+    expect(hook.result.current.strokes).toHaveLength(2);
+    expect(estilos(hook.result.current.strokes)).toEqual([
+      { w: 7, o: 9 },
+      { w: 7, o: 9 },
+    ]);
+  });
+});

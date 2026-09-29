@@ -24,6 +24,8 @@ import {
   type NoteColor,
   type Stroke,
   type StrokeColor,
+  type StrokeOpacity,
+  type StrokeSize,
   type StrokeTool,
 } from "./types";
 
@@ -82,6 +84,10 @@ export interface NewStroke {
   color: StrokeColor;
   /** Ferramenta que desenhou o traço. Ausente é lápis — ver {@link Stroke.tool}. */
   tool?: StrokeTool;
+  /** Espessura. Ausente é o padrão da ferramenta — ver {@link Stroke.w}. */
+  w?: StrokeSize;
+  /** Opacidade. Ausente é o padrão da ferramenta — ver {@link Stroke.o}. */
+  o?: StrokeOpacity;
   /** Coordenadas de canvas, achatadas — ver {@link Stroke.points}. */
   points: number[];
 }
@@ -217,6 +223,8 @@ function sameStroke(a: Stroke, b: Stroke): boolean {
   return (
     a.color === b.color &&
     a.tool === b.tool &&
+    a.w === b.w &&
+    a.o === b.o &&
     a.z === b.z &&
     a.points.length === b.points.length &&
     a.points.every((value, index) => value === b.points[index])
@@ -419,6 +427,8 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
       id: createId(new Set(board.strokes.map((existing) => existing.id))),
       color: input.color,
       tool: input.tool,
+      w: input.w,
+      o: input.o,
       points: input.points,
       // Traço novo nasce na frente, como a note: foi o usuário que acabou de desenhá-lo.
       z: topZ(board.strokes) + 1,
@@ -521,6 +531,8 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
         id,
         color: candidate.color,
         tool: candidate.tool,
+        w: candidate.w,
+        o: candidate.o,
         points: candidate.points,
         z: strokeZ,
       });
@@ -569,6 +581,8 @@ export function createBoardStore(initial: Board = createEmptyBoard()): BoardStor
         id,
         color: candidate.color,
         tool: candidate.tool,
+        w: candidate.w,
+        o: candidate.o,
         points: candidate.points,
         z,
       });
