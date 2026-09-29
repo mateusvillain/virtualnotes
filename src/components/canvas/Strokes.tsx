@@ -6,14 +6,11 @@ import {
   STROKE_OPACITIES,
   STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
-  STROKE_TOOL_PENCIL,
   strokeOpacityValue,
   strokeSizeScale,
   strokeTool,
   type Stroke,
   type StrokeColor,
-  type StrokeOpacity,
-  type StrokeSize,
   type StrokeStyle,
   type StrokeTool,
 } from "@/lib/board/types";
@@ -440,20 +437,17 @@ export function Strokes({
   );
 }
 
-/** O traço em curso, como o `Viewport` o conhece. */
-export interface DrawingPreview {
+/**
+ * O traço em curso, como o `Viewport` o conhece.
+ *
+ * É um {@link StrokeStyle}, com os mesmos nomes do contrato (`w` e `o` são **índices**,
+ * #157): a prévia entra em {@link Ink} como o traço gravado entra, sem tradução no meio.
+ * Ausentes, espessura e opacidade são o padrão da ferramenta.
+ */
+export interface DrawingPreview extends StrokeStyle {
   points: readonly Point[];
   color: StrokeColor;
   tool: StrokeTool;
-  /** Espessura do gesto (#157). Ausente é o padrão da ferramenta. */
-  size?: StrokeSize;
-  /** Opacidade do gesto (#157). Ausente é o padrão da ferramenta. */
-  opacity?: StrokeOpacity;
-}
-
-/** A cara da tinta de uma prévia, no formato que {@link Ink} lê. */
-function previewStyle(tool: StrokeTool, size?: StrokeSize, opacity?: StrokeOpacity): StrokeStyle {
-  return { tool, w: size, o: opacity };
 }
 
 /**
@@ -479,23 +473,22 @@ function HighlighterPreviewSlot() {
       <Ink
         points={preview.points.flatMap((point) => [point.x, point.y])}
         color={strokeColor(preview.color)}
-        style={previewStyle(preview.tool, preview.size, preview.opacity)}
+        style={preview}
       />
     </g>
   );
 }
 
-interface StrokePreviewProps {
+/**
+ * `tool`, `w` e `o` vêm de {@link StrokeStyle}: a ferramenta, a espessura e a opacidade do
+ * gesto (#116, #157) — as mesmas que `addStroke` vai gravar. `w` e `o` são índices, como no
+ * contrato; ausentes, o padrão da ferramenta. Sem ferramenta, é o lápis.
+ */
+interface StrokePreviewProps extends StrokeStyle {
   /** O traço em curso, em coordenadas de canvas, ou `null` fora de um gesto de desenho. */
   points: readonly Point[] | null;
   /** Cor do lápis no instante do gesto (#69) — a mesma que `addStroke` vai gravar. */
   color: StrokeColor;
-  /** A ferramenta do gesto (#116): a prévia pinta com a mesma espessura e opacidade. */
-  tool?: StrokeTool;
-  /** Espessura do gesto (#157) — a mesma que `addStroke` vai gravar. Ausente é o padrão. */
-  size?: StrokeSize;
-  /** Opacidade do gesto (#157) — a mesma que `addStroke` vai gravar. Ausente é o padrão. */
-  opacity?: StrokeOpacity;
 }
 
 /**
@@ -514,13 +507,7 @@ interface StrokePreviewProps {
  * "trocava" de cor de repente ao soltar o ponteiro — o mesmo bug que a prévia existe para
  * evitar (ver o comentário acima sobre não piscar de lugar).
  */
-export function StrokePreview({
-  points,
-  color,
-  tool = STROKE_TOOL_PENCIL,
-  size,
-  opacity,
-}: StrokePreviewProps) {
+export function StrokePreview({ points, color, ...style }: StrokePreviewProps) {
   if (points === null || points.length < 2) return null;
 
   // A caneta tinteiro pinta a prévia pelos pontos como o board vai gravá-los (#113):
@@ -530,13 +517,13 @@ export function StrokePreview({
   // lápis não precisa — a linha dele não depende da direção.
   const flat = points.flatMap((point) => [point.x, point.y]);
   const shown =
-    tool === STROKE_TOOL_FOUNTAIN
+    strokeTool(style) === STROKE_TOOL_FOUNTAIN
       ? simplify(points).flatMap((point) => [Math.round(point.x), Math.round(point.y)])
       : flat;
 
   return (
     <InkLayer testId="stroke-preview">
-      <Ink points={shown} color={strokeColor(color)} style={previewStyle(tool, size, opacity)} />
+      <Ink points={shown} color={strokeColor(color)} style={style} />
     </InkLayer>
   );
 }

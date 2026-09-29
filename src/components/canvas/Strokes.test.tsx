@@ -121,6 +121,9 @@ describe("Strokes — marca-texto (#116)", () => {
 
     expect(tintas()[0]?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH));
     expect(tintas()[0]?.getAttribute("opacity")).toBe(String(HIGHLIGHTER_OPACITY));
+    // O literal, e não só a constante derivada: o marca-texto padrão continua a 35% como
+    // sempre esteve (#116), e uma troca do padrão no contrato não passa despercebida.
+    expect(tintas()[0]?.getAttribute("opacity")).toBe("0.35");
   });
 
   it("não muda o lápis: fino e opaco", () => {
@@ -461,8 +464,8 @@ describe("espessura e opacidade do traço (#157)", () => {
           { x: 10, y: 5 },
         ]}
         color={6}
-        size={5}
-        opacity={1}
+        w={5}
+        o={1}
       />,
     );
 
@@ -481,8 +484,8 @@ describe("espessura e opacidade do traço (#157)", () => {
           ],
           color: 0,
           tool: STROKE_TOOL_HIGHLIGHTER,
-          size: 6,
-          opacity: 19,
+          w: 6,
+          o: 19,
         }}
       >
         <Strokes strokes={[]} />
