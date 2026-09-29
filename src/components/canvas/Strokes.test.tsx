@@ -17,6 +17,8 @@ import {
 import { simplify } from "@/lib/canvas/simplify";
 import {
   STROKE_COLORS,
+  STROKE_OPACITIES,
+  STROKE_SIZES,
   STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   type Stroke,
@@ -409,5 +411,86 @@ describe("StrokePreview — caneta tinteiro (#113)", () => {
     expect(
       screen.getByTestId("stroke-preview").querySelector("polyline")?.getAttribute("points"),
     ).toBe("0,0 10,0.4 20,-0.3 30,0.2 40,0");
+  });
+});
+
+describe("espessura e opacidade do traço (#157)", () => {
+  function tinta(): Element {
+    const [elemento] = screen.getAllByTestId("stroke");
+    if (elemento === undefined) throw new Error("sem tinta");
+    return elemento;
+  }
+
+  it("pinta o lápis com a espessura e a opacidade do traço", () => {
+    render(<Strokes strokes={[stroke({ w: 7, o: 9 })]} />);
+
+    expect(tinta().getAttribute("stroke-width")).toBe(String(STROKE_WIDTH * STROKE_SIZES[7]));
+    expect(tinta().getAttribute("opacity")).toBe(String(STROKE_OPACITIES[9] / 100));
+  });
+
+  it("pinta o marca-texto cheio quando o traço pede", () => {
+    render(<Strokes strokes={[stroke({ tool: STROKE_TOOL_HIGHLIGHTER, w: 0, o: 19 })]} />);
+
+    expect(tinta().getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH * STROKE_SIZES[0]));
+    expect(tinta().hasAttribute("opacity")).toBe(false);
+  });
+
+  it("pinta a caneta tinteiro com a pena escalada e a opacidade do traço", () => {
+    const caneta = stroke({ tool: STROKE_TOOL_FOUNTAIN, w: 4, o: 3, points: [0, 0, 40, 10] });
+    render(<Strokes strokes={[caneta]} />);
+
+    expect(tinta().getAttribute("d")).toBe(
+      polygonPath(fountainOutline(caneta.points, STROKE_SIZES[4])),
+    );
+    expect(tinta().getAttribute("opacity")).toBe(String(STROKE_OPACITIES[3] / 100));
+  });
+
+  /** Opacidade no elemento, e não na cor: o traço que cruza a si mesmo não escurece. */
+  it("aplica a opacidade à tinta inteira, e não à cor", () => {
+    render(<Strokes strokes={[stroke({ o: 9, points: [0, 0, 10, 10, 10, 0, 0, 10] })]} />);
+
+    expect(tinta().getAttribute("opacity")).toBe("0.5");
+    expect(tinta().getAttribute("stroke-opacity")).toBeNull();
+  });
+
+  it("a prévia pinta com a espessura e a opacidade do gesto", () => {
+    render(
+      <StrokePreview
+        points={[
+          { x: 0, y: 0 },
+          { x: 10, y: 5 },
+        ]}
+        color={6}
+        size={5}
+        opacity={1}
+      />,
+    );
+
+    const linha = screen.getByTestId("stroke-preview").querySelector("polyline");
+    expect(linha?.getAttribute("stroke-width")).toBe(String(STROKE_WIDTH * STROKE_SIZES[5]));
+    expect(linha?.getAttribute("opacity")).toBe(String(STROKE_OPACITIES[1] / 100));
+  });
+
+  it("a prévia do marca-texto na camada de tinta usa a espessura e a opacidade do gesto", () => {
+    render(
+      <HighlighterPreviewContext.Provider
+        value={{
+          points: [
+            { x: 0, y: 0 },
+            { x: 10, y: 5 },
+          ],
+          color: 0,
+          tool: STROKE_TOOL_HIGHLIGHTER,
+          size: 6,
+          opacity: 19,
+        }}
+      >
+        <Strokes strokes={[]} />
+      </HighlighterPreviewContext.Provider>,
+    );
+
+    const linha = screen.getByTestId("stroke-preview").querySelector("polyline");
+    expect(linha?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH * STROKE_SIZES[6]));
+    expect(linha?.hasAttribute("opacity")).toBe(false);
   });
 });

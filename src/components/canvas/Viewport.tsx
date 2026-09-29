@@ -973,6 +973,8 @@ export function Viewport({
             points={drawing?.points ?? null}
             color={drawing?.color ?? pencilColor}
             tool={drawing?.tool}
+            size={drawing?.size}
+            opacity={drawing?.opacity}
           />
         )}
         {/*

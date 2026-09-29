@@ -2,12 +2,19 @@
 
 import { strokeColor } from "@/lib/theme/note-colors";
 import {
+  DEFAULT_HIGHLIGHTER_OPACITY,
+  STROKE_OPACITIES,
   STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
+  strokeOpacityValue,
+  strokeSizeScale,
   strokeTool,
   type Stroke,
   type StrokeColor,
+  type StrokeOpacity,
+  type StrokeSize,
+  type StrokeStyle,
   type StrokeTool,
 } from "@/lib/board/types";
 import {
@@ -24,20 +31,25 @@ import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
 
 /**
- * Opacidade da tinta do marca-texto (#116).
- *
- * Aplicada ao traço inteiro, e não à cor: um elemento com `opacity` é composto como uma
- * camada só, então o ponto em que o marca-texto cruza a si mesmo não escurece — é a mesma
- * tinta, uma vez. Dois traços diferentes sobrepostos escurecem, como dois riscos de
- * marca-texto de verdade. Valor de partida, ajustável em revisão.
+ * Opacidade com que o marca-texto nasce (#116), como fração: a mesma que o contrato guarda
+ * como padrão dele (#153). Derivada, e não escrita de novo, para as duas nunca divergirem.
  */
-export const HIGHLIGHTER_OPACITY = 0.35;
+export const HIGHLIGHTER_OPACITY = STROKE_OPACITIES[DEFAULT_HIGHLIGHTER_OPACITY] / 100;
 
-/** Como a tinta de uma ferramenta é pintada: a espessura e a opacidade. */
-function inkStyle(tool: StrokeTool): { width: number; opacity?: number } {
-  return tool === STROKE_TOOL_HIGHLIGHTER
-    ? { width: strokeInkWidth(tool), opacity: HIGHLIGHTER_OPACITY }
-    : { width: strokeInkWidth(tool) };
+/**
+ * Como a tinta de um traço é pintada: a espessura da ferramenta vezes o multiplicador do
+ * traço, e a opacidade dele (#157).
+ *
+ * A opacidade é do traço inteiro, e não da cor: um elemento com `opacity` é composto como
+ * uma camada só, então o ponto em que o traço cruza a si mesmo não escurece — é a mesma
+ * tinta, uma vez. Dois traços diferentes sobrepostos escurecem, como dois riscos de
+ * marca-texto de verdade. Opacidade cheia fica sem o atributo, como sempre ficou.
+ */
+function inkStyle(style: StrokeStyle): { scale: number; width: number; opacity?: number } {
+  const scale = strokeSizeScale(style);
+  const opacity = strokeOpacityValue(style);
+  const width = strokeInkWidth(strokeTool(style), scale);
+  return opacity < 1 ? { scale, width, opacity } : { scale, width };
 }
 
 /**
@@ -141,7 +153,7 @@ function InkLine({
   color: string;
   /** Espessura em unidades de canvas. O halo e o alvo de clique são a mesma linha, mais grossa. */
   width?: number;
-  /** Opacidade da linha inteira — só o marca-texto usa (#116). */
+  /** Opacidade da linha inteira (#116, #157). Ausente é cheia. */
   opacity?: number;
   testId?: string;
 }) {
@@ -164,41 +176,54 @@ function InkLine({
  * traço.
  *
  * Forma preenchida, e não linha: a espessura muda ao longo do traço, e um `stroke-width`
- * vale para a linha inteira. O contorno é calculado dos pontos a cada desenho (#111) — o
- * board não guarda espessura nenhuma.
+ * vale para a linha inteira. O contorno é calculado dos pontos a cada desenho (#111); o
+ * board guarda só o multiplicador da pena (#157), e não a espessura de cada trecho.
  */
 function FountainInk({
   points,
   color,
+  scale,
+  opacity,
   testId,
 }: {
   points: readonly number[];
   color: string;
+  scale: number;
+  opacity?: number;
   testId?: string;
 }) {
-  return <path d={polygonPath(fountainOutline(points))} fill={color} data-testid={testId} />;
+  return (
+    <path
+      d={polygonPath(fountainOutline(points, scale))}
+      fill={color}
+      opacity={opacity}
+      data-testid={testId}
+    />
+  );
 }
 
 /**
  * A tinta de um traço, na forma da ferramenta dele: o contorno da pena para a caneta
- * tinteiro, a linha para o resto. É o ponto único onde a ferramenta decide a forma, para o
- * traço gravado e as prévias não divergirem.
+ * tinteiro, a linha para o resto. É o ponto único onde a ferramenta, a espessura e a
+ * opacidade (#157) decidem a tinta, para o traço gravado e as prévias não divergirem.
  */
 function Ink({
   points,
   color,
-  tool,
+  style,
   testId,
 }: {
   points: readonly number[];
   color: string;
-  tool: StrokeTool;
+  style: StrokeStyle;
   testId?: string;
 }) {
-  return tool === STROKE_TOOL_FOUNTAIN ? (
-    <FountainInk points={points} color={color} testId={testId} />
+  const { scale, width, opacity } = inkStyle(style);
+
+  return strokeTool(style) === STROKE_TOOL_FOUNTAIN ? (
+    <FountainInk points={points} color={color} scale={scale} opacity={opacity} testId={testId} />
   ) : (
-    <InkLine points={points} color={color} {...inkStyle(tool)} testId={testId} />
+    <InkLine points={points} color={color} width={width} opacity={opacity} testId={testId} />
   );
 }
 
@@ -331,7 +356,7 @@ function StrokeShape({
       data-resizing={resizing !== null}
       transform={partes.length === 0 ? undefined : partes.join(" ")}
     >
-      <Ink points={points} color={strokeColor(stroke.color)} tool={tool} testId="stroke" />
+      <Ink points={points} color={strokeColor(stroke.color)} style={stroke} testId="stroke" />
       <polyline
         points={polylinePoints(points)}
         fill="none"
@@ -420,6 +445,15 @@ export interface DrawingPreview {
   points: readonly Point[];
   color: StrokeColor;
   tool: StrokeTool;
+  /** Espessura do gesto (#157). Ausente é o padrão da ferramenta. */
+  size?: StrokeSize;
+  /** Opacidade do gesto (#157). Ausente é o padrão da ferramenta. */
+  opacity?: StrokeOpacity;
+}
+
+/** A cara da tinta de uma prévia, no formato que {@link Ink} lê. */
+function previewStyle(tool: StrokeTool, size?: StrokeSize, opacity?: StrokeOpacity): StrokeStyle {
+  return { tool, w: size, o: opacity };
 }
 
 /**
@@ -445,7 +479,7 @@ function HighlighterPreviewSlot() {
       <Ink
         points={preview.points.flatMap((point) => [point.x, point.y])}
         color={strokeColor(preview.color)}
-        tool={preview.tool}
+        style={previewStyle(preview.tool, preview.size, preview.opacity)}
       />
     </g>
   );
@@ -458,6 +492,10 @@ interface StrokePreviewProps {
   color: StrokeColor;
   /** A ferramenta do gesto (#116): a prévia pinta com a mesma espessura e opacidade. */
   tool?: StrokeTool;
+  /** Espessura do gesto (#157) — a mesma que `addStroke` vai gravar. Ausente é o padrão. */
+  size?: StrokeSize;
+  /** Opacidade do gesto (#157) — a mesma que `addStroke` vai gravar. Ausente é o padrão. */
+  opacity?: StrokeOpacity;
 }
 
 /**
@@ -476,7 +514,13 @@ interface StrokePreviewProps {
  * "trocava" de cor de repente ao soltar o ponteiro — o mesmo bug que a prévia existe para
  * evitar (ver o comentário acima sobre não piscar de lugar).
  */
-export function StrokePreview({ points, color, tool = STROKE_TOOL_PENCIL }: StrokePreviewProps) {
+export function StrokePreview({
+  points,
+  color,
+  tool = STROKE_TOOL_PENCIL,
+  size,
+  opacity,
+}: StrokePreviewProps) {
   if (points === null || points.length < 2) return null;
 
   // A caneta tinteiro pinta a prévia pelos pontos como o board vai gravá-los (#113):
@@ -492,7 +536,7 @@ export function StrokePreview({ points, color, tool = STROKE_TOOL_PENCIL }: Stro
 
   return (
     <InkLayer testId="stroke-preview">
-      <Ink points={shown} color={strokeColor(color)} tool={tool} />
+      <Ink points={shown} color={strokeColor(color)} style={previewStyle(tool, size, opacity)} />
     </InkLayer>
   );
 }
