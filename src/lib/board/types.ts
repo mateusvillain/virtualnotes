@@ -105,7 +105,7 @@ export type StrokeColors = PerTool<typeof STROKE_TOOLS, StrokeColor>;
  * tupla mapeia só as posições e devolve uma tupla; sobre o tipo concreto, mapearia também
  * `map`, `length` e o resto dos membros de array.
  */
-type PerTool<Tools extends readonly unknown[], Value> = {
+export type PerTool<Tools extends readonly unknown[], Value> = {
   readonly [Tool in keyof Tools]: Value;
 };
 

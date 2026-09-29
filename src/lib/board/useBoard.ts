@@ -39,12 +39,14 @@ import {
   DEFAULT_STROKE_OPACITIES,
   DEFAULT_STROKE_SIZES,
   NOTE_SIZE,
+  STROKE_TOOLS,
   STROKE_TOOL_PENCIL,
   createEmptyBoard,
   strokeTool,
   type Board,
   type Note,
   type NoteColor,
+  type PerTool,
   type Stroke,
   type StrokeColor,
   type StrokeColors,
@@ -84,17 +86,17 @@ function strokeLike(stroke: Stroke, points: number[]): NewStroke {
  * O setter mantém a referência quando o valor não muda: repetir a escolha atual não
  * re-renderiza quem lê a lista.
  */
-function usePerTool<Values extends readonly unknown[]>(
-  initial: Values,
-): [Values, (tool: StrokeTool, value: Values[number]) => void] {
-  const [values, setValues] = useState<Values>(initial);
+function usePerTool<Value>(
+  initial: PerTool<typeof STROKE_TOOLS, Value>,
+): [PerTool<typeof STROKE_TOOLS, Value>, (tool: StrokeTool, value: Value) => void] {
+  const [values, setValues] = useState(initial);
 
-  const setValue = useCallback((tool: StrokeTool, value: Values[number]) => {
+  const setValue = useCallback((tool: StrokeTool, value: Value) => {
     setValues((current) => {
       if (current[tool] === value) return current;
-      const next = [...current];
+      const next: [...PerTool<typeof STROKE_TOOLS, Value>] = [...current];
       next[tool] = value;
-      return next as unknown as Values;
+      return next;
     });
   }, []);
 
