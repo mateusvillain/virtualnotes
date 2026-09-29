@@ -6,6 +6,9 @@ import { SIMPLIFY_TOLERANCE } from "@/lib/canvas/simplify";
 import {
   CANVAS_MAX_ABS_COORDINATE,
   DEFAULT_HIGHLIGHTER_COLOR,
+  DEFAULT_HIGHLIGHTER_OPACITY,
+  STROKE_OPACITY_FULL,
+  STROKE_SIZE_BASE,
   NOTE_COLORS,
   NOTE_SIZE,
   SCHEMA_VERSION,
@@ -1662,5 +1665,90 @@ describe("useBoard — borracha pela espessura do traço (#158)", () => {
 
   it("o mesmo toque não alcança o lápis padrão", () => {
     expect(passa(112)).toContain("fino");
+  });
+});
+
+describe("useBoard — espessura e opacidade por ferramenta (#159)", () => {
+  const traço = [
+    { x: 0, y: 0 },
+    { x: 50, y: 20 },
+  ];
+
+  it("todas nascem na base; lápis e caneta cheios, o marca-texto a 35%", () => {
+    const { result } = renderHook(() => useBoard());
+
+    expect(result.current.strokeSizes).toEqual([
+      STROKE_SIZE_BASE,
+      STROKE_SIZE_BASE,
+      STROKE_SIZE_BASE,
+    ]);
+    expect(result.current.strokeOpacities).toEqual([
+      STROKE_OPACITY_FULL,
+      STROKE_OPACITY_FULL,
+      DEFAULT_HIGHLIGHTER_OPACITY,
+    ]);
+  });
+
+  it("trocar a espessura ou a opacidade de uma ferramenta não mexe nas outras", () => {
+    const { result } = renderHook(() => useBoard());
+
+    act(() => result.current.setStrokeSize(STROKE_TOOL_FOUNTAIN, 6));
+    act(() => result.current.setStrokeOpacity(STROKE_TOOL_PENCIL, 9));
+
+    expect(result.current.strokeSizes).toEqual([STROKE_SIZE_BASE, 6, STROKE_SIZE_BASE]);
+    expect(result.current.strokeOpacities).toEqual([
+      9,
+      STROKE_OPACITY_FULL,
+      DEFAULT_HIGHLIGHTER_OPACITY,
+    ]);
+  });
+
+  it("o traço grava a espessura e a opacidade da ferramenta que o desenhou", () => {
+    const { result } = renderHook(() => useBoard());
+    act(() => result.current.setStrokeSize(STROKE_TOOL_PENCIL, 7));
+    act(() => result.current.setStrokeOpacity(STROKE_TOOL_PENCIL, 9));
+    act(() => result.current.setStrokeOpacity(STROKE_TOOL_HIGHLIGHTER, STROKE_OPACITY_FULL));
+
+    act(() => result.current.addStroke(traço));
+    act(() => result.current.addStroke(traço, STROKE_TOOL_HIGHLIGHTER));
+
+    expect(result.current.strokes.map(({ w, o }) => ({ w, o }))).toEqual([
+      { w: 7, o: 9 },
+      // Cheio é escolha no marca-texto; a espessura na base é o padrão, e fica de fora.
+      { w: undefined, o: STROKE_OPACITY_FULL },
+    ]);
+  });
+
+  it("o traço com os valores padrão sai sem os campos", () => {
+    const { result } = renderHook(() => useBoard());
+
+    act(() => result.current.addStroke(traço));
+    act(() => result.current.addStroke(traço, STROKE_TOOL_HIGHLIGHTER));
+
+    for (const stroke of result.current.strokes) {
+      expect(stroke).not.toHaveProperty("w");
+      expect(stroke).not.toHaveProperty("o");
+    }
+  });
+
+  it("trocar a espessura ou a opacidade não entra no histórico de desfazer", () => {
+    const { result } = renderHook(() => useBoard());
+
+    act(() => result.current.setStrokeSize(STROKE_TOOL_PENCIL, 5));
+    act(() => result.current.setStrokeOpacity(STROKE_TOOL_PENCIL, 3));
+
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it("repetir o mesmo valor não troca a referência", () => {
+    const { result } = renderHook(() => useBoard());
+    const tamanhos = result.current.strokeSizes;
+    const opacidades = result.current.strokeOpacities;
+
+    act(() => result.current.setStrokeSize(STROKE_TOOL_PENCIL, STROKE_SIZE_BASE));
+    act(() => result.current.setStrokeOpacity(STROKE_TOOL_PENCIL, STROKE_OPACITY_FULL));
+
+    expect(result.current.strokeSizes).toBe(tamanhos);
+    expect(result.current.strokeOpacities).toBe(opacidades);
   });
 });
