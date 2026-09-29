@@ -161,6 +161,9 @@ type DragState =
       /** Ferramenta e cor do instante em que o gesto começou (#117). */
       tool: StrokeTool;
       color: StrokeColor;
+      /** Espessura e opacidade do mesmo instante (#162). Ausentes, o padrão da ferramenta. */
+      w?: StrokeSize;
+      o?: StrokeOpacity;
     }
   | {
       kind: "erase";
@@ -724,7 +727,11 @@ export function Viewport({
         // Em coordenadas de canvas desde já: o traço é conteúdo do quadro, e guardá-lo em
         // pixels de tela o prenderia ao zoom e ao pan do instante em que foi desenhado.
         state.points.push(screenToCanvas(localPoint(event), viewportRef.current));
-        setDrawing({ points: [...state.points], tool: state.tool, color: state.color });
+        // Com todo o estilo do gesto, e não só ferramenta e cor: sem `w` e `o`, a prévia
+        // voltava à espessura e à opacidade padrão no primeiro movimento, e só o traço
+        // gravado, ao soltar, saía com os valores escolhidos (#162).
+        const { points, tool, color, w, o } = state;
+        setDrawing({ points: [...points], tool, color, w, o });
         return;
       }
 

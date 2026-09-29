@@ -5019,6 +5019,36 @@ describe("Whiteboard — painel de traço (#162)", () => {
     expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
   });
 
+  it.each([
+    ["p", "o lápis", STROKE_WIDTH],
+    ["h", "o marca-texto", HIGHLIGHTER_WIDTH],
+  ])(
+    "com %s (%s), a prévia já sai com a espessura e a opacidade antes de soltar",
+    (tecla, _, base) => {
+      render(<Whiteboard />);
+      fireEvent.keyDown(document, { key: tecla });
+      fireEvent.click(rabisco());
+      fireEvent.change(slider(UI.en.toolbar.size), {
+        target: { value: String(STROKE_SIZES.length - 1) },
+      });
+      fireEvent.change(slider(UI.en.toolbar.opacity), { target: { value: "9" } });
+
+      // Vários movimentos, e sem soltar: a prévia é refeita a cada um, e é no refazer que ela
+      // perdia os valores escolhidos.
+      const surface = screen.getByTestId("viewport-surface");
+      fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 120 });
+      fireEvent.pointerMove(surface, { pointerId: 1, clientX: 300, clientY: 100 });
+
+      const linha = defined(
+        screen.getByTestId("stroke-preview").querySelector("polyline") ?? undefined,
+        "a linha da prévia",
+      );
+      expect(linha.getAttribute("stroke-width")).toBe(String(base * 6));
+      expect(linha.getAttribute("opacity")).toBe("0.5");
+    },
+  );
+
   it("os valores escolhidos valem para o próximo traço, e só da ferramenta ligada", () => {
     render(<Whiteboard />);
     fireEvent.keyDown(document, { key: "p" });
