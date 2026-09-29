@@ -48,20 +48,27 @@ export const STROKE_WIDTH = 2;
 export const HIGHLIGHTER_WIDTH = 16;
 
 /**
- * A espessura da tinta de uma ferramenta, em unidades de canvas.
+ * A espessura da tinta de um traço, em unidades de canvas: a base da ferramenta vezes o
+ * multiplicador de espessura do traço (#157, `strokeSizeScale`).
  *
  * Para a caneta tinteiro, que não tem espessura única, é a **maior** que a pena alcança
  * (#115): os alvos precisam cobrir a tinta onde ela é mais grossa, ou o clique na parte
  * larga de uma letra passaria direto para o quadro. Nos trechos finos a folga sobra, e sobra
  * pouco — a pena inteira é de {@link FOUNTAIN_MAX_WIDTH} unidades.
  *
- * `scale` é o multiplicador de espessura do traço (#157, `strokeSizeScale`): a base da
- * ferramenta vezes ele. O padrão é `1`, a espessura de sempre.
+ * Recebe o traço, e não a ferramenta e o multiplicador soltos (#158): é a conta única da
+ * espessura, lida pela pintura (`Strokes.tsx`) e pelos alvos ({@link inkOverhang}), para
+ * que o que se vê e o que se clica nunca divirjam.
  */
-export function strokeInkWidth(tool: StrokeTool, scale = 1): number {
-  if (tool === STROKE_TOOL_HIGHLIGHTER) return HIGHLIGHTER_WIDTH * scale;
-  if (tool === STROKE_TOOL_FOUNTAIN) return FOUNTAIN_MAX_WIDTH * scale;
-  return STROKE_WIDTH * scale;
+export function strokeInkWidth(style: StrokeStyle): number {
+  return toolBaseWidth(strokeTool(style)) * strokeSizeScale(style);
+}
+
+/** A espessura da tinta de uma ferramenta a 1×, antes do multiplicador do traço. */
+function toolBaseWidth(tool: StrokeTool): number {
+  if (tool === STROKE_TOOL_HIGHLIGHTER) return HIGHLIGHTER_WIDTH;
+  if (tool === STROKE_TOOL_FOUNTAIN) return FOUNTAIN_MAX_WIDTH;
+  return STROKE_WIDTH;
 }
 
 /**
@@ -79,8 +86,7 @@ export function strokeInkWidth(tool: StrokeTool, scale = 1): number {
  * tornaria o traço fino quase inclicável, e a moldura cortaria para dentro dos pontos.
  */
 export function inkOverhang(style: StrokeStyle): number {
-  const width = strokeInkWidth(strokeTool(style), strokeSizeScale(style));
-  return Math.max(0, (width - STROKE_WIDTH) / 2);
+  return Math.max(0, (strokeInkWidth(style) - STROKE_WIDTH) / 2);
 }
 
 /**

@@ -178,6 +178,21 @@ describe("elementsInRect", () => {
 
     expect(marcados(vazia)).toEqual(marcados(EMPTY_SELECTION));
   });
+
+  /**
+   * A #158: o retângulo pega o traço pela borda que se vê. Um lápis a 6× (`w: 7`) tem 12
+   * unidades de tinta — 5 além do lápis padrão de cada lado da linha do meio.
+   */
+  it("pega um traço grosso encostando só na borda da tinta", () => {
+    const strokes = [
+      stroke({ id: "grosso", w: 7, points: [0, 0, 100, 0] }),
+      stroke({ id: "fino", points: [0, 50, 100, 50] }),
+    ];
+
+    // 5 unidades abaixo de cada linha: dentro da tinta do grosso, fora do alcance do fino.
+    expect(marcados(elementsInRect([], strokes, rect(40, 5, 20, 2))).strokes).toEqual(["grosso"]);
+    expect(marcados(elementsInRect([], strokes, rect(40, 55, 20, 2))).strokes).toEqual([]);
+  });
 });
 
 describe("selectedNotes", () => {

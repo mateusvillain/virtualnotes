@@ -489,7 +489,7 @@ describe("alvo da caneta tinteiro (#115)", () => {
   }
 
   it("a tinta da caneta, para os alvos, é a pena inteira", () => {
-    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN)).toBe(FOUNTAIN_MAX_WIDTH);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN })).toBe(FOUNTAIN_MAX_WIDTH);
     expect(inkOverhang({ tool: STROKE_TOOL_FOUNTAIN })).toBe(sobra);
   });
 
@@ -509,7 +509,9 @@ describe("alvo da caneta tinteiro (#115)", () => {
         const perto = Math.min(
           ...linha.map((ponto) => Math.hypot(ponto.x - vertice.x, ponto.y - vertice.y)),
         );
-        expect(perto).toBeLessThanOrEqual(strokeInkWidth(STROKE_TOOL_FOUNTAIN) / 2 + 1e-9);
+        expect(perto).toBeLessThanOrEqual(
+          strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN }) / 2 + 1e-9,
+        );
       }
     }
   });
@@ -537,10 +539,12 @@ describe("alvo da caneta tinteiro (#115)", () => {
 });
 
 describe("espessura do traço (#157)", () => {
-  it("strokeInkWidth multiplica a base de cada ferramenta", () => {
-    expect(strokeInkWidth(STROKE_TOOL_PENCIL, 3)).toBe(STROKE_WIDTH * 3);
-    expect(strokeInkWidth(STROKE_TOOL_HIGHLIGHTER, 0.5)).toBe(HIGHLIGHTER_WIDTH / 2);
-    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN, 2)).toBe(FOUNTAIN_MAX_WIDTH * 2);
+  it("strokeInkWidth multiplica a base da ferramenta pela espessura do traço", () => {
+    expect(strokeInkWidth({ w: 5 })).toBe(STROKE_WIDTH * 3);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_HIGHLIGHTER, w: 0 })).toBe(HIGHLIGHTER_WIDTH / 2);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN, w: 4 })).toBe(FOUNTAIN_MAX_WIDTH * 2);
+    // Sem `w`, a espessura de sempre da ferramenta.
+    expect(strokeInkWidth({})).toBe(STROKE_WIDTH);
   });
 
   it("fountainWidth escala o fio e a largura da pena juntos", () => {

@@ -45,7 +45,7 @@ export const HIGHLIGHTER_OPACITY = STROKE_OPACITIES[DEFAULT_HIGHLIGHTER_OPACITY]
 function inkStyle(style: StrokeStyle): { scale: number; width: number; opacity?: number } {
   const scale = strokeSizeScale(style);
   const opacity = strokeOpacityValue(style);
-  const width = strokeInkWidth(strokeTool(style), scale);
+  const width = strokeInkWidth(style);
   return opacity < 1 ? { scale, width, opacity } : { scale, width };
 }
 
