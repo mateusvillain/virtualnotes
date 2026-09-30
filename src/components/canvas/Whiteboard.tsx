@@ -6,6 +6,7 @@ import {
   STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
+  isStrokeSize,
   type StrokeTool,
 } from "@/lib/board/types";
 import type { BoardMode, ToolMode } from "@/lib/board/modes";
@@ -244,6 +245,21 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     setTaught(false);
   }, [board]);
 
+  /**
+   * `[` e `]`: um passo de espessura na ferramenta ligada, parando nas pontas da lista. Fora
+   * de um modo de desenho a tecla não é do quadro.
+   */
+  const changeStrokeSize = useCallback(
+    (step: -1 | 1): boolean => {
+      if (drawingTool === null) return false;
+
+      const next = board.strokeSizes[drawingTool] + step;
+      if (isStrokeSize(next)) board.setStrokeSize(drawingTool, next);
+      return true;
+    },
+    [board, drawingTool],
+  );
+
   useKeyboardShortcuts({
     onDelete: board.deleteSelection,
     onPlaceNote: togglePlacing,
@@ -258,6 +274,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     onCancel: selectTool,
     onSelectTool: selectTool,
     onNudge: board.nudgeSelection,
+    onStrokeSize: changeStrokeSize,
   });
 
   return (

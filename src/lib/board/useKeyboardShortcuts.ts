@@ -52,6 +52,13 @@ interface KeyboardShortcutsOptions {
    */
   onNudge: (delta: Point) => boolean;
   /**
+   * `[` e `]`: afinar e engrossar o traço da ferramenta ligada, um passo de `STROKE_SIZES`.
+   *
+   * Devolve se a tecla era do quadro, como as setas: sem ferramenta de desenho ligada não há
+   * traço para mudar, e a tecla segue para quem mais a quiser.
+   */
+  onStrokeSize: (step: -1 | 1) => boolean;
+  /**
    * `Esc`: largar a ferramenta em curso.
    *
    * Genérico de propósito. `Esc` significa "sai disso", e quem sabe do que se está saindo é
@@ -151,6 +158,7 @@ export function useKeyboardShortcuts({
   onSelectTool,
   onCancel,
   onNudge,
+  onStrokeSize,
 }: KeyboardShortcutsOptions): void {
   /**
    * Os tratadores atuais, lidos por ref dentro do ouvinte.
@@ -172,6 +180,7 @@ export function useKeyboardShortcuts({
     onSelectTool,
     onCancel,
     onNudge,
+    onStrokeSize,
   });
   useEffect(() => {
     handlers.current = {
@@ -188,6 +197,7 @@ export function useKeyboardShortcuts({
       onSelectTool,
       onCancel,
       onNudge,
+      onStrokeSize,
     };
   }, [
     onDelete,
@@ -203,6 +213,7 @@ export function useKeyboardShortcuts({
     onSelectTool,
     onCancel,
     onNudge,
+    onStrokeSize,
   ]);
 
   useEffect(() => {
@@ -328,6 +339,13 @@ export function useKeyboardShortcuts({
       if (event.key.toLowerCase() === "v") {
         event.preventDefault();
         handlers.current.onSelectTool();
+        return;
+      }
+
+      // Pela tecla produzida, e não pela posição: no ABNT2 os colchetes moram em outro lugar
+      // do teclado, e o atalho é o caractere, como o `N` e o `P`.
+      if (event.key === "[" || event.key === "]") {
+        if (handlers.current.onStrokeSize(event.key === "[" ? -1 : 1)) event.preventDefault();
         return;
       }
 

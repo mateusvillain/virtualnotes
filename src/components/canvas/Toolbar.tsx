@@ -12,7 +12,8 @@ import { PencilIllustration } from "@/components/ui/tools/PencilIllustration";
 import { StrokeIcon } from "@/components/ui/tools/StrokeIcon";
 import type { ToolMode } from "@/lib/board/modes";
 import { useUi } from "@/lib/i18n/LocaleProvider";
-import { SHORTCUTS } from "@/lib/shortcuts";
+import { useIsMac } from "@/lib/dom/useIsMac";
+import { SHORTCUTS, ariaKeyShortcuts, shortcutLabel, type ButtonShortcut } from "@/lib/shortcuts";
 
 interface ToolbarProps {
   /** A ferramenta ligada, ou `null` com a seleção valendo. */
@@ -107,6 +108,8 @@ const selectorClass =
 
 interface SelectorProps {
   label: string;
+  /** Os atalhos do botão, se houver: aparecem na dica e em `aria-keyshortcuts`. */
+  shortcuts?: readonly ButtonShortcut[];
   disabled: boolean;
   open: boolean;
   onToggle: () => void;
@@ -122,6 +125,7 @@ interface SelectorProps {
 /** Um botão da seção Color Controls com o painel que ele abre. */
 function Selector({
   label,
+  shortcuts,
   disabled,
   open,
   onToggle,
@@ -135,10 +139,17 @@ function Selector({
 }: SelectorProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+  const isMac = useIsMac();
 
   return (
     <div className="relative flex">
-      <Tooltip label={label} side="top" suppressed={open}>
+      <Tooltip
+        label={label}
+        // Os dois atalhos num badge só (`[ ]`): são as duas pontas da mesma ação.
+        shortcut={shortcuts?.map((shortcut) => shortcutLabel(shortcut, isMac)).join(" ")}
+        side="top"
+        suppressed={open}
+      >
         <button
           ref={triggerRef}
           type="button"
@@ -146,6 +157,8 @@ function Selector({
           onClick={onToggle}
           disabled={disabled}
           aria-label={label}
+          // Alternativas separadas por espaço, como o atributo pede.
+          aria-keyshortcuts={shortcuts?.map(ariaKeyShortcuts).join(" ")}
           aria-expanded={open}
           aria-controls={open ? panelId : undefined}
           data-testid={`${testId}-button`}
@@ -269,6 +282,7 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
         </Selector>
         <Selector
           label={ui.toolbar.stroke}
+          shortcuts={[SHORTCUTS.strokeThinner, SHORTCUTS.strokeThicker]}
           disabled={!stroke.enabled}
           open={panel === "settings"}
           onToggle={() => toggle("settings")}

@@ -24,7 +24,6 @@ import { cancelPointerGesture, releaseCapture } from "@/lib/canvas/pointer-captu
 import { useSpaceHeld } from "@/lib/canvas/useSpaceHeld";
 import {
   STROKE_COLOR_BLACK,
-  STROKE_TOOL_FOUNTAIN,
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   type StrokeColor,
@@ -32,6 +31,7 @@ import {
   type StrokeSize,
   type StrokeTool,
 } from "@/lib/board/types";
+import { DrawCursor } from "./DrawCursor";
 import { EraserCursor } from "./EraserCursor";
 import { NotePlacementPreview } from "./NotePlacement";
 import { SelectionBox } from "./SelectionBox";
@@ -316,9 +316,9 @@ export function Viewport({
 
     A borracha entra na mesma guarda que a colocação de nota: o círculo do alvo (#98) segue
     o mesmo ponteiro guardado, pela mesma razão de não aparecer num canto arbitrário ao
-    ligar o modo.
+    ligar o modo. O círculo das ferramentas de desenho também.
   */
-  if (!placing && !erasing && pointer !== null) setPointer(null);
+  if (!placing && !erasing && !pencil && pointer !== null) setPointer(null);
 
   /** Posição do ponteiro relativa ao canto do container — é o que as conversões esperam. */
   const localPoint = useCallback((event: { clientX: number; clientY: number }): Point => {
@@ -678,8 +678,13 @@ export function Viewport({
     (event: PointerEvent<HTMLDivElement>) => {
       // Antes de qualquer gesto, e fora de todos eles: a prévia da colocação e o círculo da
       // borracha seguem o cursor mesmo quando ele passa por cima de um post-it. Só custa um
-      // re-render enquanto um dos dois modos está ligado.
-      if (placing || erasing) setPointer(localPoint(event));
+      // re-render enquanto um dos modos está ligado.
+      //
+      // O círculo do desenho só segue mouse e caneta: no toque não há cursor, e o círculo
+      // ficaria parado onde o dedo saiu da tela.
+      if (placing || erasing || (pencil && event.pointerType !== "touch")) {
+        setPointer(localPoint(event));
+      }
 
       const touch = touches.current.get(event.pointerId);
       if (touch) {
@@ -753,7 +758,17 @@ export function Viewport({
       setMarquee(rect);
       onSelectionRect?.(rect);
     },
-    [erasing, localPoint, onEraseSegment, onSelectionRect, onSelectionStart, pan, placing, zoomBy],
+    [
+      erasing,
+      localPoint,
+      onEraseSegment,
+      onSelectionRect,
+      onSelectionStart,
+      pan,
+      pencil,
+      placing,
+      zoomBy,
+    ],
   );
 
   /**
@@ -881,9 +896,17 @@ export function Viewport({
   /** Onde o círculo da borracha cai, em coordenadas de canvas — mesma conta, mesma razão. */
   const eraserPoint = erasing && pointer !== null ? screenToCanvas(pointer, viewport) : null;
 
+  /**
+   * Onde o círculo da ferramenta de desenho cai. Some com o espaço segurado: ali o arraste
+   * navega, e a mão é quem responde pelo cursor.
+   */
+  const drawPoint =
+    pencil && !spaceHeld && pointer !== null ? screenToCanvas(pointer, viewport) : null;
+
   /*
     O cursor conta o que o ponteiro vai fazer: mão com espaço, mão fechada com a rodinha
-    apertada, lápis com o modo ligado, cruz para mirar a nota. Na mesma ordem em que os
+    apertada, nenhum com uma ferramenta de desenho (o círculo de `DrawCursor` é o cursor),
+    cruz para mirar a nota. Na mesma ordem em que os
     gestos se decidem no `pointerdown`, senão o desenho prometeria uma coisa e o gesto faria
     outra — e por isso o espaço ganha de tudo, inclusive de um pan já em curso.
 
@@ -899,7 +922,9 @@ export function Viewport({
 
     A borracha some o cursor do sistema (#98): o círculo de `EraserCursor`, do tamanho exato
     do alvo, é quem responde por ela agora — um ícone de tamanho fixo ao lado do círculo só
-    confundiria sobre qual dos dois é a área de verdade.
+    confundiria sobre qual dos dois é a área de verdade. As ferramentas de desenho seguem a
+    mesma regra: o círculo de `DrawCursor`, da espessura do próximo traço, no lugar do ícone
+    de lápis, caneta ou marca-texto.
 
     Muda por classe: dos gestos, só o pan pela rodinha chega a re-renderizar, e ainda assim
     duas vezes por gesto e nenhuma durante o movimento.
@@ -908,17 +933,11 @@ export function Viewport({
     ? "cursor-grab active:cursor-grabbing"
     : wheelPanning
       ? "cursor-grabbing"
-      : pencil
-        ? drawingTool === STROKE_TOOL_HIGHLIGHTER
-          ? "cursor-highlighter"
-          : drawingTool === STROKE_TOOL_FOUNTAIN
-            ? "cursor-fountain"
-            : "cursor-pencil"
-        : erasing
-          ? "cursor-none"
-          : placing
-            ? "cursor-crosshair"
-            : "cursor-default";
+      : pencil || erasing
+        ? "cursor-none"
+        : placing
+          ? "cursor-crosshair"
+          : "cursor-default";
 
   // A altura da prévia segue a ferramenta do gesto, e não a do modo agora: são a mesma coisa,
   // exceto quando o modo muda no meio de um traço (#117).
@@ -1002,6 +1021,12 @@ export function Viewport({
         */}
         <NotePlacementPreview at={placementPoint} />
         <EraserCursor at={eraserPoint} />
+        <DrawCursor
+          at={drawPoint}
+          style={{ tool: drawingTool, w: strokeSize, o: strokeOpacity }}
+          color={pencilColor}
+          scale={viewport.scale}
+        />
         <SelectionBox rect={marquee} />
       </div>
     </div>
