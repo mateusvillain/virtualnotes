@@ -332,10 +332,11 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
         >
           {/*
             Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
-            lados, embaixo e entre eles — 52×164. A animação conta com essa altura.
+            lados, embaixo e entre eles — 52×164. A animação conta com essa altura. A sombra
+            é a do arco de cores e da toolbar; cabe nos 8px de folga do recorte.
           */}
           <div
-            className={`stroke-panel-slide rounded-t-3xl rounded-b-lg px-2 pt-4 pb-2 ${glassSurfaceClass}`}
+            className={`stroke-panel-slide rounded-t-3xl rounded-b-lg px-2 pt-4 pb-2 shadow-[0_1px_4px_rgb(0_0_0/0.08)] ${glassSurfaceClass}`}
             data-testid="stroke-settings-surface"
           >
             {stroke.settings}
