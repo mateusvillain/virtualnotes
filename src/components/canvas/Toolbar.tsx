@@ -87,6 +87,12 @@ const PANEL_OFFSET = 34;
 /** O arco de cores fica mais perto: 4px acima da pílula, e não 8 (Penpot). */
 const ARC_OFFSET = 30;
 
+/**
+ * Duração da saída do painel de traço, em ms — o `Popover` o segura montado por esse tempo.
+ * Tem de bater com `stroke-panel-out` em globals.css.
+ */
+export const STROKE_PANEL_EXIT_MS = 200;
+
 /** O rabisco do botão de espessura e opacidade, exportado do Penpot (`Vector 1 (Stroke)`). */
 function StrokeIcon() {
   return (
@@ -127,12 +133,12 @@ interface SelectorProps {
   onToggle: () => void;
   panelLabel: string;
   onClose: () => void;
-  rounded: "full" | "panel";
+  rounded: "full" | "panel" | "column";
   /** O painel sem vidro, para conteúdo que desenha o próprio fundo. */
   bare?: boolean;
   /** Quanto o painel sobe acima do botão; por padrão, {@link PANEL_OFFSET}. */
   offset?: number;
-  /** Tempo da animação de saída do conteúdo, em ms. */
+  /** Tempo da animação de saída do painel, em ms. Sem valor, ele some na hora. */
   exitMs?: number;
   panelClassName: string;
   testId: string;
@@ -314,9 +320,12 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onToggle={() => toggle("settings")}
           onClose={() => close("settings")}
           panelLabel={ui.toolbar.stroke}
-          rounded="panel"
-          // 304×52 no Penpot: os dois sliders de 140 e 8px em volta e entre eles.
-          panelClassName="p-2"
+          rounded="column"
+          // Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
+          // lados, embaixo e entre eles — 52×164. A entrada e a saída moram em globals.css
+          // (`stroke-panel`), e contam com essa altura.
+          exitMs={STROKE_PANEL_EXIT_MS}
+          panelClassName="stroke-panel px-2 pt-4 pb-2"
           testId="stroke-settings"
           icon={<StrokeIcon />}
         >
