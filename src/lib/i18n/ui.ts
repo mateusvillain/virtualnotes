@@ -68,6 +68,11 @@ export interface UiCopy {
     /** Nome do painel de espessura e opacidade desta ferramenta (#161). */
     stroke: string;
     black: string;
+    /** As duas cores do arco que a nota não tem, como o preto. */
+    gray: string;
+    white: string;
+    /** Rótulo do botão no fim do arco que abre o seletor de cor do sistema. */
+    custom: string;
   };
   fountain: {
     /** Dica e `aria-label` do botão que liga o modo caneta tinteiro (#114). */
@@ -150,7 +155,15 @@ export const UI: Record<Locale, UiCopy> = {
       opacity: "Opacity",
     },
     history: { undo: "Undo", redo: "Redo" },
-    pencil: { action: "Pencil", color: "Pencil colour", stroke: "Pencil stroke", black: "Black" },
+    pencil: {
+      action: "Pencil",
+      color: "Pencil colour",
+      stroke: "Pencil stroke",
+      black: "Black",
+      gray: "Grey",
+      white: "White",
+      custom: "Custom colour",
+    },
     fountain: {
       action: "Fountain pen",
       color: "Fountain pen colour",
@@ -222,7 +235,15 @@ export const UI: Record<Locale, UiCopy> = {
       opacity: "Opacidade",
     },
     history: { undo: "Desfazer", redo: "Refazer" },
-    pencil: { action: "Lápis", color: "Cor do lápis", stroke: "Traço do lápis", black: "Preto" },
+    pencil: {
+      action: "Lápis",
+      color: "Cor do lápis",
+      stroke: "Traço do lápis",
+      black: "Preto",
+      gray: "Cinza",
+      white: "Branco",
+      custom: "Outra cor",
+    },
     fountain: {
       action: "Caneta tinteiro",
       color: "Cor da caneta tinteiro",

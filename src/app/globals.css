@@ -43,6 +43,13 @@
   --color-note-orange: #fed7aa;
 
   /*
+   * As duas cores do arco que a nota não tem (o preto é --color-ink). Valores do Penpot; o
+   * branco tem borda no arco, porque sumiria contra o fundo claro dele.
+   */
+  --color-stroke-gray: #666666;
+  --color-stroke-white: #ffffff;
+
+  /*
    * Tipografia. Uma escala curta e explícita, em vez dos padrões do Tailwind, para que
    * mudar o ritmo do texto seja mudar este bloco.
    */

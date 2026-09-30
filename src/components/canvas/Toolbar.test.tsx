@@ -158,12 +158,14 @@ describe("Toolbar", () => {
       expect(traco.getAttribute("aria-keyshortcuts")).toBe("[ ]");
     });
 
-    it("o bloco de cores tem raio cheio e o painel de traço, 8px", async () => {
+    it("o arco de cores abre sem vidro, e o painel de traço tem raio de 8px", async () => {
       const user = userEvent.setup();
       renderToolbar("pencil", { enabled: true });
 
+      // O arco desenha o próprio fundo: um vidro retangular em volta sobraria nas pontas.
       await user.click(screen.getByRole("button", { name: ui.toolbar.color }));
-      expect(screen.getByTestId("stroke-color-panel").className).toContain("rounded-full");
+      expect(screen.getByTestId("stroke-color-panel").className).not.toContain("rounded-full");
+      expect(screen.getByTestId("stroke-color-panel").className).not.toContain("backdrop-blur");
 
       await user.click(screen.getByRole("button", { name: ui.toolbar.stroke }));
       expect(screen.getByTestId("stroke-settings-panel").className).toContain("rounded-lg");

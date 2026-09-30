@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 interface ColorRadioGroupProps {
   /** Quantas opções a paleta tem. Os índices vão de `0` a `count - 1`. */
@@ -27,6 +27,19 @@ interface ColorRadioGroupProps {
    * de "marcada".
    */
   shape?: "square" | "circle";
+  /**
+   * Classes do grupo, no lugar da fila padrão. Com {@link swatchPosition}, é quem dá ao grupo
+   * o tamanho e o `relative` que as posições pedem.
+   */
+  className?: string;
+  /**
+   * Centro de cada opção dentro do grupo, em px — para paletas que não são uma fila, como o
+   * arco de cores do traço. Pelo centro, e não pelo canto, para a cor marcada crescer para
+   * todos os lados e não empurrar o círculo para baixo e para a direita.
+   */
+  swatchPosition?: (color: number) => { x: number; y: number };
+  /** Classes a mais de uma opção — a borda do branco, que sem ela some no fundo claro. */
+  swatchClassName?: (color: number) => string | undefined;
 }
 
 /** Aparência de cada opção, por formato e estado. */
@@ -77,6 +90,9 @@ export function ColorRadioGroup({
   ariaLabel,
   testId,
   shape = "square",
+  className,
+  swatchPosition,
+  swatchClassName,
 }: ColorRadioGroupProps) {
   const groupRef = useRef<HTMLDivElement>(null);
   /**
@@ -130,11 +146,14 @@ export function ColorRadioGroup({
       ref={groupRef}
       role="radiogroup"
       aria-label={ariaLabel}
-      className={`flex items-center ${shape === "circle" ? "gap-2" : "gap-1"}`}
+      className={className ?? `flex items-center ${shape === "circle" ? "gap-2" : "gap-1"}`}
       data-testid={testId}
     >
       {Array.from({ length: count }, (_, color) => {
         const selected = value === color;
+        const position = swatchPosition?.(color);
+        const placement: CSSProperties =
+          position === undefined ? {} : { position: "absolute", left: position.x, top: position.y };
 
         return (
           <button
@@ -149,8 +168,10 @@ export function ColorRadioGroup({
             onFocus={() => setFocused(color)}
             className={`${SWATCH[shape].base} ${
               selected ? SWATCH[shape].selected : SWATCH[shape].idle
+            } ${position === undefined ? "" : "-translate-x-1/2 -translate-y-1/2"} ${
+              swatchClassName?.(color) ?? ""
             }`}
-            style={{ backgroundColor: swatchColor(color) }}
+            style={{ backgroundColor: swatchColor(color), ...placement }}
             data-testid={`${testId}-swatch-${color}`}
             data-selected={selected}
           />

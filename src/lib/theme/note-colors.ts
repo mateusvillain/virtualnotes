@@ -9,6 +9,9 @@
 import {
   NOTE_COLORS,
   STROKE_COLOR_BLACK,
+  STROKE_COLOR_GRAY,
+  STROKE_COLOR_WHITE,
+  isCustomStrokeColor,
   type NoteColor,
   type NoteColorName,
   type StrokeColor,
@@ -48,6 +51,10 @@ export function strokeColor(color: StrokeColor): string {
   // Comparação com o índice, e não com o nome: é o índice que o board guarda, e é ele que
   // o resto do sistema trata como a identidade da cor.
   if (color === STROKE_COLOR_BLACK) return "var(--color-ink)";
+  if (color === STROKE_COLOR_GRAY) return "var(--color-stroke-gray)";
+  if (color === STROKE_COLOR_WHITE) return "var(--color-stroke-white)";
+  // A cor livre já é o valor: não tem token porque não é de paleta nenhuma.
+  if (isCustomStrokeColor(color)) return color;
 
   return noteBackgroundColor(color);
 }

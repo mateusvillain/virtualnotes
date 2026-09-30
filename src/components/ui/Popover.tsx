@@ -36,6 +36,11 @@ interface PopoverProps {
   offset: number;
   /** Raio do vidro: cheio no bloco de cores, 8px no painel de traço (Penpot). */
   rounded?: "full" | "panel";
+  /**
+   * Sem o vidro: o conteúdo desenha o próprio fundo. É o arco de cores, cuja forma não é um
+   * retângulo arredondado.
+   */
+  bare?: boolean;
   /** Respiro interno e o que mais o conteúdo pedir de layout. */
   className?: string;
   testId?: string;
@@ -68,6 +73,7 @@ export function Popover({
   label,
   offset,
   rounded = "full",
+  bare = false,
   className = "",
   testId,
   children,
@@ -143,7 +149,9 @@ export function Popover({
       role="dialog"
       aria-label={label}
       // O vidro das pílulas (Penpot: branco a 90%, borda `#e4e4e4` a meio tom).
-      className={`absolute left-1/2 z-10 w-max -translate-x-1/2 ${glassSurfaceClass} ${ROUNDED[rounded]} ${className}`}
+      className={`absolute left-1/2 z-10 w-max -translate-x-1/2 ${
+        bare ? "" : `${glassSurfaceClass} ${ROUNDED[rounded]}`
+      } ${className}`}
       style={{ bottom: `calc(100% + ${offset}px)`, marginLeft: shift }}
       data-testid={testId}
     >

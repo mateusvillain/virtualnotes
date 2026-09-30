@@ -41,8 +41,15 @@ describe("cores do post-it", () => {
 });
 
 describe("cores do traço", () => {
-  it("são as seis cores da nota mais o preto", () => {
-    expect(STROKE_COLORS).toEqual([...NOTE_COLORS, "black"]);
+  it("são as seis cores da nota mais o preto, o cinza e o branco", () => {
+    expect(STROKE_COLORS).toEqual([...NOTE_COLORS, "black", "gray", "white"]);
+  });
+
+  it("aceita cor livre só como #rrggbb minúsculo", () => {
+    expect(isStrokeColor("#ff8800")).toBe(true);
+    expect(["#FF8800", "#f80", "ff8800", "#ff88001", "red", "#gg0000"].some(isStrokeColor)).toBe(
+      false,
+    );
   });
 
   it("aceita todo índice da paleta, sem sobrar nem faltar", () => {

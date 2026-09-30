@@ -83,6 +83,9 @@ export const TOOLBAR_TOOLS: readonly ToolbarEntry[] = [
  */
 const PANEL_OFFSET = 34;
 
+/** O arco de cores fica mais perto: 4px acima da pílula, e não 8 (Penpot). */
+const ARC_OFFSET = 30;
+
 /** O rabisco do botão de espessura e opacidade, exportado do Penpot (`Vector 1 (Stroke)`). */
 function StrokeIcon() {
   return (
@@ -124,6 +127,10 @@ interface SelectorProps {
   panelLabel: string;
   onClose: () => void;
   rounded: "full" | "panel";
+  /** O painel sem vidro, para conteúdo que desenha o próprio fundo. */
+  bare?: boolean;
+  /** Quanto o painel sobe acima do botão; por padrão, {@link PANEL_OFFSET}. */
+  offset?: number;
   panelClassName: string;
   testId: string;
   icon: ReactNode;
@@ -140,6 +147,8 @@ function Selector({
   panelLabel,
   onClose,
   rounded,
+  bare,
+  offset = PANEL_OFFSET,
   panelClassName,
   testId,
   icon,
@@ -182,8 +191,9 @@ function Selector({
         }}
         triggerRef={triggerRef}
         label={panelLabel}
-        offset={PANEL_OFFSET}
+        offset={offset}
         rounded={rounded}
+        bare={bare}
         className={panelClassName}
         testId={`${testId}-panel`}
       >
@@ -275,8 +285,10 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onClose={() => close("color")}
           panelLabel={ui.toolbar.color}
           rounded="full"
-          // 236×44 no Penpot: as sete cores e 8px de cada lado.
-          panelClassName="flex h-11 items-center px-2"
+          // O arco (Penpot) tem forma própria, e desenha o próprio fundo.
+          bare
+          offset={ARC_OFFSET}
+          panelClassName=""
           testId="stroke-color"
           icon={
             <span
