@@ -145,8 +145,8 @@ export const UI: Record<Locale, UiCopy> = {
     toolbar: {
       label: "Tools",
       color: "Stroke colour",
-      stroke: "Stroke and opacity",
-      size: "Stroke",
+      stroke: "Thickness and opacity",
+      size: "Thickness",
       opacity: "Opacity",
     },
     history: { undo: "Undo", redo: "Redo" },

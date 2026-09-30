@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRef, useState } from "react";
-import { act } from "react";
+import { act, useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Popover } from "./Popover";
 
