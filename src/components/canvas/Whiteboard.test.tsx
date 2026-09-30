@@ -44,13 +44,13 @@ function aberto(element: HTMLElement | null): HTMLElement | null {
  */
 function blocoDeCores(nome: "pencil" | "fountain" | "highlighter"): HTMLElement | null {
   const testId = `${nome}-color-picker`;
-  const aberto = screen.queryByTestId(testId);
-  if (aberto !== null) return aberto;
+  const jaAberto = aberto(screen.queryByTestId(testId));
+  if (jaAberto !== null) return jaAberto;
 
   const circulo = screen.getByTestId("stroke-color-button") as HTMLButtonElement;
   if (circulo.disabled || circulo.getAttribute("aria-expanded") === "true") return null;
   fireEvent.click(circulo);
-  return screen.queryByTestId(testId);
+  return aberto(screen.queryByTestId(testId));
 }
 
 function duploCliqueNoFundo(x: number, y: number): void {

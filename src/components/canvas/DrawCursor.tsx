@@ -1,12 +1,7 @@
 "use client";
 
 import { strokeInkWidth } from "@/lib/board/stroke-geometry";
-import {
-  STROKE_OPACITIES,
-  strokeOpacity,
-  type StrokeColor,
-  type StrokeStyle,
-} from "@/lib/board/types";
+import { strokeOpacityValue, type StrokeColor, type StrokeStyle } from "@/lib/board/types";
 import { topLeftCenteredAt, type Point } from "@/lib/canvas/coords";
 import { strokeColor } from "@/lib/theme/note-colors";
 
@@ -58,7 +53,6 @@ export function DrawCursor({ at, style, color, scale }: DrawCursorProps) {
 
   const size = strokeInkWidth(style);
   const { x, y } = topLeftCenteredAt(at, { w: size, h: size });
-  const opacity = STROKE_OPACITIES[strokeOpacity(style)] / 100;
 
   const aim = size * scale < DRAW_CURSOR_AIM_BELOW;
   const aimSize = AIM_SIZE / scale;
@@ -94,7 +88,7 @@ export function DrawCursor({ at, style, color, scale }: DrawCursorProps) {
           width: size,
           height: size,
           // A cor por trás com a opacidade do traço, e a borda por dentro, sempre sólida.
-          background: `color-mix(in srgb, ${strokeColor(color)} ${opacity * 100}%, transparent)`,
+          background: `color-mix(in srgb, ${strokeColor(color)} ${strokeOpacityValue(style) * 100}%, transparent)`,
           boxShadow: `inset 0 0 0 ${1 / scale}px var(--color-ink)`,
         }}
       />

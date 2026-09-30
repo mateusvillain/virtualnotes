@@ -154,6 +154,8 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
         : null;
   /** A ferramenta cujos valores de traço a moldura mostra: a ligada, ou o lápis fora de um modo de desenho. */
   const strokeTool = drawingTool ?? STROKE_TOOL_PENCIL;
+  /** A cor do traço da ferramenta, em CSS: o círculo da toolbar e o gradiente de opacidade. */
+  const strokeInk = strokeColor(board.strokeColors[strokeTool]);
   const placing = mode === "placing";
 
   /**
@@ -340,7 +342,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
             // um modo de desenho, os botões desabilitados mostram os do lápis.
             stroke={{
               enabled: drawingTool !== null,
-              color: strokeColor(board.strokeColors[strokeTool]),
+              color: strokeInk,
               colorPicker: (
                 <StrokeColorPicker
                   tool={strokeTool}
@@ -353,7 +355,7 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
                   tool={strokeTool}
                   size={board.strokeSizes[strokeTool]}
                   opacity={board.strokeOpacities[strokeTool]}
-                  color={strokeColor(board.strokeColors[strokeTool])}
+                  color={strokeInk}
                   onSizeChange={(size) => board.setStrokeSize(strokeTool, size)}
                   onOpacityChange={(opacity) => board.setStrokeOpacity(strokeTool, opacity)}
                 />

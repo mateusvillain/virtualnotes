@@ -9,6 +9,7 @@ import { FountainPenIllustration } from "@/components/ui/tools/FountainPenIllust
 import { HighlighterIllustration } from "@/components/ui/tools/HighlighterIllustration";
 import { NoteIllustration } from "@/components/ui/tools/NoteIllustration";
 import { PencilIllustration } from "@/components/ui/tools/PencilIllustration";
+import { StrokeIcon } from "@/components/ui/tools/StrokeIcon";
 import type { ToolMode } from "@/lib/board/modes";
 import { useUi } from "@/lib/i18n/LocaleProvider";
 import { useIsMac } from "@/lib/dom/useIsMac";
@@ -88,15 +89,6 @@ const PANEL_OFFSET = 34;
  * Tem de bater com `stroke-panel-out` em globals.css.
  */
 export const STROKE_PANEL_EXIT_MS = 200;
-
-/** O rabisco do botão de espessura e opacidade, exportado do Penpot (`Vector 1 (Stroke)`). */
-function StrokeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path d="M1.98 0C3.08 -0.01 3.99 0.88 4 1.98C4.01 2.98 4.16 4.83 4.5 6.69C4.81 8.42 5.24 9.84 5.69 10.65C6.28 10.34 7.1 9.62 8.04 8.58C8.95 7.57 9.82 6.44 10.54 5.5C10.89 5.05 11.22 4.61 11.48 4.29C11.61 4.13 11.75 3.96 11.88 3.82C11.94 3.75 12.03 3.66 12.13 3.58C12.2 3.51 12.39 3.34 12.68 3.2L12.85 3.13C13.57 2.83 14.3 2.83 14.95 3.02L15.25 3.12L15.54 3.25C16.2 3.58 16.73 4.1 17.1 4.62C17.67 5.4 17.93 6.29 18.32 8.28C18.72 10.32 19.32 13.91 19.97 17.66C20.16 18.74 19.43 19.78 18.34 19.97C17.26 20.16 16.22 19.43 16.03 18.34C15.36 14.52 14.79 11.04 14.4 9.05C14.25 8.31 14.14 7.83 14.05 7.5C13.95 7.64 13.84 7.78 13.72 7.94C13 8.88 12.03 10.12 11 11.27C10 12.36 8.78 13.56 7.51 14.21C6.86 14.55 6.01 14.85 5.07 14.75C4.02 14.63 3.18 14.07 2.6 13.24C1.53 11.73 0.92 9.37 0.56 7.4C0.19 5.34 0.01 3.26 0 2.02C-0.01 0.92 0.88 0.01 1.98 0Z" />
-    </svg>
-  );
-}
 
 /**
  * Divisor entre as seções da pílula (Penpot, `Line 2` e `Line 4`): 1px por 24, `#dddddd`
