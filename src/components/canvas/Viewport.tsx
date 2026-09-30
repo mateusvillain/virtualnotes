@@ -28,6 +28,8 @@ import {
   STROKE_TOOL_HIGHLIGHTER,
   STROKE_TOOL_PENCIL,
   type StrokeColor,
+  type StrokeOpacity,
+  type StrokeSize,
   type StrokeTool,
 } from "@/lib/board/types";
 import { EraserCursor } from "./EraserCursor";
@@ -80,6 +82,13 @@ type ViewportProps = Pick<ViewportApi, "viewport" | "pan" | "zoomBy"> & {
    * que altura ela é desenhada: o marca-texto por baixo da tinta, como vai ficar ao soltar.
    */
   drawingTool?: StrokeTool;
+  /**
+   * Espessura e opacidade da ferramenta ligada (#162), em índices, como o traço as grava.
+   * Ausentes, o padrão da ferramenta. Chegam à prévia pelo mesmo caminho da cor, para o
+   * traço em curso já ter a cara do traço que vai ficar.
+   */
+  strokeSize?: StrokeSize;
+  strokeOpacity?: StrokeOpacity;
   /** Modo borracha ligado: arrastar ou tocar apaga o traço que encostar (#98). */
   erasing?: boolean;
   /** Modo de colocação ligado: uma nota translúcida segue o cursor e o clique a fixa (#73). */
@@ -152,6 +161,9 @@ type DragState =
       /** Ferramenta e cor do instante em que o gesto começou (#117). */
       tool: StrokeTool;
       color: StrokeColor;
+      /** Espessura e opacidade do mesmo instante (#162). Ausentes, o padrão da ferramenta. */
+      w?: StrokeSize;
+      o?: StrokeOpacity;
     }
   | {
       kind: "erase";
@@ -203,6 +215,8 @@ export function Viewport({
   pencil = false,
   pencilColor = STROKE_COLOR_BLACK,
   drawingTool = STROKE_TOOL_PENCIL,
+  strokeSize,
+  strokeOpacity,
   erasing = false,
   placing = false,
   onPlaceNote,
@@ -373,11 +387,11 @@ export function Viewport({
       event.currentTarget.setPointerCapture(event.pointerId);
 
       const point = screenToCanvas(localPoint(event), viewportRef.current);
-      const style = { tool: drawingTool, color: pencilColor };
+      const style = { tool: drawingTool, color: pencilColor, w: strokeSize, o: strokeOpacity };
       drag.current = { kind: "draw", pointerId: event.pointerId, points: [point], ...style };
       setDrawing({ points: [point], ...style });
     },
-    [drawingTool, localPoint, pencilColor],
+    [drawingTool, localPoint, pencilColor, strokeOpacity, strokeSize],
   );
 
   /**
@@ -713,7 +727,11 @@ export function Viewport({
         // Em coordenadas de canvas desde já: o traço é conteúdo do quadro, e guardá-lo em
         // pixels de tela o prenderia ao zoom e ao pan do instante em que foi desenhado.
         state.points.push(screenToCanvas(localPoint(event), viewportRef.current));
-        setDrawing({ points: [...state.points], tool: state.tool, color: state.color });
+        // Com todo o estilo do gesto, e não só ferramenta e cor: sem `w` e `o`, a prévia
+        // voltava à espessura e à opacidade padrão no primeiro movimento, e só o traço
+        // gravado, ao soltar, saía com os valores escolhidos (#162).
+        const { points, tool, color, w, o } = state;
+        setDrawing({ points: [...points], tool, color, w, o });
         return;
       }
 

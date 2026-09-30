@@ -43,5 +43,7 @@ export const subtleButtonClass =
  * 2px à medida. Com `border`, uma pílula de botões de 32px e 4px de respiro teria 42 de
  * altura, e não 40 — e as dos cantos desalinhariam entre si.
  */
-export const pillSurfaceClass =
-  "rounded-full bg-surface/90 ring-1 ring-inset ring-border/50 backdrop-blur-xs";
+export const glassSurfaceClass = "bg-surface/90 ring-1 ring-inset ring-border/50 backdrop-blur-xs";
+
+/** O vidro com o raio de pílula. Os painéis que abrem da toolbar (#155) escolhem o próprio raio. */
+export const pillSurfaceClass = `rounded-full ${glassSurfaceClass}`;
