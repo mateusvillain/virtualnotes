@@ -217,56 +217,59 @@ body {
 /**
  * Abrir e fechar o painel de espessura e opacidade da toolbar, saindo de trás dela.
  *
- * O painel desliza de baixo para cima, e um recorte esconde tudo o que ainda está abaixo do
- * topo da pílula — como se ele subisse de dentro da toolbar, na mesma ideia do arco de cores.
- * O recorte anda junto com o deslize, nos mesmos quadros: os dois estão no mesmo keyframe, e
- * propriedades de um keyframe interpolam com o mesmo progresso.
+ * Duas camadas, como no arco de cores: a de fora (`.stroke-panel`, o próprio `Popover`) não se
+ * mexe e recorta tudo o que passa da linha do topo da pílula; a de dentro
+ * (`.stroke-panel-slide`, o vidro com os sliders) desliza por baixo desse recorte, como se
+ * subisse de dentro da toolbar.
  *
- * As contas, com o painel a 8px da pílula e 164px de altura (Toolbar.tsx):
- *   - fechado, ele está 172px para baixo (164 + 8): o topo encosta na linha da pílula;
- *   - o recorte de baixo é sempre o deslocamento menos 8px, o que põe a borda do recorte na
- *     linha da pílula: 164px no começo (nada aparece), -8px no fim (nada é cortado).
- * Os -8px dos outros lados só deixam o anel e o foco dos sliders fora do recorte.
+ * O recorte fica parado de propósito. Animar o recorte junto com o deslize parecia igual, mas
+ * `transform` roda na GPU e `clip-path` na thread principal: na saída, com o React ocupado, o
+ * recorte atrasava alguns quadros e o painel descia por cima da toolbar.
+ *
+ * As contas, com o painel a 8px da pílula e 164px de altura (Toolbar.tsx): o recorte desce
+ * 8px abaixo da moldura, até a linha da pílula; fechado, o vidro está 172px para baixo
+ * (164 + 8), com o topo encostado nessa linha. Os -8px dos outros lados só deixam o anel de
+ * foco dos sliders fora do recorte.
  *
  * Anima `transform` sem brigar com a centralização do painel: o `-translate-x-1/2` do Tailwind
- * é a propriedade `translate`, separada de `transform`.
+ * é a propriedade `translate`, separada de `transform` — e fica na camada de fora, não nesta.
  */
 @keyframes stroke-panel-in {
   from {
     transform: translateY(172px);
-    clip-path: inset(-8px -8px 164px -8px);
   }
   to {
     transform: none;
-    clip-path: inset(-8px -8px -8px -8px);
   }
 }
 
 @keyframes stroke-panel-out {
   from {
     transform: none;
-    clip-path: inset(-8px -8px -8px -8px);
   }
   to {
     transform: translateY(172px);
-    clip-path: inset(-8px -8px 164px -8px);
   }
 }
 
-/* As curvas e os tempos do arco de cores: as duas peças saem da toolbar do mesmo jeito. */
 .stroke-panel {
+  clip-path: inset(-8px);
+}
+
+/* As curvas e os tempos do arco de cores: as duas peças saem da toolbar do mesmo jeito. */
+.stroke-panel-slide {
   animation: stroke-panel-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* A duração é STROKE_PANEL_EXIT_MS, em Toolbar.tsx. */
-.stroke-panel[data-state="closed"] {
+[data-state="closed"] .stroke-panel-slide {
   animation: stroke-panel-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 /* Quem pediu menos movimento recebe o painel pronto, e ele some sem animar. */
 @media (prefers-reduced-motion: reduce) {
-  .stroke-panel,
-  .stroke-panel[data-state="closed"] {
+  .stroke-panel-slide,
+  [data-state="closed"] .stroke-panel-slide {
     animation: none;
   }
 

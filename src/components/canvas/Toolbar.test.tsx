@@ -171,7 +171,7 @@ describe("Toolbar", () => {
       expect(screen.getByTestId("stroke-color-panel").className).not.toContain("backdrop-blur");
 
       await user.click(screen.getByRole("button", { name: ui.toolbar.stroke }));
-      expect(screen.getByTestId("stroke-settings-panel").className).toContain(
+      expect(screen.getByTestId("stroke-settings-surface").className).toContain(
         "rounded-t-3xl rounded-b-lg",
       );
     });

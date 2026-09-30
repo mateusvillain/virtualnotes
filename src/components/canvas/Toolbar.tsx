@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { glassSurfaceClass } from "@/components/ui/iconButton";
 import { Popover } from "@/components/ui/Popover";
 import { ARC_EXIT_MS } from "@/components/ui/StrokeColorPicker";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -133,7 +134,7 @@ interface SelectorProps {
   onToggle: () => void;
   panelLabel: string;
   onClose: () => void;
-  rounded: "full" | "panel" | "column";
+  rounded: "full" | "panel";
   /** O painel sem vidro, para conteúdo que desenha o próprio fundo. */
   bare?: boolean;
   /** Quanto o painel sobe acima do botão; por padrão, {@link PANEL_OFFSET}. */
@@ -320,16 +321,25 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onToggle={() => toggle("settings")}
           onClose={() => close("settings")}
           panelLabel={ui.toolbar.stroke}
-          rounded="column"
-          // Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
-          // lados, embaixo e entre eles — 52×164. A entrada e a saída moram em globals.css
-          // (`stroke-panel`), e contam com essa altura.
+          rounded="panel"
+          // Sem vidro, e parado: é só a moldura que recorta o painel na linha da pílula. O
+          // vidro e os sliders estão dentro, e é essa camada que sobe e desce (globals.css).
+          bare
           exitMs={STROKE_PANEL_EXIT_MS}
-          panelClassName="stroke-panel px-2 pt-4 pb-2"
+          panelClassName="stroke-panel"
           testId="stroke-settings"
           icon={<StrokeIcon />}
         >
-          {stroke.settings}
+          {/*
+            Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
+            lados, embaixo e entre eles — 52×164. A animação conta com essa altura.
+          */}
+          <div
+            className={`stroke-panel-slide rounded-t-3xl rounded-b-lg px-2 pt-4 pb-2 ${glassSurfaceClass}`}
+            data-testid="stroke-settings-surface"
+          >
+            {stroke.settings}
+          </div>
         </Selector>
       </div>
     </div>
