@@ -36,6 +36,12 @@ interface PopoverProps {
   offset: number;
   /** Raio do vidro: cheio no bloco de cores, 8px no painel de traço (Penpot). */
   rounded?: "full" | "panel";
+  /**
+   * Quanto tempo o painel continua montado depois de fechar, em ms, para o conteúdo tocar a
+   * própria animação de saída. Nesse intervalo ele leva `data-state="closed"` e fica `inert`:
+   * aparece saindo, mas já não recebe clique nem foco. Sem valor, some na hora.
+   */
+  exitMs?: number;
   /** Respiro interno e o que mais o conteúdo pedir de layout. */
   className?: string;
   testId?: string;
@@ -68,6 +74,7 @@ export function Popover({
   label,
   offset,
   rounded = "full",
+  exitMs = 0,
   className = "",
   testId,
   children,
@@ -75,6 +82,19 @@ export function Popover({
   const panelRef = useRef<HTMLDivElement>(null);
   /** Deslocamento horizontal que traz o painel para dentro da janela. */
   const [shift, setShift] = useState(0);
+  /** Ainda montado: aberto, ou fechando durante {@link exitMs}. */
+  const [present, setPresent] = useState(open);
+
+  // Ajustado durante o render, e não num efeito, para o painel montar no mesmo quadro em que
+  // abre — e sumir no mesmo quadro em que fecha, quando não há saída para tocar.
+  if (open && !present) setPresent(true);
+  if (!open && present && exitMs === 0) setPresent(false);
+
+  useEffect(() => {
+    if (open || !present) return;
+    const timer = setTimeout(() => setPresent(false), exitMs);
+    return () => clearTimeout(timer);
+  }, [exitMs, open, present]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -134,7 +154,7 @@ export function Popover({
     };
   }, [onOpenChange, open, triggerRef]);
 
-  if (!open) return null;
+  if (!open && !present) return null;
 
   return (
     <div
@@ -145,6 +165,8 @@ export function Popover({
       // O vidro das pílulas (Penpot: branco a 90%, borda `#e4e4e4` a meio tom).
       className={`absolute left-1/2 z-10 w-max -translate-x-1/2 ${glassSurfaceClass} ${ROUNDED[rounded]} ${className}`}
       style={{ bottom: `calc(100% + ${offset}px)`, marginLeft: shift }}
+      data-state={open ? "open" : "closed"}
+      inert={!open}
       data-testid={testId}
     >
       {children}

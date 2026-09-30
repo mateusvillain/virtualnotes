@@ -1,10 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
+import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Popover } from "./Popover";
 
-function Harness({ onGlobalEscape = () => {} }: { onGlobalEscape?: () => void }) {
+function Harness({
+  onGlobalEscape = () => {},
+  exitMs,
+}: {
+  onGlobalEscape?: () => void;
+  exitMs?: number;
+}) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -38,6 +45,8 @@ function Harness({ onGlobalEscape = () => {} }: { onGlobalEscape?: () => void })
           triggerRef={triggerRef}
           label="Painel"
           offset={34}
+          exitMs={exitMs}
+          testId="painel"
         >
           <button type="button">primeiro</button>
           <button type="button">segundo</button>
@@ -112,5 +121,58 @@ describe("Popover", () => {
     await user.click(screen.getByRole("button", { name: "abrir" }));
 
     expect(screen.getByRole("dialog").style.bottom).toBe("calc(100% + 34px)");
+  });
+});
+
+describe("Popover — saída animada", () => {
+  it("sem exitMs, some no mesmo instante em que fecha", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "abrir" }));
+    await user.click(screen.getByRole("button", { name: "abrir" }));
+
+    expect(screen.queryByTestId("painel")).toBeNull();
+  });
+
+  it("com exitMs, continua montado e inerte até a saída acabar", () => {
+    vi.useFakeTimers();
+    try {
+      render(<Harness exitMs={200} />);
+      const gatilho = screen.getByRole("button", { name: "abrir" });
+
+      fireEvent.click(gatilho);
+      expect(screen.getByTestId("painel").dataset.state).toBe("open");
+
+      fireEvent.click(gatilho);
+      const painel = screen.getByTestId("painel");
+      expect(painel.dataset.state).toBe("closed");
+      expect(painel.hasAttribute("inert")).toBe(true);
+
+      act(() => vi.advanceTimersByTime(199));
+      expect(screen.queryByTestId("painel")).not.toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(screen.queryByTestId("painel")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reabrir durante a saída volta a abrir, sem desmontar", () => {
+    vi.useFakeTimers();
+    try {
+      render(<Harness exitMs={200} />);
+      const gatilho = screen.getByRole("button", { name: "abrir" });
+
+      fireEvent.click(gatilho);
+      fireEvent.click(gatilho);
+      act(() => vi.advanceTimersByTime(100));
+      fireEvent.click(gatilho);
+      act(() => vi.advanceTimersByTime(200));
+
+      expect(screen.getByTestId("painel").dataset.state).toBe("open");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
