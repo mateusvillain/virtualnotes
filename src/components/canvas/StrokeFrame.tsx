@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { ResizeHandle } from "@/components/postit/ResizeHandle";
 import { useDrag } from "@/lib/canvas/useDrag";
 import type { Point, Rect, Size } from "@/lib/canvas/coords";
-import { strokeTool, type Stroke } from "@/lib/board/types";
+import type { Stroke } from "@/lib/board/types";
 import { inkOverhang, strokeBounds } from "@/lib/board/stroke-geometry";
 
 interface StrokeFrameProps {
@@ -66,7 +66,7 @@ export function StrokeFrame({
   // Em volta da tinta, e não só dos pontos (#118): a linha do meio de um marca-texto
   // horizontal tem altura zero, e a caixa dos pontos cortaria o destaque ao meio. A sobra
   // entra também no tamanho em curso, que o redimensionamento mede pelos pontos.
-  const overhang = inkOverhang(strokeTool(stroke));
+  const overhang = inkOverhang(stroke);
   const style: CSSProperties = {
     left: bounds.x - overhang,
     top: bounds.y - overhang,

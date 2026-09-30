@@ -1639,6 +1639,35 @@ describe("useBoard — espessura e opacidade do traço (#153)", () => {
   });
 });
 
+describe("useBoard — borracha pela espessura do traço (#158)", () => {
+  const comLapis: Board = {
+    version: SCHEMA_VERSION,
+    notes: [],
+    strokes: [
+      // Lápis a 6×: a tinta vai até 6 unidades da linha do meio.
+      { id: "grosso", color: 6, w: 7, points: [0, 0, 200, 0], z: 1 },
+      { id: "fino", color: 6, points: [0, 100, 200, 100], z: 2 },
+    ],
+  };
+
+  function passa(y: number) {
+    const hook = renderHook(() => useBoard({ initialBoard: comLapis, autosave: false }));
+    act(() => hook.result.current.beginErasing());
+    act(() => hook.result.current.eraseSegment({ x: 100, y }, { x: 100, y }));
+    act(() => hook.result.current.endErasing());
+    return hook.result.current.strokes.map((s) => s.id);
+  }
+
+  it("apaga o lápis grosso encostando só na borda visível dele", () => {
+    // Fora do alvo do lápis padrão (raio 8), dentro do alvo do grosso (raio 13).
+    expect(passa(12)).not.toContain("grosso");
+  });
+
+  it("o mesmo toque não alcança o lápis padrão", () => {
+    expect(passa(112)).toContain("fino");
+  });
+});
+
 describe("useBoard — espessura e opacidade por ferramenta (#159)", () => {
   const traço = [
     { x: 0, y: 0 },

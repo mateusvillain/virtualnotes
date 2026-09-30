@@ -342,27 +342,38 @@ function isIndexOf(value: unknown, list: readonly unknown[]): boolean {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < list.length;
 }
 
+/**
+ * O que decide a cara da tinta: ferramenta, espessura e opacidade. Um `Stroke` serve, e a
+ * prévia do traço em curso também (#157) — ela ainda não é traço, e a ferramenta dela pode
+ * ser o lápis explícito, que o contrato nunca grava.
+ */
+export interface StrokeStyle {
+  tool?: StrokeTool;
+  w?: StrokeSize;
+  o?: StrokeOpacity;
+}
+
 /** A ferramenta de um traço, com a ausência do campo lida como lápis. */
-export function strokeTool(stroke: Pick<Stroke, "tool">): StrokeTool {
+export function strokeTool(stroke: StrokeStyle): StrokeTool {
   return stroke.tool ?? STROKE_TOOL_PENCIL;
 }
 
 /** O índice de espessura de um traço, com a ausência do campo lida como o padrão da ferramenta. */
-export function strokeSize(stroke: Pick<Stroke, "tool" | "w">): StrokeSize {
+export function strokeSize(stroke: StrokeStyle): StrokeSize {
   return stroke.w ?? DEFAULT_STROKE_SIZES[strokeTool(stroke)];
 }
 
 /** O índice de opacidade de um traço, com a ausência do campo lida como o padrão da ferramenta. */
-export function strokeOpacity(stroke: Pick<Stroke, "tool" | "o">): StrokeOpacity {
+export function strokeOpacity(stroke: StrokeStyle): StrokeOpacity {
   return stroke.o ?? DEFAULT_STROKE_OPACITIES[strokeTool(stroke)];
 }
 
 /** O multiplicador da espessura-base da ferramenta: `1` para o traço padrão. */
-export function strokeSizeScale(stroke: Pick<Stroke, "tool" | "w">): number {
+export function strokeSizeScale(stroke: StrokeStyle): number {
   return STROKE_SIZES[strokeSize(stroke)];
 }
 
 /** A opacidade de um traço, de 0 a 1: pronta para o atributo `opacity` do SVG. */
-export function strokeOpacityValue(stroke: Pick<Stroke, "tool" | "o">): number {
+export function strokeOpacityValue(stroke: StrokeStyle): number {
   return STROKE_OPACITIES[strokeOpacity(stroke)] / 100;
 }
