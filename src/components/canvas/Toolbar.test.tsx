@@ -142,8 +142,9 @@ describe("Toolbar", () => {
         screen.getByRole("dialog", { name: ui.toolbar.color }).id,
       );
 
+      // O arco continua montado enquanto gira para fora, mas já fechado: inerte.
       await user.click(traco);
-      expect(screen.queryByTestId("cores")).toBeNull();
+      expect(screen.getByTestId("stroke-color-panel").dataset.state).toBe("closed");
       expect(screen.getByTestId("sliders")).toBeDefined();
       expect(traco.getAttribute("aria-expanded")).toBe("true");
 

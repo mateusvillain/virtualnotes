@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import { Popover } from "@/components/ui/Popover";
+import { ARC_EXIT_MS } from "@/components/ui/StrokeColorPicker";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ToolbarTool } from "@/components/ui/ToolbarTool";
 import { EraserIllustration } from "@/components/ui/tools/EraserIllustration";
@@ -131,6 +132,8 @@ interface SelectorProps {
   bare?: boolean;
   /** Quanto o painel sobe acima do botão; por padrão, {@link PANEL_OFFSET}. */
   offset?: number;
+  /** Tempo da animação de saída do conteúdo, em ms. */
+  exitMs?: number;
   panelClassName: string;
   testId: string;
   icon: ReactNode;
@@ -149,6 +152,7 @@ function Selector({
   rounded,
   bare,
   offset = PANEL_OFFSET,
+  exitMs,
   panelClassName,
   testId,
   icon,
@@ -194,6 +198,7 @@ function Selector({
         offset={offset}
         rounded={rounded}
         bare={bare}
+        exitMs={exitMs}
         className={panelClassName}
         testId={`${testId}-panel`}
       >
@@ -288,6 +293,7 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           // O arco (Penpot) tem forma própria, e desenha o próprio fundo.
           bare
           offset={ARC_OFFSET}
+          exitMs={ARC_EXIT_MS}
           panelClassName=""
           testId="stroke-color"
           icon={

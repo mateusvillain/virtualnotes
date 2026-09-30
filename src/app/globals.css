@@ -154,3 +154,62 @@ body {
     animation: none;
   }
 }
+
+/**
+ * Abrir e fechar o arco de cores do traço, como uma fita que rola.
+ *
+ * O arco inteiro gira em volta do centro do círculo de que ele é pedaço (117, 117). Fechado,
+ * está 160° para trás: só a ponta do seletor de cor livre fica acima da base, na posição da
+ * ponta esquerda, e o resto está enrolado por baixo. Ao abrir ele gira de volta, e o seletor
+ * passa por cima até a ponta direita puxando as cores atrás de si. Fechar faz o caminho
+ * contrário, da direita para a esquerda.
+ *
+ * Sempre a 160°, e não à distância entre as pontas: é o que leva a última cor da direita até
+ * a da esquerda, a 20° uma da outra em oito passos.
+ *
+ * O recorte em `.color-arc` esconde a parte enrolada. Ele desce 5px abaixo da base só para
+ * não cortar a sombra do anel.
+ */
+@keyframes color-arc-roll-in {
+  from {
+    transform: rotate(-160deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes color-arc-roll-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: rotate(-160deg);
+  }
+}
+
+.color-arc {
+  clip-path: inset(-8px -8px -5px -8px);
+}
+
+.color-arc-roll {
+  transform-origin: 117px 117px;
+  animation: color-arc-roll-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* A duração é ARC_EXIT_MS, em StrokeColorPicker.tsx. */
+[data-state="closed"] .color-arc-roll {
+  animation: color-arc-roll-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Quem pediu menos movimento recebe o arco pronto, e ele some sem girar. */
+@media (prefers-reduced-motion: reduce) {
+  .color-arc-roll,
+  [data-state="closed"] .color-arc-roll {
+    animation: none;
+  }
+
+  [data-state="closed"] .color-arc {
+    visibility: hidden;
+  }
+}

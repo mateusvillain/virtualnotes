@@ -33,15 +33,23 @@ import { UI } from "@/lib/i18n/ui";
  * Color Controls, e este atalho o abre se ainda estiver fechado — `null` com o círculo
  * desabilitado, sem ferramenta de traço ligada.
  */
+/**
+ * O elemento, se ele não estiver num painel fechando. O arco de cores continua montado
+ * durante o giro de saída, mas para quem usa ele já fechou: está `inert`, e sai girando.
+ */
+function aberto(element: HTMLElement | null): HTMLElement | null {
+  return element?.closest('[data-state="closed"]') ? null : element;
+}
+
 function blocoDeCores(nome: "pencil" | "fountain" | "highlighter"): HTMLElement | null {
   const testId = `${nome}-color-picker`;
-  const aberto = screen.queryByTestId(testId);
-  if (aberto !== null) return aberto;
+  const jaAberto = aberto(screen.queryByTestId(testId));
+  if (jaAberto !== null) return jaAberto;
 
   const circulo = screen.getByTestId("stroke-color-button") as HTMLButtonElement;
   if (circulo.disabled || circulo.getAttribute("aria-expanded") === "true") return null;
   fireEvent.click(circulo);
-  return screen.queryByTestId(testId);
+  return aberto(screen.queryByTestId(testId));
 }
 
 function duploCliqueNoFundo(x: number, y: number): void {
@@ -4897,7 +4905,7 @@ describe("Whiteboard — bloco de cores pelo círculo (#160)", () => {
   }
 
   function bloco(): HTMLElement | null {
-    return screen.queryByTestId("stroke-color-panel");
+    return aberto(screen.queryByTestId("stroke-color-panel"));
   }
 
   it.each([
@@ -5036,7 +5044,7 @@ describe("Whiteboard — painel de traço (#162)", () => {
     expect(screen.queryByTestId("stroke-color-panel")).not.toBeNull();
 
     fireEvent.click(rabisco());
-    expect(screen.queryByTestId("stroke-color-panel")).toBeNull();
+    expect(aberto(screen.queryByTestId("stroke-color-panel"))).toBeNull();
 
     fireEvent.click(rabisco());
     expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();

@@ -50,26 +50,44 @@ const ARC_COLORS: readonly StrokeColorIndex[] = [
   NOTE_COLORS.indexOf("blue") as StrokeColorIndex,
 ];
 
+/**
+ * Duração do giro de fechar, em ms — o `Popover` segura o arco montado por esse tempo. Tem de
+ * bater com `color-arc-roll-out` em globals.css.
+ */
+export const ARC_EXIT_MS = 200;
+
 /** Largura e altura do arco, em px (Penpot). */
 const ARC_WIDTH = 234;
 const ARC_HEIGHT = 118;
 
 /**
- * Os círculos correm num arco de raio 99 com centro no meio da base, de 170° a 10°, a 20° um
- * do outro: as oito cores e, na última posição, o seletor livre.
+ * Centro de cada posição do arco, em px a partir do canto superior esquerdo: as oito cores e,
+ * na última, o seletor livre.
+ *
+ * Medidos no contorno do Penpot ({@link ARC_PATH}), e não calculados num círculo: o fundo não
+ * é um anel perfeito. O meio da faixa fica entre 99,3 e 99,8px do centro, e as pontas são
+ * cortadas na horizontal e fechadas por uma tampa redonda cujo centro fica mais para fora do
+ * que um raio fixo daria. Um círculo só deixava o preto e o seletor ~1,3px para dentro.
+ *
+ * As pontas são o centro dessas tampas; as do meio, o ponto médio entre as bordas de dentro
+ * e de fora da faixa, em ângulos iguais entre as duas pontas (~20° um do outro).
  */
-const SLOT_RADIUS = 99;
-const SLOT_COUNT = ARC_COLORS.length + 1;
-const FIRST_ANGLE = 170;
-const ANGLE_STEP = (FIRST_ANGLE - 10) / (SLOT_COUNT - 1);
+const SLOT_CENTERS: readonly { x: number; y: number }[] = [
+  { x: 18.2, y: 100.1 },
+  { x: 30.2, y: 67.4 },
+  { x: 52.7, y: 40.9 },
+  { x: 82.8, y: 23.6 },
+  { x: 116.9, y: 17.7 },
+  { x: 151, y: 23.6 },
+  { x: 181, y: 40.9 },
+  { x: 203.5, y: 67.4 },
+  { x: 215.6, y: 100.1 },
+];
+const SLOT_COUNT = SLOT_CENTERS.length;
 
-/** Centro da posição `slot` do arco, em px a partir do canto superior esquerdo. */
+/** Centro da posição `slot` do arco. */
 function slotCenter(slot: number): { x: number; y: number } {
-  const angle = ((FIRST_ANGLE - slot * ANGLE_STEP) * Math.PI) / 180;
-  return {
-    x: ARC_WIDTH / 2 + SLOT_RADIUS * Math.cos(angle),
-    y: ARC_HEIGHT - 1 - SLOT_RADIUS * Math.sin(angle),
-  };
+  return SLOT_CENTERS[slot]!;
 }
 
 /**
@@ -122,63 +140,66 @@ export function StrokeColorPicker({ tool, value, onChange }: StrokeColorPickerPr
   }
 
   return (
+    // O recorte esconde o que o giro de abrir e fechar leva para baixo da base (globals.css).
     <div
-      className="relative"
+      className="color-arc relative"
       style={{ width: ARC_WIDTH, height: ARC_HEIGHT }}
       data-testid={`${name}-color-arc`}
     >
-      {/*
+      <div className="color-arc-roll absolute inset-0">
+        {/*
         Mesmo fundo da toolbar: branco descendo para `#f5f5f5`, com a sombra curta de quem
         encosta no quadro (Penpot). Um SVG, e não um `div`, porque a forma é um anel e a
         sombra tem de seguir o contorno dele.
       */}
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-visible drop-shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
-        width={ARC_WIDTH}
-        height={ARC_HEIGHT}
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="1" stopColor="#f5f5f5" />
-          </linearGradient>
-        </defs>
-        <path d={ARC_PATH} fill={`url(#${gradientId})`} />
-      </svg>
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-visible drop-shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+          width={ARC_WIDTH}
+          height={ARC_HEIGHT}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffffff" />
+              <stop offset="1" stopColor="#f5f5f5" />
+            </linearGradient>
+          </defs>
+          <path d={ARC_PATH} fill={`url(#${gradientId})`} />
+        </svg>
 
-      <ColorRadioGroup
-        count={ARC_COLORS.length}
-        value={selectedSlot === -1 ? null : selectedSlot}
-        onChange={(slot) => onChange(ARC_COLORS[slot]!)}
-        swatchColor={(slot) => strokeColor(ARC_COLORS[slot]!)}
-        colorLabel={colorLabel}
-        ariaLabel={ui[name].color}
-        testId={`${name}-color-picker`}
-        shape="circle"
-        className="absolute inset-0"
-        swatchPosition={slotCenter}
-        swatchClassName={(slot) =>
-          ARC_COLORS[slot] === STROKE_COLOR_WHITE ? "border border-border" : undefined
-        }
-      />
-
-      <label
-        className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition-[width,height] duration-150 ease-out has-focus-visible:ring-2 has-focus-visible:ring-selection has-focus-visible:ring-offset-2 motion-reduce:transition-none ${
-          custom ? "h-7 w-7 ring-2 ring-ink-muted ring-offset-2" : "h-6 w-6"
-        }`}
-        style={{ left: pickerCenter.x, top: pickerCenter.y, backgroundImage: RAINBOW }}
-        data-testid={`${name}-color-custom`}
-        data-selected={custom}
-      >
-        <input
-          type="color"
-          aria-label={ui.pencil.custom}
-          className="sr-only"
-          value={pickerValue(value)}
-          onChange={(event) => onChange(event.target.value.toLowerCase() as CustomStrokeColor)}
+        <ColorRadioGroup
+          count={ARC_COLORS.length}
+          value={selectedSlot === -1 ? null : selectedSlot}
+          onChange={(slot) => onChange(ARC_COLORS[slot]!)}
+          swatchColor={(slot) => strokeColor(ARC_COLORS[slot]!)}
+          colorLabel={colorLabel}
+          ariaLabel={ui[name].color}
+          testId={`${name}-color-picker`}
+          shape="circle"
+          className="absolute inset-0"
+          swatchPosition={slotCenter}
+          swatchClassName={(slot) =>
+            ARC_COLORS[slot] === STROKE_COLOR_WHITE ? "border border-border" : undefined
+          }
         />
-      </label>
+
+        <label
+          className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition-[width,height] duration-150 ease-out has-focus-visible:ring-2 has-focus-visible:ring-selection has-focus-visible:ring-offset-2 motion-reduce:transition-none ${
+            custom ? "h-7 w-7 ring-2 ring-ink-muted ring-offset-2" : "h-6 w-6"
+          }`}
+          style={{ left: pickerCenter.x, top: pickerCenter.y, backgroundImage: RAINBOW }}
+          data-testid={`${name}-color-custom`}
+          data-selected={custom}
+        >
+          <input
+            type="color"
+            aria-label={ui.pencil.custom}
+            className="sr-only"
+            value={pickerValue(value)}
+            onChange={(event) => onChange(event.target.value.toLowerCase() as CustomStrokeColor)}
+          />
+        </label>
+      </div>
     </div>
   );
 }
