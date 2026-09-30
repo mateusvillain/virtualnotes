@@ -27,6 +27,12 @@ interface SliderProps {
   /** O valor como o leitor de tela deve anunciá-lo ("2×", "35%"). */
   valueText: (value: number) => string;
   track: SliderTrack;
+  /**
+   * Deitado, com o rótulo em cima; ou em pé, sem rótulo visível — o nome continua valendo para
+   * o leitor de tela. Em pé é o mesmo slider girado -90°: o começo fica embaixo e o fim em
+   * cima, e o `<input>` nativo gira junto, então o arrasto segue o eixo que se vê.
+   */
+  orientation?: "horizontal" | "vertical";
   testId?: string;
 }
 
@@ -57,7 +63,17 @@ function Wedge({ className }: { className: string }) {
  *
  * O foco por teclado aparece na alça (`peer-focus-visible`), que é onde o olho está.
  */
-export function Slider({ value, steps, onChange, label, valueText, track, testId }: SliderProps) {
+export function Slider({
+  value,
+  steps,
+  onChange,
+  label,
+  valueText,
+  track,
+  orientation = "horizontal",
+  testId,
+}: SliderProps) {
+  const vertical = orientation === "vertical";
   const id = useId();
   const last = Math.max(steps - 1, 1);
   const handleLeft = (value / last) * (SLIDER_WIDTH - HANDLE_WIDTH);
@@ -88,53 +104,67 @@ export function Slider({ value, steps, onChange, label, valueText, track, testId
     if (clamped !== value) onChange(clamped);
   }
 
+  const slider = (
+    <div
+      className={`relative h-3.5 ${vertical ? "absolute top-1/2 left-1/2 -translate-1/2 -rotate-90" : ""}`}
+      style={{ width: SLIDER_WIDTH }}
+    >
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={steps - 1}
+        step={1}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        onKeyDown={handleKeyDown}
+        aria-valuetext={valueText(value)}
+        className="peer absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-2 [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:appearance-none"
+      />
+
+      {track.kind === "fill" ? (
+        <div className="pointer-events-none absolute top-[3px] left-0">
+          <Wedge className="fill-[#d9d9d9]" />
+          <div
+            className="absolute inset-y-0 left-0 overflow-hidden"
+            style={{ width: handleLeft + HANDLE_WIDTH }}
+          >
+            <Wedge className="fill-[#43a7ee]" />
+          </div>
+        </div>
+      ) : (
+        // Casas de 4px, `#ebebeb` sobre branco, e por cima o gradiente até a cor do traço.
+        <div className="pointer-events-none absolute inset-x-0 top-[3px] h-2 overflow-hidden rounded-full bg-[repeating-conic-gradient(#ebebeb_0_25%,#ffffff_0_50%)] bg-size-[8px_8px]">
+          <div
+            className="absolute inset-0"
+            style={{ backgroundImage: `linear-gradient(to right, transparent, ${track.color})` }}
+            data-testid={testId === undefined ? undefined : `${testId}-gradient`}
+          />
+        </div>
+      )}
+
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-0 h-3.5 w-2 rounded-2xl border border-[#dddddd] bg-white shadow-[0_1px_1px_rgb(0_0_0/0.08)] peer-focus-visible:ring-2 peer-focus-visible:ring-selection peer-focus-visible:ring-offset-1"
+        style={{ left: handleLeft }}
+        data-testid={testId === undefined ? undefined : `${testId}-handle`}
+      />
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
-      <label htmlFor={id} className="text-xs leading-[14px] text-ink">
+      <label htmlFor={id} className={vertical ? "sr-only" : "text-xs leading-[14px] text-ink"}>
         {label}
       </label>
-      <div className="relative h-3.5" style={{ width: SLIDER_WIDTH }}>
-        <input
-          id={id}
-          type="range"
-          min={0}
-          max={steps - 1}
-          step={1}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
-          onKeyDown={handleKeyDown}
-          aria-valuetext={valueText(value)}
-          className="peer absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-2 [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:appearance-none"
-        />
-
-        {track.kind === "fill" ? (
-          <div className="pointer-events-none absolute top-[3px] left-0">
-            <Wedge className="fill-[#d9d9d9]" />
-            <div
-              className="absolute inset-y-0 left-0 overflow-hidden"
-              style={{ width: handleLeft + HANDLE_WIDTH }}
-            >
-              <Wedge className="fill-[#43a7ee]" />
-            </div>
-          </div>
-        ) : (
-          // Casas de 4px, `#ebebeb` sobre branco, e por cima o gradiente até a cor do traço.
-          <div className="pointer-events-none absolute inset-x-0 top-[3px] h-2 overflow-hidden rounded-full bg-[repeating-conic-gradient(#ebebeb_0_25%,#ffffff_0_50%)] bg-size-[8px_8px]">
-            <div
-              className="absolute inset-0"
-              style={{ backgroundImage: `linear-gradient(to right, transparent, ${track.color})` }}
-              data-testid={testId === undefined ? undefined : `${testId}-gradient`}
-            />
-          </div>
-        )}
-
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 h-3.5 w-2 rounded-2xl border border-[#dddddd] bg-white shadow-[0_1px_1px_rgb(0_0_0/0.08)] peer-focus-visible:ring-2 peer-focus-visible:ring-selection peer-focus-visible:ring-offset-1"
-          style={{ left: handleLeft }}
-          data-testid={testId === undefined ? undefined : `${testId}-handle`}
-        />
-      </div>
+      {vertical ? (
+        // A caixa em pé que o slider girado ocupa: girar não muda o tamanho no layout.
+        <div className="relative w-3.5" style={{ height: SLIDER_WIDTH }}>
+          {slider}
+        </div>
+      ) : (
+        slider
+      )}
     </div>
   );
 }

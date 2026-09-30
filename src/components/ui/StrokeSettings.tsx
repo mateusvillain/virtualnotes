@@ -25,8 +25,8 @@ interface StrokeSettingsProps {
 }
 
 /**
- * O painel de traço (#161): os sliders de espessura e de opacidade de uma ferramenta, lado a
- * lado, como na variante `Variant3` do Penpot.
+ * O painel de traço (#161): os sliders de espessura e de opacidade de uma ferramenta, em pé e
+ * lado a lado, sem rótulo visível — espessura à esquerda, opacidade à direita.
  *
  * Só apresentação: recebe os índices e devolve os novos. Os sliders não sabem o que os
  * passos significam; é aqui que o índice vira "2×" e "35%" para o leitor de tela, no
@@ -58,6 +58,7 @@ export function StrokeSettings({
         onChange={(value) => onSizeChange(value as StrokeSize)}
         valueText={(value) => `${number.format(STROKE_SIZES[value as StrokeSize])}×`}
         track={{ kind: "fill" }}
+        orientation="vertical"
         testId="stroke-size"
       />
       <Slider
@@ -67,6 +68,7 @@ export function StrokeSettings({
         onChange={(value) => onOpacityChange(value as StrokeOpacity)}
         valueText={(value) => `${STROKE_OPACITIES[value as StrokeOpacity]}%`}
         track={{ kind: "checker", color }}
+        orientation="vertical"
         testId="stroke-opacity"
       />
     </div>

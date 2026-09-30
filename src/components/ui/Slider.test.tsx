@@ -106,3 +106,46 @@ describe("Slider", () => {
     );
   });
 });
+
+describe("Slider — em pé", () => {
+  function renderVertical(onChange = vi.fn()) {
+    return render(
+      <Slider
+        label="Espessura"
+        steps={8}
+        value={2}
+        onChange={onChange}
+        valueText={(step) => `passo ${step}`}
+        track={{ kind: "fill" }}
+        orientation="vertical"
+        testId="slider"
+      />,
+    );
+  }
+
+  it("esconde o rótulo da tela, mas continua nomeado por ele", () => {
+    renderVertical();
+
+    expect(screen.getByText("Espessura").className).toContain("sr-only");
+    expect(screen.getByRole("slider", { name: "Espessura" })).toBeDefined();
+  });
+
+  it("é o slider deitado girado -90°, numa caixa em pé do mesmo comprimento", () => {
+    renderVertical();
+
+    const girado = screen.getByTestId("slider-handle").parentElement!;
+    expect(girado.className).toContain("-rotate-90");
+    expect(girado.parentElement!.style.height).toBe("140px");
+  });
+
+  it("a seta para cima sobe, como no deitado", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderVertical(onChange);
+
+    screen.getByRole("slider").focus();
+    await user.keyboard("{ArrowUp}");
+
+    expect(onChange).toHaveBeenLastCalledWith(3);
+  });
+});

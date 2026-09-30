@@ -34,8 +34,8 @@ interface PopoverProps {
    * borda de cima da pílula mais o respiro entre as duas peças.
    */
   offset: number;
-  /** Raio do vidro: cheio no bloco de cores, 8px no painel de traço (Penpot). */
-  rounded?: "full" | "panel";
+  /** Raio do vidro: cheio no bloco de cores, 24px em cima e 8 embaixo no painel de traço. */
+  rounded?: keyof typeof ROUNDED;
   /**
    * Quanto tempo o painel continua montado depois de fechar, em ms, para o conteúdo tocar a
    * própria animação de saída. Nesse intervalo ele leva `data-state="closed"` e fica `inert`:
@@ -49,7 +49,12 @@ interface PopoverProps {
 }
 
 /** O raio de cada variante. */
-const ROUNDED = { full: "rounded-full", panel: "rounded-lg" } as const;
+const ROUNDED = {
+  full: "rounded-full",
+  panel: "rounded-lg",
+  // Em pé: 24px em cima, 8px embaixo, rente à toolbar.
+  column: "rounded-t-3xl rounded-b-lg",
+} as const;
 
 /**
  * Painel não modal preso acima de um gatilho da toolbar (#155): o bloco de cores e o painel
