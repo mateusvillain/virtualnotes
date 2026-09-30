@@ -905,7 +905,8 @@ export function Viewport({
 
   /*
     O cursor conta o que o ponteiro vai fazer: mão com espaço, mão fechada com a rodinha
-    apertada, lápis com o modo ligado, cruz para mirar a nota. Na mesma ordem em que os
+    apertada, nenhum com uma ferramenta de desenho (o círculo de `DrawCursor` é o cursor),
+    cruz para mirar a nota. Na mesma ordem em que os
     gestos se decidem no `pointerdown`, senão o desenho prometeria uma coisa e o gesto faria
     outra — e por isso o espaço ganha de tudo, inclusive de um pan já em curso.
 

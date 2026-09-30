@@ -138,6 +138,12 @@ describe("Slider — em pé", () => {
     expect(girado.parentElement!.style.height).toBe("140px");
   });
 
+  it("anuncia a orientação em pé, que o giro do CSS não conta", () => {
+    renderVertical();
+
+    expect(screen.getByRole("slider").getAttribute("aria-orientation")).toBe("vertical");
+  });
+
   it("a seta para cima sobe, como no deitado", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
