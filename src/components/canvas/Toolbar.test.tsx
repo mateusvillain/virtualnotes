@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { UI } from "@/lib/i18n/ui";
@@ -147,8 +147,10 @@ describe("Toolbar", () => {
       expect(screen.getByTestId("sliders")).toBeDefined();
       expect(traco.getAttribute("aria-expanded")).toBe("true");
 
+      // O painel continua montado enquanto some, mas já fechado: inerte.
       await user.click(traco);
-      expect(screen.queryByTestId("sliders")).toBeNull();
+      expect(screen.getByTestId("stroke-settings-panel").dataset.state).toBe("closed");
+      expect(screen.getByTestId("stroke-settings-panel").hasAttribute("inert")).toBe(true);
     });
 
     it("o rabisco anuncia os atalhos de espessura", () => {
@@ -175,10 +177,11 @@ describe("Toolbar", () => {
 
       await user.click(screen.getByRole("button", { name: ui.toolbar.stroke }));
       rerender({ enabled: false });
+      expect(screen.getByTestId("stroke-settings-panel").dataset.state).toBe("closed");
 
-      expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+      // Reabilitar não reabre: o painel termina a saída e some.
       rerender({ enabled: true });
-      expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+      await waitFor(() => expect(screen.queryByTestId("stroke-settings-panel")).toBeNull());
     });
   });
 });
