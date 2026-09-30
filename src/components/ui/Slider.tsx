@@ -22,7 +22,7 @@ interface SliderProps {
   /** Quantos passos o slider tem. Não sabe o que eles significam. */
   steps: number;
   onChange: (value: number) => void;
-  /** Rótulo visível, acima da trilha, e nome acessível do controle. */
+  /** Nome acessível do controle; visível acima da trilha só no slider deitado. */
   label: string;
   /** O valor como o leitor de tela deve anunciá-lo ("2×", "35%"). */
   valueText: (value: number) => string;
@@ -106,7 +106,9 @@ export function Slider({
 
   const slider = (
     <div
-      className={`relative h-3.5 ${vertical ? "absolute top-1/2 left-1/2 -translate-1/2 -rotate-90" : ""}`}
+      // Em pé, `absolute` centrado na caixa em pé e girado; deitado, `relative` no fluxo. Nunca
+      // os dois: qual vence dependeria da ordem do CSS gerado, e não da classe.
+      className={`h-3.5 ${vertical ? "absolute top-1/2 left-1/2 -translate-1/2 -rotate-90" : "relative"}`}
       style={{ width: SLIDER_WIDTH }}
     >
       <input
@@ -119,6 +121,8 @@ export function Slider({
         onChange={(event) => onChange(Number(event.target.value))}
         onKeyDown={handleKeyDown}
         aria-valuetext={valueText(value)}
+        // Girar com CSS não muda o que o leitor de tela anuncia: a orientação vai explícita.
+        aria-orientation={orientation}
         className="peer absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-2 [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:appearance-none"
       />
 
