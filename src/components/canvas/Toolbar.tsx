@@ -1,7 +1,18 @@
 "use client";
 
-import { useId, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ComponentType,
+  type ReactNode,
+  type SVGProps,
+} from "react";
+import { glassSurfaceClass } from "@/components/ui/iconButton";
 import { Popover } from "@/components/ui/Popover";
+import { SLIDER_WIDTH } from "@/components/ui/Slider";
+import { ARC_EXIT_MS } from "@/components/ui/StrokeColorPicker";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ToolbarTool } from "@/components/ui/ToolbarTool";
 import { EraserIllustration } from "@/components/ui/tools/EraserIllustration";
@@ -78,11 +89,32 @@ export const TOOLBAR_TOOLS: readonly ToolbarEntry[] = [
   { mode: "erasing", name: "eraser", Illustration: EraserIllustration, ...STROKE },
 ];
 
+/** Do topo do botão de 36px até a borda de cima da pílula de 88, com o botão centrado. */
+const BUTTON_TO_PILL_TOP = (88 - 36) / 2;
+
+/** O respiro entre a pílula e o painel de traço (Penpot). */
+const PANEL_GAP = 8;
+
+/** Quanto os painéis da seção sobem acima do topo do botão. */
+const PANEL_OFFSET = BUTTON_TO_PILL_TOP + PANEL_GAP;
+
+/** O arco de cores fica mais perto: 4px acima da pílula, e não 8 (Penpot). */
+const ARC_OFFSET = BUTTON_TO_PILL_TOP + 4;
+
 /**
- * Quanto os painéis da seção sobem acima do topo do botão: os 26px do botão até a borda de
- * cima da pílula (36px centrados em 88) mais os 8px entre a pílula e o painel (Penpot).
+ * Altura do painel de traço: os sliders em pé, 16px em cima (o raio de 24 come o canto) e 8
+ * embaixo — as classes `pt-4 pb-2` da camada que desliza.
  */
-const PANEL_OFFSET = 34;
+const STROKE_PANEL_HEIGHT = 16 + SLIDER_WIDTH + 8;
+
+/**
+ * O que a animação do painel de traço lê em globals.css: o respiro até a pílula, que é onde o
+ * recorte termina, e o quanto o painel desce para sumir inteiro atrás dela.
+ */
+const STROKE_PANEL_VARS = {
+  "--stroke-panel-gap": `${PANEL_GAP}px`,
+  "--stroke-panel-travel": `${STROKE_PANEL_HEIGHT + PANEL_GAP}px`,
+} as CSSProperties;
 
 /**
  * Duração da saída do painel de traço, em ms — o `Popover` o segura montado por esse tempo.
@@ -121,16 +153,20 @@ interface SelectorProps {
   onToggle: () => void;
   panelLabel: string;
   onClose: () => void;
-  rounded: "full" | "panel" | "column";
+  /** Quanto o painel sobe acima do botão; por padrão, {@link PANEL_OFFSET}. */
+  offset?: number;
   /** Tempo da animação de saída do painel, em ms. Sem valor, ele some na hora. */
   exitMs?: number;
-  panelClassName: string;
+  panelClassName?: string;
   testId: string;
   icon: ReactNode;
   children: ReactNode;
 }
 
-/** Um botão da seção Color Controls com o painel que ele abre. */
+/**
+ * Um botão da seção Color Controls com o painel que ele abre. O painel não tem vidro: quem
+ * desenha o fundo é o conteúdo.
+ */
 function Selector({
   label,
   shortcuts,
@@ -139,7 +175,7 @@ function Selector({
   onToggle,
   panelLabel,
   onClose,
-  rounded,
+  offset = PANEL_OFFSET,
   exitMs,
   panelClassName,
   testId,
@@ -183,8 +219,10 @@ function Selector({
         }}
         triggerRef={triggerRef}
         label={panelLabel}
-        offset={PANEL_OFFSET}
-        rounded={rounded}
+        offset={offset}
+        // Sem vidro nos dois: o arco e o painel de traço desenham o próprio fundo, cada um com a
+        // forma que o Penpot dá.
+        bare
         exitMs={exitMs}
         className={panelClassName}
         testId={`${testId}-panel`}
@@ -259,7 +297,9 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
     // Branco descendo para `#f5f5f5`, 32px de raio em cima e 16 embaixo, e a sombra curta de
     // quem encosta no quadro (Penpot, variante `default`).
     <div
-      className="flex h-22 items-stretch rounded-t-[32px] rounded-b-2xl bg-linear-to-b from-white to-[#f5f5f5] px-6 shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+      className="flex h-22 items-stretch rounded-t-[32px] rounded-b-2xl bg-linear-to-b from-white to-[#f5f5f5] px-6 shadow-toolbar"
+      // As medidas de que a animação do painel de traço depende, derivadas daqui.
+      style={STROKE_PANEL_VARS}
       data-testid="toolbar"
     >
       <div role="group" aria-label={ui.toolbar.label} className="flex items-stretch">
@@ -276,13 +316,13 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onToggle={() => toggle("color")}
           onClose={() => close("color")}
           panelLabel={ui.toolbar.color}
-          rounded="full"
-          // 236×44 no Penpot: as sete cores e 8px de cada lado.
-          panelClassName="flex h-11 items-center px-2"
+          offset={ARC_OFFSET}
+          exitMs={ARC_EXIT_MS}
           testId="stroke-color"
           icon={
             <span
-              className="h-5 w-5 rounded-full"
+              // A borda é para o branco, e as cores livres claras, não sumirem na pílula branca.
+              className="h-5 w-5 rounded-full border border-border"
               style={{ backgroundColor: stroke.color }}
               data-testid="stroke-color-swatch"
             />
@@ -298,16 +338,24 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onToggle={() => toggle("settings")}
           onClose={() => close("settings")}
           panelLabel={ui.toolbar.stroke}
-          rounded="column"
-          // Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
-          // lados, embaixo e entre eles — 52×164. A entrada e a saída moram em globals.css
-          // (`stroke-panel`), e contam com essa altura.
+          // Parado: é só a moldura que recorta o painel na linha da pílula. O vidro e os
+          // sliders estão dentro, e é essa camada que sobe e desce (globals.css).
           exitMs={STROKE_PANEL_EXIT_MS}
-          panelClassName="stroke-panel px-2 pt-4 pb-2"
+          panelClassName="stroke-panel"
           testId="stroke-settings"
           icon={<StrokeIcon />}
         >
-          {stroke.settings}
+          {/*
+            Em pé: os dois sliders de 140, 16px em cima (o raio de 24 come o canto) e 8 nos
+            lados, embaixo e entre eles — 52×164. A animação conta com essa altura. A sombra
+            é a do arco de cores e da toolbar; cabe nos 8px de folga do recorte.
+          */}
+          <div
+            className={`stroke-panel-slide rounded-t-3xl rounded-b-lg px-2 pt-4 pb-2 shadow-toolbar ${glassSurfaceClass}`}
+            data-testid="stroke-settings-surface"
+          >
+            {stroke.settings}
+          </div>
         </Selector>
       </div>
     </div>

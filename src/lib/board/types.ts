@@ -16,9 +16,11 @@
  * `parseBoard`); a versão sobe para que um board **futuro** demais seja recusado, e não
  * mostrado errado em silêncio. A v3 subiu pela mesma regra, com `tool` (#110): a v2 mostraria
  * um traço de marca-texto como uma linha fina e opaca de lápis. A v4 também, com `w` e `o`
- * (#153): a v3 mostraria um traço grosso ou translúcido na espessura e opacidade padrão.
+ * (#153): a v3 mostraria um traço grosso ou translúcido na espessura e opacidade padrão. A v5
+ * sobe com o cinza, o branco e a cor livre do traço: a v4 descartaria esses traços calada, por
+ * não reconhecer a cor.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Cores de post-it, na ordem em que aparecem no seletor. O board guarda o índice desta
@@ -39,15 +41,31 @@ export type NoteColor = TupleIndex<typeof NOTE_COLORS>;
 
 /**
  * Cores do traço: as seis da nota, na mesma ordem, mais o preto — que é o padrão do lápis
- * (issue #64). Preto entra como uma cor a mais na mesma paleta, e não como um caso especial,
- * para que o índice serializado continue sendo a única fonte de verdade sobre a cor.
+ * (issue #64) —, o cinza e o branco do arco de cores. Entram como cores a mais na mesma
+ * paleta, e não como casos especiais, para que o índice serializado continue sendo a fonte de
+ * verdade sobre a cor. Sempre no fim: no meio, deslocariam o índice de todo traço já gravado.
  */
-export const STROKE_COLORS = [...NOTE_COLORS, "black"] as const;
+export const STROKE_COLORS = [...NOTE_COLORS, "black", "gray", "white"] as const;
 
 export type StrokeColorName = (typeof STROKE_COLORS)[number];
 
-/** Índice em {@link STROKE_COLORS}. É isto que vai serializado no traço. */
-export type StrokeColor = TupleIndex<typeof STROKE_COLORS>;
+/** Índice em {@link STROKE_COLORS}. */
+export type StrokeColorIndex = TupleIndex<typeof STROKE_COLORS>;
+
+/**
+ * Cor livre, escolhida no seletor do sistema no fim do arco de cores: `#rrggbb` minúsculo.
+ * Sempre seis dígitos, e nunca `rgb()` ou nome de cor, para existir uma grafia só de cada cor
+ * e o link não crescer com variações da mesma.
+ */
+export type CustomStrokeColor = `#${string}`;
+
+/**
+ * A cor de um traço, como vai serializada: o índice da paleta, ou uma cor livre em hex.
+ *
+ * As da paleta continuam sendo índice — custam um dígito no link e seguem o tema. A livre é a
+ * única que vai como valor, porque não existe token para uma cor que ninguém previu.
+ */
+export type StrokeColor = StrokeColorIndex | CustomStrokeColor;
 
 /**
  * Cor com que o lápis nasce: o preto.
@@ -56,7 +74,13 @@ export type StrokeColor = TupleIndex<typeof STROKE_COLORS>;
  * as notas. Ele é o último índice de propósito — acrescentado **depois** das seis cores de
  * nota, para que os índices delas continuem valendo em todo link já compartilhado.
  */
-export const STROKE_COLOR_BLACK = 6 satisfies StrokeColor;
+export const STROKE_COLOR_BLACK = 6 satisfies StrokeColorIndex;
+
+/** O cinza, acrescentado com o arco de cores. */
+export const STROKE_COLOR_GRAY = 7 satisfies StrokeColorIndex;
+
+/** O branco, acrescentado com o arco de cores. */
+export const STROKE_COLOR_WHITE = 8 satisfies StrokeColorIndex;
 
 /**
  * Ferramentas de desenho, na ordem do índice que o traço guarda (epic #107).
@@ -89,7 +113,7 @@ export const STROKE_TOOL_HIGHLIGHTER = 2 satisfies StrokeTool;
  * no quadro, e o amarelo translúcido é o que se reconhece como destaque. É o índice do
  * amarelo em {@link NOTE_COLORS}, que {@link STROKE_COLORS} repete na mesma posição.
  */
-export const DEFAULT_HIGHLIGHTER_COLOR = 0 satisfies StrokeColor;
+export const DEFAULT_HIGHLIGHTER_COLOR = 0 satisfies StrokeColorIndex;
 
 /**
  * Uma cor por ferramenta de desenho, na ordem de {@link STROKE_TOOLS} — indexada pelo
@@ -260,7 +284,7 @@ export interface Note {
 export interface Stroke {
   /** Identificador único dentro do board. */
   id: string;
-  /** Índice em {@link STROKE_COLORS}. */
+  /** Índice em {@link STROKE_COLORS}, ou uma cor livre em `#rrggbb`. */
   color: StrokeColor;
   /**
    * Índice em {@link STROKE_TOOLS}. Ausente é lápis: o contrato nunca grava o `0`, para que
@@ -308,8 +332,14 @@ export function isNoteColor(value: unknown): value is NoteColor {
   );
 }
 
-/** Guarda de tipo para o índice de cor de traço vindo de dado não confiável. */
+/** Guarda de tipo para uma cor livre de traço vindo de dado não confiável. */
+export function isCustomStrokeColor(value: unknown): value is CustomStrokeColor {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/.test(value);
+}
+
+/** Guarda de tipo para a cor de traço vindo de dado não confiável: índice ou hex. */
 export function isStrokeColor(value: unknown): value is StrokeColor {
+  if (isCustomStrokeColor(value)) return true;
   return (
     typeof value === "number" &&
     Number.isInteger(value) &&

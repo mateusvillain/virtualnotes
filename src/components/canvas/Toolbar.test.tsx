@@ -142,8 +142,9 @@ describe("Toolbar", () => {
         screen.getByRole("dialog", { name: ui.toolbar.color }).id,
       );
 
+      // O arco continua montado enquanto gira para fora, mas já fechado: inerte.
       await user.click(traco);
-      expect(screen.queryByTestId("cores")).toBeNull();
+      expect(screen.getByTestId("stroke-color-panel").dataset.state).toBe("closed");
       expect(screen.getByTestId("sliders")).toBeDefined();
       expect(traco.getAttribute("aria-expanded")).toBe("true");
 
@@ -160,15 +161,17 @@ describe("Toolbar", () => {
       expect(traco.getAttribute("aria-keyshortcuts")).toBe("[ ]");
     });
 
-    it("o bloco de cores tem raio cheio e o painel de traço, 24px em cima e 8 embaixo", async () => {
+    it("o arco de cores abre sem vidro, e o painel de traço tem 24px em cima e 8 embaixo", async () => {
       const user = userEvent.setup();
       renderToolbar("pencil", { enabled: true });
 
+      // O arco desenha o próprio fundo: um vidro retangular em volta sobraria nas pontas.
       await user.click(screen.getByRole("button", { name: ui.toolbar.color }));
-      expect(screen.getByTestId("stroke-color-panel").className).toContain("rounded-full");
+      expect(screen.getByTestId("stroke-color-panel").className).not.toContain("rounded-full");
+      expect(screen.getByTestId("stroke-color-panel").className).not.toContain("backdrop-blur");
 
       await user.click(screen.getByRole("button", { name: ui.toolbar.stroke }));
-      expect(screen.getByTestId("stroke-settings-panel").className).toContain(
+      expect(screen.getByTestId("stroke-settings-surface").className).toContain(
         "rounded-t-3xl rounded-b-lg",
       );
     });

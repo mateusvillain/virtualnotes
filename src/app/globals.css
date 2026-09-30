@@ -43,6 +43,13 @@
   --color-note-orange: #fed7aa;
 
   /*
+   * As duas cores do arco que a nota não tem (o preto é --color-ink). Valores do Penpot; o
+   * branco tem borda no arco, porque sumiria contra o fundo claro dele.
+   */
+  --color-stroke-gray: #666666;
+  --color-stroke-white: #ffffff;
+
+  /*
    * Tipografia. Uma escala curta e explícita, em vez dos padrões do Tailwind, para que
    * mudar o ritmo do texto seja mudar este bloco.
    */
@@ -78,6 +85,13 @@
   --color-shadow-soft: color-mix(in srgb, var(--color-ink) 6%, transparent);
   --shadow-note: 0 1px 2px var(--color-shadow-soft), 0 4px 12px var(--color-shadow-strong);
   --shadow-control: 0 1px 2px var(--color-shadow-soft), 0 8px 24px var(--color-shadow-soft);
+  /*
+   * A sombra curta da toolbar, do arco de cores e do painel de traço: o valor do Penpot, preto
+   * a 8%. Um token só para as três peças lerem como uma superfície, em `box-shadow` e, no
+   * arco (que é um anel), em `drop-shadow`.
+   */
+  --shadow-toolbar: 0 1px 4px rgb(0 0 0 / 0.08);
+  --drop-shadow-toolbar: 0 1px 4px rgb(0 0 0 / 0.08);
 }
 
 /* As fontes vêm do next/font em layout.tsx, então entram por referência. */
@@ -149,58 +163,121 @@ body {
 }
 
 /**
- * Abrir e fechar o painel de espessura e opacidade da toolbar, saindo de trás dela.
+ * Abrir e fechar o arco de cores do traço, como uma fita que rola.
  *
- * O painel desliza de baixo para cima, e um recorte esconde tudo o que ainda está abaixo do
- * topo da pílula — como se ele subisse de dentro da toolbar.
- * O recorte anda junto com o deslize, nos mesmos quadros: os dois estão no mesmo keyframe, e
- * propriedades de um keyframe interpolam com o mesmo progresso.
+ * O arco inteiro gira em volta do centro do círculo de que ele é pedaço (`--color-arc-pivot`,
+ * de StrokeColorPicker.tsx). Fechado,
+ * está 160° para trás: só a ponta do seletor de cor livre fica acima da base, na posição da
+ * ponta esquerda, e o resto está enrolado por baixo. Ao abrir ele gira de volta, e o seletor
+ * passa por cima até a ponta direita puxando as cores atrás de si. Fechar faz o caminho
+ * contrário, da direita para a esquerda.
  *
- * As contas, com o painel a 8px da pílula e 164px de altura (Toolbar.tsx):
- *   - fechado, ele está 172px para baixo (164 + 8): o topo encosta na linha da pílula;
- *   - o recorte de baixo é sempre o deslocamento menos 8px, o que põe a borda do recorte na
- *     linha da pílula: 164px no começo (nada aparece), -8px no fim (nada é cortado).
- * Os -8px dos outros lados só deixam o anel e o foco dos sliders fora do recorte.
+ * Sempre a 160°, e não à distância entre as pontas: é o que leva a última cor da direita até
+ * a da esquerda, a 20° uma da outra em oito passos.
  *
- * Anima `transform` sem brigar com a centralização do painel: o `-translate-x-1/2` do Tailwind
- * é a propriedade `translate`, separada de `transform`.
+ * O recorte em `.color-arc` esconde a parte enrolada. Ele desce 5px abaixo da base só para
+ * não cortar a sombra do anel.
  */
-@keyframes stroke-panel-in {
+@keyframes color-arc-roll-in {
   from {
-    transform: translateY(172px);
-    clip-path: inset(-8px -8px 164px -8px);
+    transform: rotate(-160deg);
   }
   to {
     transform: none;
-    clip-path: inset(-8px -8px -8px -8px);
+  }
+}
+
+@keyframes color-arc-roll-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: rotate(-160deg);
+  }
+}
+
+.color-arc {
+  clip-path: inset(-8px -8px -5px -8px);
+}
+
+.color-arc-roll {
+  transform-origin: var(--color-arc-pivot);
+  animation: color-arc-roll-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* A duração é ARC_EXIT_MS, em StrokeColorPicker.tsx. */
+[data-state="closed"] .color-arc-roll {
+  animation: color-arc-roll-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Quem pediu menos movimento recebe o arco pronto, e ele some sem girar. */
+@media (prefers-reduced-motion: reduce) {
+  .color-arc-roll,
+  [data-state="closed"] .color-arc-roll {
+    animation: none;
+  }
+
+  [data-state="closed"] .color-arc {
+    visibility: hidden;
+  }
+}
+
+/**
+ * Abrir e fechar o painel de espessura e opacidade da toolbar, saindo de trás dela.
+ *
+ * Duas camadas, como no arco de cores: a de fora (`.stroke-panel`, o próprio `Popover`) não se
+ * mexe e recorta tudo o que passa da linha do topo da pílula; a de dentro
+ * (`.stroke-panel-slide`, o vidro com os sliders) desliza por baixo desse recorte, como se
+ * subisse de dentro da toolbar.
+ *
+ * O recorte fica parado de propósito. Animar o recorte junto com o deslize parecia igual, mas
+ * `transform` roda na GPU e `clip-path` na thread principal: na saída, com o React ocupado, o
+ * recorte atrasava alguns quadros e o painel descia por cima da toolbar.
+ *
+ * As medidas vêm de Toolbar.tsx (`STROKE_PANEL_VARS`): o recorte desce `--stroke-panel-gap`
+ * abaixo da moldura, até a linha da pílula; fechado, o vidro está `--stroke-panel-travel`
+ * para baixo (altura do painel + respiro), com o topo encostado nessa linha. Os -8px dos
+ * outros lados só deixam o anel de foco dos sliders fora do recorte.
+ *
+ * Anima `transform` sem brigar com a centralização do painel: o `-translate-x-1/2` do Tailwind
+ * é a propriedade `translate`, separada de `transform` — e fica na camada de fora, não nesta.
+ */
+@keyframes stroke-panel-in {
+  from {
+    transform: translateY(var(--stroke-panel-travel));
+  }
+  to {
+    transform: none;
   }
 }
 
 @keyframes stroke-panel-out {
   from {
     transform: none;
-    clip-path: inset(-8px -8px -8px -8px);
   }
   to {
-    transform: translateY(172px);
-    clip-path: inset(-8px -8px 164px -8px);
+    transform: translateY(var(--stroke-panel-travel));
   }
 }
 
-/* Sai rápido e assenta devagar; fecha mais curto, acelerando no fim. */
 .stroke-panel {
+  clip-path: inset(-8px -8px calc(-1 * var(--stroke-panel-gap)) -8px);
+}
+
+/* As curvas e os tempos do arco de cores: as duas peças saem da toolbar do mesmo jeito. */
+.stroke-panel-slide {
   animation: stroke-panel-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* A duração é STROKE_PANEL_EXIT_MS, em Toolbar.tsx. */
-.stroke-panel[data-state="closed"] {
+[data-state="closed"] .stroke-panel-slide {
   animation: stroke-panel-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 /* Quem pediu menos movimento recebe o painel pronto, e ele some sem animar. */
 @media (prefers-reduced-motion: reduce) {
-  .stroke-panel,
-  .stroke-panel[data-state="closed"] {
+  .stroke-panel-slide,
+  [data-state="closed"] .stroke-panel-slide {
     animation: none;
   }
 

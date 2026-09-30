@@ -15,7 +15,6 @@ import {
   NOTE_COLORS,
   NOTE_SIZE,
   SCHEMA_VERSION,
-  STROKE_COLORS,
   STROKE_COLOR_BLACK,
   STROKE_SIZES,
 } from "@/lib/board/types";
@@ -30,8 +29,9 @@ import { UI } from "@/lib/i18n/ui";
  * componentes e viram comportamento observável.
  */
 /**
- * O elemento, se ele não estiver num painel fechando. O painel de traço continua montado
- * durante a animação de saída, mas para quem usa ele já fechou: está `inert`, e sai sumindo.
+ * O elemento, se ele não estiver num painel fechando. O arco de cores e o painel de traço
+ * continuam montados durante a animação de saída, mas para quem usa eles já fecharam: estão
+ * `inert`, e saem da tela.
  */
 function aberto(element: HTMLElement | null): HTMLElement | null {
   return element?.closest('[data-state="closed"]') ? null : element;
@@ -4359,16 +4359,34 @@ describe("Whiteboard — cor do lápis (#69)", () => {
     expect(paleta()).toBeNull();
   });
 
-  it("oferece sete opções: as seis da nota, mais o preto", () => {
+  it("oferece as oito cores do arco, na ordem do Penpot", () => {
     render(<Whiteboard />);
     ligaLapis();
 
     const cores = within(paletaAberta()).getAllByRole("radio");
-    expect(cores).toHaveLength(STROKE_COLORS.length);
     expect(cores.map((cor) => cor.getAttribute("aria-label"))).toEqual([
-      ...NOTE_COLORS.map((name) => UI.en.note.colors[name]),
       UI.en.pencil.black,
+      UI.en.pencil.gray,
+      UI.en.pencil.white,
+      UI.en.note.colors.pink,
+      UI.en.note.colors.orange,
+      UI.en.note.colors.yellow,
+      UI.en.note.colors.green,
+      UI.en.note.colors.blue,
     ]);
+  });
+
+  it("a cor livre do seletor vale para o próximo traço", () => {
+    render(<Whiteboard />);
+    ligaLapis();
+    paletaAberta();
+
+    fireEvent.input(screen.getByLabelText(UI.en.pencil.custom), {
+      target: { value: "#ff8800" },
+    });
+    rabisca([100, 100], [300, 100]);
+
+    expect(coresDosTracos()).toEqual(["#ff8800"]);
   });
 
   it("o preto é a cor do primeiro traço da sessão", () => {
@@ -4888,7 +4906,7 @@ describe("Whiteboard — bloco de cores pelo círculo (#160)", () => {
   }
 
   function bloco(): HTMLElement | null {
-    return screen.queryByTestId("stroke-color-panel");
+    return aberto(screen.queryByTestId("stroke-color-panel"));
   }
 
   it.each([
@@ -5027,7 +5045,7 @@ describe("Whiteboard — painel de traço (#162)", () => {
     expect(screen.queryByTestId("stroke-color-panel")).not.toBeNull();
 
     fireEvent.click(rabisco());
-    expect(screen.queryByTestId("stroke-color-panel")).toBeNull();
+    expect(aberto(screen.queryByTestId("stroke-color-panel"))).toBeNull();
 
     fireEvent.click(rabisco());
     expect(aberto(screen.queryByTestId("stroke-settings-panel"))).toBeNull();

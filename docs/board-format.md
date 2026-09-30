@@ -9,7 +9,7 @@ exportação. O código vive em `src/lib/board/`: `types.ts` (contrato) e `schem
 ```ts
 Board = { version: number; notes: Note[]; strokes: Stroke[] }
 Note = { id: string; x: number; y: number; w: number; h: number; color: 0..5; text: string; z: number }
-Stroke = { id: string; color: 0..6; tool?: 1..2; w?: 0..7; o?: 0..19; points: number[]; z: number }
+Stroke = { id: string; color: 0..8 | "#rrggbb"; tool?: 1..2; w?: 0..7; o?: 0..19; points: number[]; z: number }
 ```
 
 - `x`/`y` — canto superior esquerdo, em coordenadas de canvas (não de tela).
@@ -19,7 +19,10 @@ Stroke = { id: string; color: 0..6; tool?: 1..2; w?: 0..7; o?: 0..19; points: nu
 - `z` — ordem de empilhamento; maior fica por cima. Notes e traços têm pilhas de `z`
   independentes uma da outra.
 - `color` do traço — índice na paleta `STROKE_COLORS`: as mesmas seis cores de `NOTE_COLORS`,
-  na mesma ordem, mais o preto no índice `6` (o padrão do lápis, epic #64).
+  na mesma ordem, mais o preto no índice `6` (o padrão do lápis, epic #64), o cinza no `7` e o
+  branco no `8` (arco de cores, schema v5). Ou uma **cor livre**, escolhida no seletor do
+  sistema: `#rrggbb`, sempre com seis dígitos e em minúsculas. Hex em maiúsculas é
+  normalizado para minúsculas; qualquer outra string descarta o traço.
 - `tool` do traço — índice em `STROKE_TOOLS` (`["pencil", "fountain", "highlighter"]`): a
   ferramenta que desenhou o traço (epic #107). **Ausente é lápis**, e o lápis é sempre
   gravado sem o campo: todo traço de antes do campo era lápis, então boards antigos não
@@ -55,7 +58,10 @@ compete com o limite prático de tamanho de link. As decisões que seguem dessa 
 
 1. **Cor como índice, não como string.** `0` custa 1 caractere; `"yellow"` custa 8. Como
    bônus, trocar o valor visual da paleta (issue #8) não invalida nenhum link já
-   compartilhado — o índice continua apontando para o mesmo lugar.
+   compartilhado — o índice continua apontando para o mesmo lugar. A única exceção é a cor
+   livre do traço: ela não tem lugar na paleta, então vai como valor (`"#ff8800"`, 9
+   caracteres). As cores da paleta continuam índice, e só paga o hex quem escolheu uma cor
+   fora dela.
 2. **Chaves curtas de uma letra** no que é geométrico e repetido em toda note: `x`, `y`,
    `w`, `h`, `z`. Os nomes por extenso ficaram só onde a clareza importa mais que o byte
    (`id`, `color`, `text`).
@@ -78,7 +84,7 @@ serializado, não como.
 
 ## Versionamento
 
-`version` acompanha `SCHEMA_VERSION` (hoje `4`) e existe para os links não quebrarem quando
+`version` acompanha `SCHEMA_VERSION` (hoje `5`) e existe para os links não quebrarem quando
 o formato evoluir. As regras de leitura:
 
 - Versão **menor ou igual** à atual: aceita. Um board da v3 (sem `w` e `o`) abre com todo
@@ -106,6 +112,9 @@ sem aviso.
 
 `w` e `o` (#153) subiram de `3` para `4` pela mesma regra: a v3 desenharia um traço de 6× na
 espessura padrão, e um a 20% de opacidade cheio.
+
+O cinza, o branco e a cor livre do traço subiram de `4` para `5`: a v4 não reconhece a cor
+`7`, `8` nem um `#rrggbb`, e descartaria esses traços sem aviso — o board abriria sem eles.
 
 ## Validação
 

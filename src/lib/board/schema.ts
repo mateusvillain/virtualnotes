@@ -139,7 +139,10 @@ export function normalizeStroke(input: unknown): Stroke | null {
   const { id, color, tool, w, o, points, z } = input;
 
   if (typeof id !== "string" || id.length === 0) return null;
-  if (!isStrokeColor(color)) return null;
+  // Hex em maiúsculas é a mesma cor livre, e recuperável: vira a grafia única, minúscula, em
+  // vez de levar o traço junto.
+  const inkColor = typeof color === "string" ? color.toLowerCase() : color;
+  if (!isStrokeColor(inkColor)) return null;
 
   const normalizedPoints = normalizePoints(points);
   if (normalizedPoints === null) return null;
@@ -152,7 +155,7 @@ export function normalizeStroke(input: unknown): Stroke | null {
 
   return {
     id,
-    color,
+    color: inkColor,
     ...drawnWith,
     ...size,
     ...opacity,

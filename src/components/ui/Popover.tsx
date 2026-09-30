@@ -34,8 +34,13 @@ interface PopoverProps {
    * borda de cima da pílula mais o respiro entre as duas peças.
    */
   offset: number;
-  /** Raio do vidro: cheio no bloco de cores, 24px em cima e 8 embaixo no painel de traço. */
+  /** Raio do vidro: cheio ou 8px. Sem efeito com {@link bare}. */
   rounded?: keyof typeof ROUNDED;
+  /**
+   * Sem o vidro: o conteúdo desenha o próprio fundo. É o arco de cores, cuja forma não é um
+   * retângulo arredondado.
+   */
+  bare?: boolean;
   /**
    * Quanto tempo o painel continua montado depois de fechar, em ms, para o conteúdo tocar a
    * própria animação de saída. Nesse intervalo ele leva `data-state="closed"` e fica `inert`:
@@ -49,12 +54,7 @@ interface PopoverProps {
 }
 
 /** O raio de cada variante. */
-const ROUNDED = {
-  full: "rounded-full",
-  panel: "rounded-lg",
-  // Em pé: 24px em cima, 8px embaixo, rente à toolbar.
-  column: "rounded-t-3xl rounded-b-lg",
-} as const;
+const ROUNDED = { full: "rounded-full", panel: "rounded-lg" } as const;
 
 /**
  * Painel não modal preso acima de um gatilho da toolbar (#155): o bloco de cores e o painel
@@ -79,6 +79,7 @@ export function Popover({
   label,
   offset,
   rounded = "full",
+  bare = false,
   exitMs = 0,
   className = "",
   testId,
@@ -169,7 +170,9 @@ export function Popover({
       role="dialog"
       aria-label={label}
       // O vidro das pílulas (Penpot: branco a 90%, borda `#e4e4e4` a meio tom).
-      className={`absolute left-1/2 z-10 w-max -translate-x-1/2 ${glassSurfaceClass} ${ROUNDED[rounded]} ${className}`}
+      className={`absolute left-1/2 z-10 w-max -translate-x-1/2 ${
+        bare ? "" : `${glassSurfaceClass} ${ROUNDED[rounded]}`
+      } ${className}`}
       style={{ bottom: `calc(100% + ${offset}px)`, marginLeft: shift }}
       data-state={open ? "open" : "closed"}
       inert={!open}
