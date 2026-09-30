@@ -85,6 +85,12 @@ export const TOOLBAR_TOOLS: readonly ToolbarEntry[] = [
 const PANEL_OFFSET = 34;
 
 /**
+ * Duração da saída do painel de traço, em ms — o `Popover` o segura montado por esse tempo.
+ * Tem de bater com `stroke-panel-out` em globals.css.
+ */
+export const STROKE_PANEL_EXIT_MS = 120;
+
+/**
  * Divisor entre as seções da pílula (Penpot, `Line 2` e `Line 4`): 1px por 24, `#dddddd`
  * sumindo nas duas pontas.
  */
@@ -116,6 +122,8 @@ interface SelectorProps {
   panelLabel: string;
   onClose: () => void;
   rounded: "full" | "panel";
+  /** Tempo da animação de saída do painel, em ms. Sem valor, ele some na hora. */
+  exitMs?: number;
   panelClassName: string;
   testId: string;
   icon: ReactNode;
@@ -132,6 +140,7 @@ function Selector({
   panelLabel,
   onClose,
   rounded,
+  exitMs,
   panelClassName,
   testId,
   icon,
@@ -176,6 +185,7 @@ function Selector({
         label={panelLabel}
         offset={PANEL_OFFSET}
         rounded={rounded}
+        exitMs={exitMs}
         className={panelClassName}
         testId={`${testId}-panel`}
       >
@@ -289,8 +299,10 @@ export function Toolbar({ active, onToggle, stroke }: ToolbarProps) {
           onClose={() => close("settings")}
           panelLabel={ui.toolbar.stroke}
           rounded="panel"
-          // 304×52 no Penpot: os dois sliders de 140 e 8px em volta e entre eles.
-          panelClassName="p-2"
+          // 304×52 no Penpot: os dois sliders de 140 e 8px em volta e entre eles. A entrada e
+          // a saída moram em globals.css (`stroke-panel`).
+          exitMs={STROKE_PANEL_EXIT_MS}
+          panelClassName="stroke-panel p-2"
           testId="stroke-settings"
           icon={<StrokeIcon />}
         >

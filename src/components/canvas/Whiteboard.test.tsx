@@ -30,19 +30,27 @@ import { UI } from "@/lib/i18n/ui";
  * componentes e viram comportamento observável.
  */
 /**
+ * O elemento, se ele não estiver num painel fechando. O painel de traço continua montado
+ * durante a animação de saída, mas para quem usa ele já fechou: está `inert`, e sai sumindo.
+ */
+function aberto(element: HTMLElement | null): HTMLElement | null {
+  return element?.closest('[data-state="closed"]') ? null : element;
+}
+
+/**
  * O bloco de cores da ferramenta `nome` (#160). Ele só aparece aberto pelo círculo da seção
  * Color Controls, e este atalho o abre se ainda estiver fechado — `null` com o círculo
  * desabilitado, sem ferramenta de traço ligada.
  */
 function blocoDeCores(nome: "pencil" | "fountain" | "highlighter"): HTMLElement | null {
   const testId = `${nome}-color-picker`;
-  const aberto = screen.queryByTestId(testId);
-  if (aberto !== null) return aberto;
+  const jaAberto = aberto(screen.queryByTestId(testId));
+  if (jaAberto !== null) return jaAberto;
 
   const circulo = screen.getByTestId("stroke-color-button") as HTMLButtonElement;
   if (circulo.disabled || circulo.getAttribute("aria-expanded") === "true") return null;
   fireEvent.click(circulo);
-  return screen.queryByTestId(testId);
+  return aberto(screen.queryByTestId(testId));
 }
 
 function duploCliqueNoFundo(x: number, y: number): void {
@@ -5015,14 +5023,14 @@ describe("Whiteboard — painel de traço (#162)", () => {
     expect(screen.getByRole("group", { name: UI.en.pencil.stroke })).toBeDefined();
 
     fireEvent.click(screen.getByTestId("stroke-color-button"));
-    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+    expect(aberto(screen.queryByTestId("stroke-settings-panel"))).toBeNull();
     expect(screen.queryByTestId("stroke-color-panel")).not.toBeNull();
 
     fireEvent.click(rabisco());
     expect(screen.queryByTestId("stroke-color-panel")).toBeNull();
 
     fireEvent.click(rabisco());
-    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+    expect(aberto(screen.queryByTestId("stroke-settings-panel"))).toBeNull();
   });
 
   it("com a nota, a borracha ou sem ferramenta, o rabisco fica desabilitado", () => {
@@ -5034,7 +5042,7 @@ describe("Whiteboard — painel de traço (#162)", () => {
     fireEvent.keyDown(document, { key: "n" });
 
     expect(rabisco().disabled).toBe(true);
-    expect(screen.queryByTestId("stroke-settings-panel")).toBeNull();
+    expect(aberto(screen.queryByTestId("stroke-settings-panel"))).toBeNull();
   });
 
   it.each([
