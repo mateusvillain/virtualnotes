@@ -311,6 +311,22 @@ describe("normalizeStroke", () => {
     expect(normalizeStroke(stroke({ points: [1, 2] }))).toBeNull();
   });
 
+  it("aceita o cinza, o branco e a cor livre em #rrggbb", () => {
+    for (const color of [7, 8, "#ff8800"]) {
+      expect(normalizeStroke(stroke({ color }))?.color).toBe(color);
+    }
+  });
+
+  it("normaliza hex em maiúsculas para a grafia minúscula, sem descartar o traço", () => {
+    expect(normalizeStroke(stroke({ color: "#FF8800" }))?.color).toBe("#ff8800");
+  });
+
+  it("descarta o traço com uma string de cor que não é #rrggbb", () => {
+    for (const color of ["red", "#f80", "ff8800", "#ff88001"]) {
+      expect(normalizeStroke(stroke({ color }))).toBeNull();
+    }
+  });
+
   it("normaliza um traço válido", () => {
     expect(normalizeStroke(stroke())).toEqual(stroke());
   });

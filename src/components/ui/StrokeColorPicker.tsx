@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import {
   NOTE_COLORS,
   STROKE_COLOR_BLACK,
@@ -143,7 +143,14 @@ export function StrokeColorPicker({ tool, value, onChange }: StrokeColorPickerPr
     // O recorte esconde o que o giro de abrir e fechar leva para baixo da base (globals.css).
     <div
       className="color-arc relative"
-      style={{ width: ARC_WIDTH, height: ARC_HEIGHT }}
+      style={
+        {
+          width: ARC_WIDTH,
+          height: ARC_HEIGHT,
+          // O centro do círculo de que o arco é pedaço: o eixo do giro de abrir e fechar.
+          "--color-arc-pivot": `${ARC_WIDTH / 2}px ${ARC_HEIGHT - 1}px`,
+        } as CSSProperties
+      }
       data-testid={`${name}-color-arc`}
     >
       <div className="color-arc-roll absolute inset-0">
@@ -154,7 +161,7 @@ export function StrokeColorPicker({ tool, value, onChange }: StrokeColorPickerPr
       */}
         <svg
           aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-visible drop-shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+          className="pointer-events-none absolute inset-0 overflow-visible drop-shadow-toolbar"
           width={ARC_WIDTH}
           height={ARC_HEIGHT}
         >

@@ -85,6 +85,13 @@
   --color-shadow-soft: color-mix(in srgb, var(--color-ink) 6%, transparent);
   --shadow-note: 0 1px 2px var(--color-shadow-soft), 0 4px 12px var(--color-shadow-strong);
   --shadow-control: 0 1px 2px var(--color-shadow-soft), 0 8px 24px var(--color-shadow-soft);
+  /*
+   * A sombra curta da toolbar, do arco de cores e do painel de traço: o valor do Penpot, preto
+   * a 8%. Um token só para as três peças lerem como uma superfície, em `box-shadow` e, no
+   * arco (que é um anel), em `drop-shadow`.
+   */
+  --shadow-toolbar: 0 1px 4px rgb(0 0 0 / 0.08);
+  --drop-shadow-toolbar: 0 1px 4px rgb(0 0 0 / 0.08);
 }
 
 /* As fontes vêm do next/font em layout.tsx, então entram por referência. */
@@ -158,7 +165,8 @@ body {
 /**
  * Abrir e fechar o arco de cores do traço, como uma fita que rola.
  *
- * O arco inteiro gira em volta do centro do círculo de que ele é pedaço (117, 117). Fechado,
+ * O arco inteiro gira em volta do centro do círculo de que ele é pedaço (`--color-arc-pivot`,
+ * de StrokeColorPicker.tsx). Fechado,
  * está 160° para trás: só a ponta do seletor de cor livre fica acima da base, na posição da
  * ponta esquerda, e o resto está enrolado por baixo. Ao abrir ele gira de volta, e o seletor
  * passa por cima até a ponta direita puxando as cores atrás de si. Fechar faz o caminho
@@ -193,7 +201,7 @@ body {
 }
 
 .color-arc-roll {
-  transform-origin: 117px 117px;
+  transform-origin: var(--color-arc-pivot);
   animation: color-arc-roll-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -226,17 +234,17 @@ body {
  * `transform` roda na GPU e `clip-path` na thread principal: na saída, com o React ocupado, o
  * recorte atrasava alguns quadros e o painel descia por cima da toolbar.
  *
- * As contas, com o painel a 8px da pílula e 164px de altura (Toolbar.tsx): o recorte desce
- * 8px abaixo da moldura, até a linha da pílula; fechado, o vidro está 172px para baixo
- * (164 + 8), com o topo encostado nessa linha. Os -8px dos outros lados só deixam o anel de
- * foco dos sliders fora do recorte.
+ * As medidas vêm de Toolbar.tsx (`STROKE_PANEL_VARS`): o recorte desce `--stroke-panel-gap`
+ * abaixo da moldura, até a linha da pílula; fechado, o vidro está `--stroke-panel-travel`
+ * para baixo (altura do painel + respiro), com o topo encostado nessa linha. Os -8px dos
+ * outros lados só deixam o anel de foco dos sliders fora do recorte.
  *
  * Anima `transform` sem brigar com a centralização do painel: o `-translate-x-1/2` do Tailwind
  * é a propriedade `translate`, separada de `transform` — e fica na camada de fora, não nesta.
  */
 @keyframes stroke-panel-in {
   from {
-    transform: translateY(172px);
+    transform: translateY(var(--stroke-panel-travel));
   }
   to {
     transform: none;
@@ -248,12 +256,12 @@ body {
     transform: none;
   }
   to {
-    transform: translateY(172px);
+    transform: translateY(var(--stroke-panel-travel));
   }
 }
 
 .stroke-panel {
-  clip-path: inset(-8px);
+  clip-path: inset(-8px -8px calc(-1 * var(--stroke-panel-gap)) -8px);
 }
 
 /* As curvas e os tempos do arco de cores: as duas peças saem da toolbar do mesmo jeito. */

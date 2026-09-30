@@ -16,9 +16,11 @@
  * `parseBoard`); a versão sobe para que um board **futuro** demais seja recusado, e não
  * mostrado errado em silêncio. A v3 subiu pela mesma regra, com `tool` (#110): a v2 mostraria
  * um traço de marca-texto como uma linha fina e opaca de lápis. A v4 também, com `w` e `o`
- * (#153): a v3 mostraria um traço grosso ou translúcido na espessura e opacidade padrão.
+ * (#153): a v3 mostraria um traço grosso ou translúcido na espessura e opacidade padrão. A v5
+ * sobe com o cinza, o branco e a cor livre do traço: a v4 descartaria esses traços calada, por
+ * não reconhecer a cor.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Cores de post-it, na ordem em que aparecem no seletor. O board guarda o índice desta
@@ -39,8 +41,9 @@ export type NoteColor = TupleIndex<typeof NOTE_COLORS>;
 
 /**
  * Cores do traço: as seis da nota, na mesma ordem, mais o preto — que é o padrão do lápis
- * (issue #64). Preto entra como uma cor a mais na mesma paleta, e não como um caso especial,
- * para que o índice serializado continue sendo a única fonte de verdade sobre a cor.
+ * (issue #64) —, o cinza e o branco do arco de cores. Entram como cores a mais na mesma
+ * paleta, e não como casos especiais, para que o índice serializado continue sendo a fonte de
+ * verdade sobre a cor. Sempre no fim: no meio, deslocariam o índice de todo traço já gravado.
  */
 export const STROKE_COLORS = [...NOTE_COLORS, "black", "gray", "white"] as const;
 
@@ -281,7 +284,7 @@ export interface Note {
 export interface Stroke {
   /** Identificador único dentro do board. */
   id: string;
-  /** Índice em {@link STROKE_COLORS}. */
+  /** Índice em {@link STROKE_COLORS}, ou uma cor livre em `#rrggbb`. */
   color: StrokeColor;
   /**
    * Índice em {@link STROKE_TOOLS}. Ausente é lápis: o contrato nunca grava o `0`, para que
