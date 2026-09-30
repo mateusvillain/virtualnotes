@@ -45,7 +45,7 @@ export const HIGHLIGHTER_OPACITY = STROKE_OPACITIES[DEFAULT_HIGHLIGHTER_OPACITY]
 function inkStyle(style: StrokeStyle): { scale: number; width: number; opacity?: number } {
   const scale = strokeSizeScale(style);
   const opacity = strokeOpacityValue(style);
-  const width = strokeInkWidth(strokeTool(style), scale);
+  const width = strokeInkWidth(style);
   return opacity < 1 ? { scale, width, opacity } : { scale, width };
 }
 
@@ -65,12 +65,13 @@ function inkStyle(style: StrokeStyle): { scale: number; width: number; opacity?:
 export const STROKE_HIT_WIDTH = 12;
 
 /**
- * O alvo de clique de uma ferramenta (#118): o do lápis, mais a sobra da tinta dos dois
- * lados. O marca-texto ganha a mesma folga que o lápis sempre teve, medida da borda que se
- * vê — com o alvo do lápis, clicar na metade de fora de um destaque não o selecionaria.
+ * O alvo de clique de um traço (#118, #158): o do lápis, mais a sobra da tinta dos dois
+ * lados. O marca-texto e o traço grosso ganham a mesma folga que o lápis sempre teve,
+ * medida da borda que se vê — com o alvo do lápis, clicar na metade de fora de um destaque
+ * não o selecionaria.
  */
-function strokeHitWidth(tool: StrokeTool): number {
-  return widenByInk(STROKE_HIT_WIDTH, tool);
+function strokeHitWidth(stroke: Stroke): number {
+  return widenByInk(STROKE_HIT_WIDTH, stroke);
 }
 
 interface StrokesProps {
@@ -358,7 +359,7 @@ function StrokeShape({
         points={polylinePoints(points)}
         fill="none"
         stroke="transparent"
-        strokeWidth={strokeHitWidth(tool)}
+        strokeWidth={strokeHitWidth(stroke)}
         strokeLinecap="round"
         strokeLinejoin="round"
         // `stroke` e não `all`: só a faixa em volta da linha recebe o ponteiro. Com `all`, o

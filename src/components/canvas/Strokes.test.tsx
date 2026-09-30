@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   HIGHLIGHTER_OPACITY,
   HighlighterPreviewContext,
+  STROKE_HIT_WIDTH,
   StrokePreview,
   Strokes,
   polylinePoints,
@@ -495,5 +496,24 @@ describe("espessura e opacidade do traço (#157)", () => {
     const linha = screen.getByTestId("stroke-preview").querySelector("polyline");
     expect(linha?.getAttribute("stroke-width")).toBe(String(HIGHLIGHTER_WIDTH * STROKE_SIZES[6]));
     expect(linha?.hasAttribute("opacity")).toBe(false);
+  });
+});
+
+describe("alvo de clique pela espessura do traço (#158)", () => {
+  it("o alvo de um lápis grosso cresce pela sobra da tinta", () => {
+    render(<Strokes strokes={[stroke({ w: 7 })]} />);
+
+    // Lápis a 6×: 12 unidades de tinta, 10 além do padrão.
+    expect(screen.getByTestId("stroke-hit").getAttribute("stroke-width")).toBe(
+      String(STROKE_HIT_WIDTH + 10),
+    );
+  });
+
+  it("o alvo de um lápis fino fica o do lápis padrão", () => {
+    render(<Strokes strokes={[stroke({ w: 0 })]} />);
+
+    expect(screen.getByTestId("stroke-hit").getAttribute("stroke-width")).toBe(
+      String(STROKE_HIT_WIDTH),
+    );
   });
 });

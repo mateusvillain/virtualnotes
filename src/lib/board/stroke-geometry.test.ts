@@ -249,13 +249,13 @@ describe("tinta larga do marca-texto (#118)", () => {
   }
 
   it("a sobra do lápis é zero; a do marca-texto é o que passa dele de cada lado", () => {
-    expect(inkOverhang(STROKE_TOOL_PENCIL)).toBe(0);
-    expect(inkOverhang(STROKE_TOOL_HIGHLIGHTER)).toBe(sobra);
+    expect(inkOverhang({ tool: STROKE_TOOL_PENCIL })).toBe(0);
+    expect(inkOverhang({ tool: STROKE_TOOL_HIGHLIGHTER })).toBe(sobra);
   });
 
   it("a borracha do lápis continua do mesmo tamanho, e a do marca-texto cresce pela sobra", () => {
-    expect(eraserHitWidth(STROKE_TOOL_PENCIL)).toBe(ERASER_HIT_WIDTH);
-    expect(eraserHitWidth(STROKE_TOOL_HIGHLIGHTER)).toBe(ERASER_HIT_WIDTH + sobra * 2);
+    expect(eraserHitWidth({ tool: STROKE_TOOL_PENCIL })).toBe(ERASER_HIT_WIDTH);
+    expect(eraserHitWidth({ tool: STROKE_TOOL_HIGHLIGHTER })).toBe(ERASER_HIT_WIDTH + sobra * 2);
   });
 
   it("o retângulo que só encosta na borda do destaque o toca", () => {
@@ -277,8 +277,8 @@ describe("tinta larga do marca-texto (#118)", () => {
   });
 
   it("alarga qualquer alvo do lápis pela sobra, e o do lápis fica como está", () => {
-    expect(widenByInk(12, STROKE_TOOL_PENCIL)).toBe(12);
-    expect(widenByInk(12, STROKE_TOOL_HIGHLIGHTER)).toBe(12 + sobra * 2);
+    expect(widenByInk(12, { tool: STROKE_TOOL_PENCIL })).toBe(12);
+    expect(widenByInk(12, { tool: STROKE_TOOL_HIGHLIGHTER })).toBe(12 + sobra * 2);
   });
 
   it("a caixa da tinta do lápis é a mesma caixa dos pontos", () => {
@@ -489,8 +489,8 @@ describe("alvo da caneta tinteiro (#115)", () => {
   }
 
   it("a tinta da caneta, para os alvos, é a pena inteira", () => {
-    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN)).toBe(FOUNTAIN_MAX_WIDTH);
-    expect(inkOverhang(STROKE_TOOL_FOUNTAIN)).toBe(sobra);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN })).toBe(FOUNTAIN_MAX_WIDTH);
+    expect(inkOverhang({ tool: STROKE_TOOL_FOUNTAIN })).toBe(sobra);
   });
 
   /** Nenhum ponto do contorno passa da metade da pena, então o alvo cobre toda a tinta. */
@@ -509,7 +509,9 @@ describe("alvo da caneta tinteiro (#115)", () => {
         const perto = Math.min(
           ...linha.map((ponto) => Math.hypot(ponto.x - vertice.x, ponto.y - vertice.y)),
         );
-        expect(perto).toBeLessThanOrEqual(strokeInkWidth(STROKE_TOOL_FOUNTAIN) / 2 + 1e-9);
+        expect(perto).toBeLessThanOrEqual(
+          strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN }) / 2 + 1e-9,
+        );
       }
     }
   });
@@ -525,8 +527,8 @@ describe("alvo da caneta tinteiro (#115)", () => {
   });
 
   it("a borracha da caneta cresce pela sobra, e a do lápis fica como está", () => {
-    expect(eraserHitWidth(STROKE_TOOL_FOUNTAIN)).toBe(ERASER_HIT_WIDTH + sobra * 2);
-    expect(eraserHitWidth(STROKE_TOOL_PENCIL)).toBe(ERASER_HIT_WIDTH);
+    expect(eraserHitWidth({ tool: STROKE_TOOL_FOUNTAIN })).toBe(ERASER_HIT_WIDTH + sobra * 2);
+    expect(eraserHitWidth({ tool: STROKE_TOOL_PENCIL })).toBe(ERASER_HIT_WIDTH);
   });
 
   it("a caixa da tinta envolve a pena numa linha reta", () => {
@@ -537,10 +539,12 @@ describe("alvo da caneta tinteiro (#115)", () => {
 });
 
 describe("espessura do traço (#157)", () => {
-  it("strokeInkWidth multiplica a base de cada ferramenta", () => {
-    expect(strokeInkWidth(STROKE_TOOL_PENCIL, 3)).toBe(STROKE_WIDTH * 3);
-    expect(strokeInkWidth(STROKE_TOOL_HIGHLIGHTER, 0.5)).toBe(HIGHLIGHTER_WIDTH / 2);
-    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN, 2)).toBe(FOUNTAIN_MAX_WIDTH * 2);
+  it("strokeInkWidth multiplica a base da ferramenta pela espessura do traço", () => {
+    expect(strokeInkWidth({ w: 5 })).toBe(STROKE_WIDTH * 3);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_HIGHLIGHTER, w: 0 })).toBe(HIGHLIGHTER_WIDTH / 2);
+    expect(strokeInkWidth({ tool: STROKE_TOOL_FOUNTAIN, w: 4 })).toBe(FOUNTAIN_MAX_WIDTH * 2);
+    // Sem `w`, a espessura de sempre da ferramenta.
+    expect(strokeInkWidth({})).toBe(STROKE_WIDTH);
   });
 
   it("fountainWidth escala o fio e a largura da pena juntos", () => {
@@ -572,5 +576,54 @@ describe("espessura do traço (#157)", () => {
       Math.hypot(outline[0]!.x - outline[2]!.x, outline[0]!.y - outline[2]!.y);
 
     expect(diagonal(dobro)).toBeCloseTo(diagonal(normal) * 2);
+  });
+});
+
+/**
+ * A espessura escolhida (#153) multiplica a tinta, e os alvos acompanham o traço, e não só a
+ * ferramenta (#158).
+ */
+describe("alvos pela espessura do traço (#158)", () => {
+  // Lápis a 6× (índice 7): 12 unidades de tinta, 5 além do lápis padrão de cada lado.
+  const sobra = (STROKE_WIDTH * 6 - STROKE_WIDTH) / 2;
+
+  function grosso(points: number[]): Stroke {
+    return { ...stroke(points), w: 7 };
+  }
+
+  it("a sobra acompanha a espessura do traço, em qualquer ferramenta", () => {
+    expect(inkOverhang({ w: 7 })).toBe(sobra);
+    // Marca-texto a 0,5×: 8 unidades de tinta.
+    expect(inkOverhang({ tool: STROKE_TOOL_HIGHLIGHTER, w: 0 })).toBe((8 - STROKE_WIDTH) / 2);
+    // Caneta a 2×: a pena inteira tem 10 unidades.
+    expect(inkOverhang({ tool: STROKE_TOOL_FOUNTAIN, w: 4 })).toBe(
+      (FOUNTAIN_MAX_WIDTH * 2 - STROKE_WIDTH) / 2,
+    );
+  });
+
+  it("um traço mais fino que o lápis padrão fica com o alvo do lápis", () => {
+    expect(inkOverhang({ w: 0 })).toBe(0);
+    expect(eraserHitWidth({ w: 0 })).toBe(ERASER_HIT_WIDTH);
+    expect(strokeInkBounds({ ...stroke([0, 0, 100, 50]), w: 0 })).toEqual(
+      strokeBounds(stroke([0, 0, 100, 50])),
+    );
+  });
+
+  it("o retângulo que só encosta na borda de um lápis grosso o toca", () => {
+    const borda = rect(0, sobra, 10, 2);
+
+    expect(strokeIntersectsRect(grosso([0, 0, 100, 0]), borda)).toBe(true);
+    expect(strokeIntersectsRect(stroke([0, 0, 100, 0]), borda)).toBe(false);
+    expect(strokeIntersectsRect(grosso([0, 0, 100, 0]), rect(0, sobra + 2, 10, 2))).toBe(false);
+  });
+
+  it("a borracha de um lápis grosso cresce pela sobra", () => {
+    expect(eraserHitWidth({ w: 7 })).toBe(ERASER_HIT_WIDTH + sobra * 2);
+  });
+
+  it("a caixa da tinta envolve o lápis grosso inteiro", () => {
+    expect(strokeInkBounds(grosso([0, 0, 100, 0]))).toEqual(
+      rect(-sobra, -sobra, 100 + sobra * 2, sobra * 2),
+    );
   });
 });
