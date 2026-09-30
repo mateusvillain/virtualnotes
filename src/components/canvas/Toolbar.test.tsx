@@ -160,7 +160,7 @@ describe("Toolbar", () => {
       expect(traco.getAttribute("aria-keyshortcuts")).toBe("[ ]");
     });
 
-    it("o bloco de cores tem raio cheio e o painel de traço, 8px", async () => {
+    it("o bloco de cores tem raio cheio e o painel de traço, 24px em cima e 8 embaixo", async () => {
       const user = userEvent.setup();
       renderToolbar("pencil", { enabled: true });
 
@@ -168,7 +168,9 @@ describe("Toolbar", () => {
       expect(screen.getByTestId("stroke-color-panel").className).toContain("rounded-full");
 
       await user.click(screen.getByRole("button", { name: ui.toolbar.stroke }));
-      expect(screen.getByTestId("stroke-settings-panel").className).toContain("rounded-lg");
+      expect(screen.getByTestId("stroke-settings-panel").className).toContain(
+        "rounded-t-3xl rounded-b-lg",
+      );
     });
 
     it("desabilitar a seção fecha o painel aberto", async () => {

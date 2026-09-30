@@ -175,3 +175,22 @@ describe("Popover — saída animada", () => {
     }
   });
 });
+
+describe("Popover — foco sem rolar", () => {
+  it("foca o primeiro controle sem rolar a página atrás do painel", async () => {
+    const user = userEvent.setup();
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    try {
+      render(<Harness />);
+      await user.click(screen.getByRole("button", { name: "abrir" }));
+
+      // O painel pode estar começando a entrada fora do lugar, e um foco comum rolaria a
+      // moldura inteira até ele.
+      const primeiro = screen.getByRole("button", { name: "primeiro" });
+      const chamada = focus.mock.contexts.findIndex((element) => element === primeiro);
+      expect(focus.mock.calls[chamada]?.[0]).toEqual({ preventScroll: true });
+    } finally {
+      focus.mockRestore();
+    }
+  });
+});
