@@ -700,3 +700,37 @@ describe("BoardStore — histórico (#86)", () => {
     expect(store.getHistory().canUndo).toBe(false);
   });
 });
+
+describe("espessura e opacidade do traço (#153)", () => {
+  it("addStroke grava espessura e opacidade, e o padrão sem os campos", () => {
+    const store = createBoardStore();
+
+    const grosso = store.addStroke({ color: 6, w: 7, o: 9, points: [0, 0, 10, 10] });
+    const padrao = store.addStroke({ color: 6, w: 2, o: 19, points: [0, 0, 10, 10] });
+
+    expect(grosso).toMatchObject({ w: 7, o: 9 });
+    expect(padrao).not.toHaveProperty("w");
+    expect(padrao).not.toHaveProperty("o");
+  });
+
+  it("addElements e spliceStrokes preservam espessura e opacidade", () => {
+    const store = createBoardStore();
+
+    const { strokes } = store.addElements([], [{ color: 0, w: 5, o: 3, points: [0, 0, 10, 10] }]);
+    expect(strokes[0]).toMatchObject({ w: 5, o: 3 });
+
+    store.spliceStrokes([strokes[0]?.id ?? ""], [{ color: 0, w: 5, o: 3, points: [0, 0, 4, 4] }]);
+    expect(store.getBoard().strokes).toEqual([expect.objectContaining({ w: 5, o: 3 })]);
+  });
+
+  it("trocar só a espessura é uma mudança, e desfazer a devolve", () => {
+    const store = createBoardStore();
+    const stroke = store.addStroke({ color: 0, points: [0, 0, 10, 10] });
+
+    store.updateStrokes([{ id: stroke?.id ?? "", patch: { w: 6 } }]);
+    expect(store.getBoard().strokes[0]).toMatchObject({ w: 6 });
+
+    store.undo();
+    expect(store.getBoard().strokes[0]).not.toHaveProperty("w");
+  });
+});

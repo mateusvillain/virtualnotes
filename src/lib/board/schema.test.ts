@@ -346,4 +346,57 @@ describe("normalizeStroke", () => {
       expect(result.ok && JSON.stringify(result.board.strokes)).toBe(JSON.stringify(antes.strokes));
     });
   });
+
+  describe("espessura e opacidade (#153)", () => {
+    it("preserva espessura e opacidade diferentes do padrão", () => {
+      expect(normalizeStroke(stroke({ w: 7, o: 9 }))).toEqual(stroke({ w: 7, o: 9 }));
+    });
+
+    it("grava o padrão da ferramenta sem os campos, mesmo quando vêm explícitos", () => {
+      const result = normalizeStroke(stroke({ w: 2, o: 19 }));
+      expect(result).toEqual(stroke());
+      expect(result).not.toHaveProperty("w");
+      expect(result).not.toHaveProperty("o");
+    });
+
+    it("mede o padrão pela ferramenta do traço", () => {
+      // 35% é o padrão do marca-texto: some nele, mas fica no lápis, onde é escolha.
+      expect(normalizeStroke(stroke({ tool: 2, o: 6 }))).toEqual(stroke({ tool: 2 }));
+      expect(normalizeStroke(stroke({ o: 6 }))).toEqual(stroke({ o: 6 }));
+      // Cheio é escolha no marca-texto.
+      expect(normalizeStroke(stroke({ tool: 2, o: 19 }))).toEqual(stroke({ tool: 2, o: 19 }));
+    });
+
+    it("mede o padrão pela ferramenta já normalizada", () => {
+      // Ferramenta inválida vira lápis, e 35% deixa de ser o padrão.
+      expect(normalizeStroke(stroke({ tool: 9, o: 6 }))).toEqual(stroke({ o: 6 }));
+    });
+
+    it("lê índice inválido como o padrão, sem descartar o traço", () => {
+      for (const w of [8, -1, 1.5, "3", null]) {
+        expect(normalizeStroke(stroke({ w }))).toEqual(stroke());
+      }
+      for (const o of [20, -1, 1.5, "3", null]) {
+        expect(normalizeStroke(stroke({ o }))).toEqual(stroke());
+      }
+    });
+
+    /** O critério de tamanho de link do PRD: a v3 sai, na v4, com o mesmo JSON de traços. */
+    it("serializa um board da v3 igual ao de antes dos campos", () => {
+      const antes = {
+        version: 3,
+        notes: [note()],
+        strokes: [
+          stroke(),
+          { id: "s2", color: 0, tool: 1, points: [0, 0, 10, 10], z: 1 },
+          { id: "s3", color: 0, tool: 2, points: [0, 0, 10, 10], z: 1 },
+        ],
+      };
+
+      const result = parseBoard(antes);
+
+      expect(result.ok).toBe(true);
+      expect(result.ok && JSON.stringify(result.board.strokes)).toBe(JSON.stringify(antes.strokes));
+    });
+  });
 });

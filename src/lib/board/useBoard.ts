@@ -68,7 +68,7 @@ const PASTE_OFFSET = 20;
  * mudaria de desenho em silêncio (#110).
  */
 function strokeLike(stroke: Stroke, points: number[]): NewStroke {
-  return { color: stroke.color, tool: stroke.tool, points };
+  return { color: stroke.color, tool: stroke.tool, w: stroke.w, o: stroke.o, points };
 }
 
 /** Mapa vazio compartilhado: evita recriar uma instância nova a cada passada sem toque. */

@@ -9,7 +9,7 @@ exportação. O código vive em `src/lib/board/`: `types.ts` (contrato) e `schem
 ```ts
 Board = { version: number; notes: Note[]; strokes: Stroke[] }
 Note = { id: string; x: number; y: number; w: number; h: number; color: 0..5; text: string; z: number }
-Stroke = { id: string; color: 0..6; tool?: 1..2; points: number[]; z: number }
+Stroke = { id: string; color: 0..6; tool?: 1..2; w?: 0..7; o?: 0..19; points: number[]; z: number }
 ```
 
 - `x`/`y` — canto superior esquerdo, em coordenadas de canvas (não de tela).
@@ -25,6 +25,19 @@ Stroke = { id: string; color: 0..6; tool?: 1..2; points: number[]; z: number }
   gravado sem o campo: todo traço de antes do campo era lápis, então boards antigos não
   precisam de migração, e um board só com lápis gera exatamente o mesmo link de antes.
   Índice fora da lista também vira lápis, sem descartar o traço (#110).
+- `w` do traço — índice em `STROKE_SIZES` (`[0.5, 0.75, 1, 1.5, 2, 3, 4, 6]`): um
+  **multiplicador** da espessura-base da ferramenta, e não uma espessura absoluta (#153). O
+  lápis tem 2 unidades e o marca-texto 16, e uma escala comum dá às três o mesmo controle; na
+  caneta tinteiro, o fio e a largura da pena escalam juntos.
+- `o` do traço — índice em `STROKE_OPACITIES` (5% a 100%, de 5 em 5): a opacidade do traço
+  inteiro (#153).
+- **`w` e `o` ausentes são o padrão da ferramenta**, e o padrão nunca é gravado: `1×` para as
+  três; opacidade cheia para lápis e caneta, 35% para o marca-texto (`DEFAULT_STROKE_SIZES`,
+  `DEFAULT_STROKE_OPACITIES`). O padrão é medido pela ferramenta já normalizada — 35% some de
+  um traço de marca-texto, mas fica num de lápis, onde é escolha. Índice fora da lista vira o
+  padrão, sem descartar o traço. Assim todo traço de antes dos campos continua gerando o mesmo
+  link. As listas guardam posição: um valor novo só entra no **fim** — no começo ou no meio,
+  deslocaria os índices seguintes e mudaria o desenho de todo traço já compartilhado.
 - `points` — coordenadas de canvas **achatadas**: `[x0, y0, x1, y1, …]`, e não uma lista de
   `{x, y}`. Comprimento par, com ao menos dois pontos (quatro números). É a mesma lógica da
   cor por índice — o traço é o rabisco inteiro, e cada ponto dele custa bytes de link — mas
@@ -65,10 +78,11 @@ serializado, não como.
 
 ## Versionamento
 
-`version` acompanha `SCHEMA_VERSION` (hoje `3`) e existe para os links não quebrarem quando
+`version` acompanha `SCHEMA_VERSION` (hoje `4`) e existe para os links não quebrarem quando
 o formato evoluir. As regras de leitura:
 
-- Versão **menor ou igual** à atual: aceita. Um board da v2 (sem `tool`) abre com todo
+- Versão **menor ou igual** à atual: aceita. Um board da v3 (sem `w` e `o`) abre com todo
+  traço na espessura e na opacidade padrão da ferramenta. Um board da v2 (sem `tool`) abre com todo
   traço como lápis. Um board da v1 (sem `strokes`) abre normalmente — `parseBoard` trata o
   campo ausente como lista vazia, e não como erro. O board devolvido sempre sai carimbado
   com a versão atual, porque é nessa versão que ele foi normalizado.
@@ -89,6 +103,9 @@ ignorá-lo.
 `tool` (#110) subiu a versão de `2` para `3` pela mesma regra: a v2 leria um traço de
 marca-texto como uma linha fina e opaca de lápis — o dado está lá, mas o desenho sai errado,
 sem aviso.
+
+`w` e `o` (#153) subiram de `3` para `4` pela mesma regra: a v3 desenharia um traço de 6× na
+espessura padrão, e um a 20% de opacidade cheio.
 
 ## Validação
 
