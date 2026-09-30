@@ -41,7 +41,10 @@ interface AppShellProps {
  */
 export function AppShell({ children, leadingActions, trailingActions, toolbar }: AppShellProps) {
   return (
-    <main className="relative h-dvh overflow-hidden bg-canvas">
+    // `overflow-clip`, e não `hidden`: um `hidden` ainda rola por código, e dar foco a um
+    // controle que está animando fora da tela (o painel de traço subindo de trás da toolbar)
+    // rolava a moldura inteira para cima. O `clip` corta igual, e não rola nunca.
+    <main className="relative h-dvh overflow-clip bg-canvas">
       {/*
         O nome continua na árvore, só não na tela: uma página sem cabeçalho nenhum não tem
         como ser anunciada por leitor de tela, e um `h1` invisível custa zero pixel.

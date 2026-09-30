@@ -123,10 +123,11 @@ export function Popover({
   }, [open]);
 
   // O foco entra no painel ao abrir, no primeiro controle: quem abriu pelo teclado não
-  // precisa atravessar a toolbar até chegar nos valores.
+  // precisa atravessar a toolbar até chegar nos valores. Sem rolar: o painel pode estar
+  // começando a entrada fora do lugar, e o navegador rolaria a página atrás dele.
   useEffect(() => {
     if (!open) return;
-    panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus({ preventScroll: true });
   }, [open]);
 
   useEffect(() => {
