@@ -535,3 +535,42 @@ describe("alvo da caneta tinteiro (#115)", () => {
     );
   });
 });
+
+describe("espessura do traço (#157)", () => {
+  it("strokeInkWidth multiplica a base de cada ferramenta", () => {
+    expect(strokeInkWidth(STROKE_TOOL_PENCIL, 3)).toBe(STROKE_WIDTH * 3);
+    expect(strokeInkWidth(STROKE_TOOL_HIGHLIGHTER, 0.5)).toBe(HIGHLIGHTER_WIDTH / 2);
+    expect(strokeInkWidth(STROKE_TOOL_FOUNTAIN, 2)).toBe(FOUNTAIN_MAX_WIDTH * 2);
+  });
+
+  it("fountainWidth escala o fio e a largura da pena juntos", () => {
+    expect(fountainWidth({ x: 1, y: -1 }, 2)).toBeCloseTo(FOUNTAIN_MIN_WIDTH * 2);
+    expect(fountainWidth({ x: 1, y: 1 }, 2)).toBeCloseTo(FOUNTAIN_MAX_WIDTH * 2);
+    expect(fountainWidth({ x: 0, y: 0 }, 2)).toBe(FOUNTAIN_MIN_WIDTH * 2);
+  });
+
+  it("fountainOutline com o dobro da pena afasta as bordas o dobro", () => {
+    const flat = [0, 0, 100, 0, 150, 50];
+    const normal = fountainOutline(flat);
+    const dobro = fountainOutline(flat, 2);
+
+    expect(dobro).toHaveLength(normal.length);
+    for (let index = 0; index < 3; index += 1) {
+      const largura = (outline: Point[]) =>
+        Math.hypot(
+          outline[index]!.x - outline[outline.length - 1 - index]!.x,
+          outline[index]!.y - outline[outline.length - 1 - index]!.y,
+        );
+      expect(largura(dobro)).toBeCloseTo(largura(normal) * 2);
+    }
+  });
+
+  it("a marca da pena parada também escala", () => {
+    const normal = fountainOutline([5, 5, 5, 5]);
+    const dobro = fountainOutline([5, 5, 5, 5], 2);
+    const diagonal = (outline: Point[]) =>
+      Math.hypot(outline[0]!.x - outline[2]!.x, outline[0]!.y - outline[2]!.y);
+
+    expect(diagonal(dobro)).toBeCloseTo(diagonal(normal) * 2);
+  });
+});

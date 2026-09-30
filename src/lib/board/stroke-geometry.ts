@@ -52,11 +52,14 @@ export const HIGHLIGHTER_WIDTH = 16;
  * (#115): os alvos precisam cobrir a tinta onde ela é mais grossa, ou o clique na parte
  * larga de uma letra passaria direto para o quadro. Nos trechos finos a folga sobra, e sobra
  * pouco — a pena inteira é de {@link FOUNTAIN_MAX_WIDTH} unidades.
+ *
+ * `scale` é o multiplicador de espessura do traço (#157, `strokeSizeScale`): a base da
+ * ferramenta vezes ele. O padrão é `1`, a espessura de sempre.
  */
-export function strokeInkWidth(tool: StrokeTool): number {
-  if (tool === STROKE_TOOL_HIGHLIGHTER) return HIGHLIGHTER_WIDTH;
-  if (tool === STROKE_TOOL_FOUNTAIN) return FOUNTAIN_MAX_WIDTH;
-  return STROKE_WIDTH;
+export function strokeInkWidth(tool: StrokeTool, scale = 1): number {
+  if (tool === STROKE_TOOL_HIGHLIGHTER) return HIGHLIGHTER_WIDTH * scale;
+  if (tool === STROKE_TOOL_FOUNTAIN) return FOUNTAIN_MAX_WIDTH * scale;
+  return STROKE_WIDTH * scale;
 }
 
 /**
@@ -112,13 +115,16 @@ const NIB: Point = { x: Math.cos(FOUNTAIN_NIB_ANGLE), y: -Math.sin(FOUNTAIN_NIB_
  * través ao caminho —, entre {@link FOUNTAIN_MIN_WIDTH} e {@link FOUNTAIN_MAX_WIDTH}. O
  * sentido não importa: ↗ e ↙ são o mesmo risco, andado ao contrário. Um vetor nulo não tem
  * direção, e fica no fio.
+ *
+ * `scale` multiplica o fio e a largura juntos (#157): a pena fica maior ou menor, mas com a
+ * mesma proporção entre os dois, e a letra continua caligráfica em qualquer espessura.
  */
-export function fountainWidth(direction: Point): number {
+export function fountainWidth(direction: Point, scale = 1): number {
   const length = Math.hypot(direction.x, direction.y);
-  if (length === 0) return FOUNTAIN_MIN_WIDTH;
+  if (length === 0) return FOUNTAIN_MIN_WIDTH * scale;
 
   const sin = Math.abs(direction.x * NIB.y - direction.y * NIB.x) / length;
-  return FOUNTAIN_MIN_WIDTH + (FOUNTAIN_MAX_WIDTH - FOUNTAIN_MIN_WIDTH) * sin;
+  return (FOUNTAIN_MIN_WIDTH + (FOUNTAIN_MAX_WIDTH - FOUNTAIN_MIN_WIDTH) * sin) * scale;
 }
 
 /** `v` com comprimento 1, ou `null` se ele não tiver comprimento nenhum. */
@@ -133,12 +139,14 @@ function unit(v: Point): Point | null {
  * É o que um traço sem comprimento — dois pontos iguais, que um board de fora pode trazer —
  * desenha, em vez de um polígono de área zero que não pintaria nada.
  */
-function nibDab(center: Point): Point[] {
+function nibDab(center: Point, scale: number): Point[] {
+  const min = FOUNTAIN_MIN_WIDTH * scale;
+  const max = FOUNTAIN_MAX_WIDTH * scale;
   // O comprimento é aparado para os cantos caberem no círculo da pena inteira: é essa largura
   // que os alvos consideram (#115), e um canto de fora dela seria tinta inclicável.
-  const reach = Math.sqrt((FOUNTAIN_MAX_WIDTH / 2) ** 2 - (FOUNTAIN_MIN_WIDTH / 2) ** 2);
+  const reach = Math.sqrt((max / 2) ** 2 - (min / 2) ** 2);
   const along = { x: NIB.x * reach, y: NIB.y * reach };
-  const across = { x: (-NIB.y * FOUNTAIN_MIN_WIDTH) / 2, y: (NIB.x * FOUNTAIN_MIN_WIDTH) / 2 };
+  const across = { x: (-NIB.y * min) / 2, y: (NIB.x * min) / 2 };
 
   return [
     { x: center.x - along.x - across.x, y: center.y - along.y - across.y },
@@ -162,8 +170,11 @@ function nibDab(center: Point): Point[] {
  * Pontos repetidos em sequência não têm direção, e são descartados antes. Um traço que só
  * tem um ponto distinto vira a marca da pena parada ({@link nibDab}); sem ponto nenhum, não
  * há contorno.
+ *
+ * `scale` é o multiplicador de espessura do traço (#157): a pena inteira cresce ou encolhe
+ * junto — ver {@link fountainWidth}.
  */
-export function fountainOutline(flat: readonly number[]): Point[] {
+export function fountainOutline(flat: readonly number[], scale = 1): Point[] {
   const points = pointsFromFlat(flat).filter(
     (point, index, all) =>
       index === 0 || point.x !== all[index - 1]!.x || point.y !== all[index - 1]!.y,
@@ -171,7 +182,7 @@ export function fountainOutline(flat: readonly number[]): Point[] {
 
   const first = points[0];
   if (first === undefined) return [];
-  if (points.length === 1) return nibDab(first);
+  if (points.length === 1) return nibDab(first, scale);
 
   const left: Point[] = [];
   const right: Point[] = [];
@@ -196,8 +207,8 @@ export function fountainOutline(flat: readonly number[]): Point[] {
     // estique a borda para longe — e mantém a tinta dentro do alcance dos alvos (#115).
     const cos = into.x * tangent.x + into.y * tangent.y;
     const half = Math.min(
-      (fountainWidth(into) + fountainWidth(out)) / 4 / Math.max(cos, Number.EPSILON),
-      FOUNTAIN_MAX_WIDTH / 2,
+      (fountainWidth(into, scale) + fountainWidth(out, scale)) / 4 / Math.max(cos, Number.EPSILON),
+      (FOUNTAIN_MAX_WIDTH * scale) / 2,
     );
     const normal = { x: -tangent.y * half, y: tangent.x * half };
 
