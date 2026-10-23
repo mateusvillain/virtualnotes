@@ -9,9 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { glassSurfaceClass } from "@/components/ui/iconButton";
-
-/** Distância mínima entre o painel e a borda da janela. */
-export const POPOVER_VIEWPORT_MARGIN = 8;
+import { shiftInsideViewport } from "@/lib/dom/insideViewport";
 
 /** O que abre um controle de foco no painel: o primeiro que a tecla Tab alcançaria. */
 const FOCUSABLE =
@@ -112,13 +110,7 @@ export function Popover({
     // reescreveria o estilo que acabou de ser zerado aqui.
     panel.style.marginLeft = "0px";
     const { left, right } = panel.getBoundingClientRect();
-    const max = window.innerWidth - POPOVER_VIEWPORT_MARGIN;
-    const next =
-      left < POPOVER_VIEWPORT_MARGIN
-        ? POPOVER_VIEWPORT_MARGIN - left
-        : right > max
-          ? max - right
-          : 0;
+    const next = shiftInsideViewport(left, right, window.innerWidth);
     panel.style.marginLeft = `${next}px`;
     setShift(next);
   }, [open]);
