@@ -69,11 +69,14 @@ export function shortcutLabel(shortcut: ButtonShortcut, isMac: boolean): string 
  * Sempre `Control`, nunca `⌘`: o atributo descreve o atalho para quem lê a árvore de
  * acessibilidade, não a tela, e por isso não troca com a plataforma — o que evitaria, de
  * quebra, uma divergência de hidratação que a dica visual já resolve com `useIsMac`.
+ *
+ * A tecla `+` sai como `Plus`: o `+` é o separador do atributo, e `Control++` seria ambíguo
+ * (a especificação ARIA pede o nome).
  */
 export function ariaKeyShortcuts(shortcut: ButtonShortcut): string {
   const parts: string[] = [];
   if (shortcut.mod) parts.push("Control");
   if (shortcut.shift) parts.push("Shift");
-  parts.push(shortcut.key);
+  parts.push(shortcut.key === "+" ? "Plus" : shortcut.key);
   return parts.join("+");
 }

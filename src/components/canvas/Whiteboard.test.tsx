@@ -1209,7 +1209,7 @@ function aparelhoDeToque(toque: boolean): void {
 /** A escala mostrada pelos controles, em porcento. */
 function escalaAtual(): string {
   return defined(
-    screen.getByRole("button", { name: UI.en.zoom.reset }).textContent,
+    screen.getByRole("button", { name: UI.en.zoom.menu }).textContent,
     "o percentual de zoom",
   );
 }

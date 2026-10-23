@@ -33,4 +33,8 @@ describe("ariaKeyShortcuts", () => {
   it("uma tecla nua sai sozinha", () => {
     expect(ariaKeyShortcuts(SHORTCUTS.pencil)).toBe("P");
   });
+
+  it("a tecla + sai pelo nome, para não se confundir com o separador", () => {
+    expect(ariaKeyShortcuts({ mod: true, key: "+" })).toBe("Control+Plus");
+  });
 });

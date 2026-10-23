@@ -37,7 +37,13 @@ export interface UiCopy {
     startWithoutSaving: string;
     cancel: string;
   };
-  zoom: { out: string; reset: string; in: string };
+  zoom: {
+    out: string;
+    reset: string;
+    in: string;
+    /** Dica e `aria-label` do botão de porcentagem, que abre o menu de zoom (#135). */
+    menu: string;
+  };
   /**
    * Nome da toolbar inferior de ferramentas (#137). Não há mais botão de seleção: ela é o que
    * vale com nenhuma ferramenta ligada, e `V`/`Esc` levam até ela.
@@ -146,7 +152,7 @@ export const UI: Record<Locale, UiCopy> = {
       startWithoutSaving: "Start without saving",
       cancel: "Cancel",
     },
-    zoom: { out: "Zoom out", reset: "Reset zoom to 100%", in: "Zoom in" },
+    zoom: { out: "Zoom out", reset: "Reset zoom to 100%", in: "Zoom in", menu: "Zoom options" },
     toolbar: {
       label: "Tools",
       color: "Stroke colour",
@@ -226,7 +232,12 @@ export const UI: Record<Locale, UiCopy> = {
       startWithoutSaving: "Começar sem salvar",
       cancel: "Cancelar",
     },
-    zoom: { out: "Diminuir zoom", reset: "Voltar o zoom para 100%", in: "Aumentar zoom" },
+    zoom: {
+      out: "Diminuir zoom",
+      reset: "Voltar o zoom para 100%",
+      in: "Aumentar zoom",
+      menu: "Opções de zoom",
+    },
     toolbar: {
       label: "Ferramentas",
       color: "Cor do traço",
