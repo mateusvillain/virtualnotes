@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { glassSurfaceClass } from "@/components/ui/iconButton";
-import { shiftInsideViewport } from "@/lib/dom/insideViewport";
+import { useOutsidePointerDown } from "@/lib/dom/useOutsidePointerDown";
+import { useShiftInsideViewport } from "@/lib/dom/useShiftInsideViewport";
 
 /** O que abre um controle de foco no painel: o primeiro que a tecla Tab alcançaria. */
 const FOCUSABLE =
@@ -62,8 +56,7 @@ const ROUNDED = { full: "rounded-full", panel: "rounded-lg" } as const;
  * sliders), e o quadro por trás continua usável com ele aberto.
  *
  * Centrado no gatilho, como no Penpot, e empurrado de volta para dentro da janela quando o
- * centro deixaria uma ponta de fora. A medida é feita depois de montar (`useLayoutEffect`),
- * antes de pintar: o painel nunca aparece cortado por um quadro.
+ * centro deixaria uma ponta de fora (`useShiftInsideViewport`).
  *
  * Fecha com Esc ou com um clique fora do painel e do gatilho. O Esc é ouvido na janela, em
  * captura, e não segue adiante: o atalho global de Esc desliga a ferramenta, e fechar o
@@ -85,7 +78,7 @@ export function Popover({
 }: PopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   /** Deslocamento horizontal que traz o painel para dentro da janela. */
-  const [shift, setShift] = useState(0);
+  const shift = useShiftInsideViewport(panelRef, open);
   /** Ainda montado: aberto, ou fechando durante {@link exitMs}. */
   const [present, setPresent] = useState(open);
 
@@ -99,21 +92,6 @@ export function Popover({
     const timer = setTimeout(() => setPresent(false), exitMs);
     return () => clearTimeout(timer);
   }, [exitMs, open, present]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const panel = panelRef.current;
-    if (panel === null) return;
-
-    // Mede sem o ajuste anterior, ou a correção se somaria a si mesma a cada abertura. O
-    // valor novo vai direto para o DOM também: se for igual ao do estado, o React não
-    // reescreveria o estilo que acabou de ser zerado aqui.
-    panel.style.marginLeft = "0px";
-    const { left, right } = panel.getBoundingClientRect();
-    const next = shiftInsideViewport(left, right, window.innerWidth);
-    panel.style.marginLeft = `${next}px`;
-    setShift(next);
-  }, [open]);
 
   // O foco entra no painel ao abrir, no primeiro controle: quem abriu pelo teclado não
   // precisa atravessar a toolbar até chegar nos valores. Sem rolar: o painel pode estar
@@ -133,25 +111,12 @@ export function Popover({
       triggerRef.current?.focus();
     }
 
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (target === null) return;
-      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-
-      // O foco só volta ao gatilho se estava no painel, que vai sumir: sem isso ele cairia
-      // no começo do documento. Se estava em outro lugar, fica onde está.
-      const focusInside = panelRef.current?.contains(document.activeElement) ?? false;
-      onOpenChange(false);
-      if (focusInside) triggerRef.current?.focus();
-    }
-
     window.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown, true);
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [onOpenChange, open, triggerRef]);
+
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  useOutsidePointerDown(open, panelRef, triggerRef, close);
 
   if (!open && !present) return null;
 

@@ -29,6 +29,7 @@ function Harness({
           </button>
         )}
       />
+      <button type="button">depois</button>
     </div>
   );
 }
@@ -81,7 +82,7 @@ describe("Dropdown — ARIA", () => {
 
     const zoomIn = item("Zoom in");
     expect(zoomIn.textContent).toMatch(/Ctrl\+\+$/);
-    expect(zoomIn.getAttribute("aria-keyshortcuts")).toBe("Control++");
+    expect(zoomIn.getAttribute("aria-keyshortcuts")).toBe("Control+Plus");
     expect(item("Zoom to fit").getAttribute("aria-keyshortcuts")).toBeNull();
   });
 
@@ -119,14 +120,14 @@ describe("Dropdown — abrir", () => {
 
   it("abre pela seta para baixo no primeiro item, sem a seta chegar ao quadro", async () => {
     const user = userEvent.setup();
-    const global = vi.fn();
-    render(<Harness entries={makeEntries().entries} onGlobalKey={global} />);
+    const boardKey = vi.fn();
+    render(<Harness entries={makeEntries().entries} onGlobalKey={boardKey} />);
 
     trigger().focus();
     await user.keyboard("{ArrowDown}");
 
     expect(document.activeElement).toBe(item("Zoom in"));
-    expect(global).not.toHaveBeenCalledWith("ArrowDown");
+    expect(boardKey).not.toHaveBeenCalledWith("ArrowDown");
   });
 
   it("abre pela seta para cima no último item", async () => {
@@ -179,13 +180,13 @@ describe("Dropdown — navegar e ativar", () => {
 
   it("as teclas nuas não chegam aos atalhos do quadro com o menu aberto", async () => {
     const user = userEvent.setup();
-    const global = vi.fn();
-    render(<Harness entries={makeEntries().entries} onGlobalKey={global} />);
+    const boardKey = vi.fn();
+    render(<Harness entries={makeEntries().entries} onGlobalKey={boardKey} />);
     await user.click(trigger());
 
     await user.keyboard("{ArrowDown}n{Delete}");
 
-    expect(global).not.toHaveBeenCalled();
+    expect(boardKey).not.toHaveBeenCalled();
   });
 
   it("Enter ativa o item, fecha e devolve o foco ao gatilho", async () => {
@@ -258,21 +259,22 @@ describe("Dropdown — itens desabilitados", () => {
 
     expect(zoomIn).not.toHaveBeenCalled();
     expect(screen.getByRole("menu")).toBeDefined();
+    expect(document.activeElement).toBe(item("Zoom out"));
   });
 });
 
 describe("Dropdown — fechar", () => {
   it("Esc fecha, devolve o foco ao gatilho e não chega ao atalho global", async () => {
     const user = userEvent.setup();
-    const global = vi.fn();
-    render(<Harness entries={makeEntries().entries} onGlobalKey={global} />);
+    const boardKey = vi.fn();
+    render(<Harness entries={makeEntries().entries} onGlobalKey={boardKey} />);
     await user.click(trigger());
 
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(trigger());
-    expect(global).not.toHaveBeenCalledWith("Escape");
+    expect(boardKey).not.toHaveBeenCalledWith("Escape");
   });
 
   it("clicar fora fecha e devolve o foco que estava no menu", async () => {
@@ -294,6 +296,19 @@ describe("Dropdown — fechar", () => {
     await user.keyboard("{Tab}");
 
     expect(screen.queryByRole("menu")).toBeNull();
+    // Parte do gatilho, e não do topo do documento: o próximo controle depois dele.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "depois" }));
+  });
+
+  it("Shift+Tab fecha e volta para antes do gatilho", async () => {
+    const user = userEvent.setup();
+    render(<Harness entries={makeEntries().entries} />);
+    await user.click(trigger());
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "fora" }));
   });
 });
 
@@ -313,6 +328,27 @@ describe("Dropdown — dentro da janela", () => {
     await user.click(trigger());
 
     // 300 + 192 = 492; a borda útil é 400 - 8 = 392.
+    expect(screen.getByRole("menu").style.marginLeft).toBe("-100px");
+  });
+
+  it("mede de novo a cada abertura, sem somar o ajuste anterior", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.getAttribute("role") !== "menu") return DOMRect.fromRect();
+      // A posição medida inclui a margem aplicada: sem zerá-la antes, a segunda abertura
+      // veria o menu já dentro e desfaria o ajuste.
+      const margin = parseFloat(this.style.marginLeft) || 0;
+      return DOMRect.fromRect({ x: 300 + margin, y: 0, width: 192, height: 200 });
+    });
+    render(<Harness entries={makeEntries().entries} />);
+
+    await user.click(trigger());
+    await user.keyboard("{Escape}");
+    await user.click(trigger());
+
     expect(screen.getByRole("menu").style.marginLeft).toBe("-100px");
   });
 });

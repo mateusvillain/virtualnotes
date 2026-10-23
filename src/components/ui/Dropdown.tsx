@@ -4,14 +4,14 @@ import {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
   type RefObject,
 } from "react";
-import { shiftInsideViewport } from "@/lib/dom/insideViewport";
 import { useIsMac } from "@/lib/dom/useIsMac";
+import { useOutsidePointerDown } from "@/lib/dom/useOutsidePointerDown";
+import { useShiftInsideViewport } from "@/lib/dom/useShiftInsideViewport";
 import { ariaKeyShortcuts, shortcutLabel, type ButtonShortcut } from "@/lib/shortcuts";
 
 /** Uma ação do menu. */
@@ -46,7 +46,10 @@ interface DropdownProps {
   entries: readonly DropdownEntry[];
   /**
    * Desenha o gatilho. Uma função, e não um botão pronto, para quem chama manter a própria
-   * aparência e o próprio `Tooltip` em volta — e poder escondê-lo com o menu aberto (`open`).
+   * aparência e o próprio `Tooltip` em volta.
+   *
+   * O `Tooltip` envolve o botão **dentro** da função, e recebe `suppressed={open}`: a dica
+   * abre do mesmo lado do menu, numa camada acima, e cobriria o primeiro item.
    */
   renderTrigger: (props: DropdownTriggerProps, open: boolean) => ReactNode;
   /** Por onde o menu se prende ao gatilho antes do ajuste à janela. */
@@ -57,13 +60,19 @@ interface DropdownProps {
 /** Como o menu se prende ao gatilho em cada alinhamento. */
 const ALIGNMENT = { start: "left-0", end: "right-0" } as const;
 
-/** Teclas que andam pelo menu, e para qual item cada uma leva. */
-const NAVIGATION = ["ArrowDown", "ArrowUp", "Home", "End"] as const;
-type NavigationKey = (typeof NAVIGATION)[number];
+/** Onde o foco cai ao abrir: a seta para cima abre no último item, o resto no primeiro. */
+type OpenFocus = "first" | "last";
 
-function isNavigationKey(key: string): key is NavigationKey {
-  return (NAVIGATION as readonly string[]).includes(key);
-}
+/**
+ * Teclas que andam pelo menu, e para qual item cada uma leva: o índice seguinte, a partir do
+ * atual (`-1` quando o foco ainda não está num item) e do último. As setas dão a volta.
+ */
+const NAVIGATION: Record<string, (current: number, last: number) => number> = {
+  ArrowDown: (current, last) => (current >= last ? 0 : current + 1),
+  ArrowUp: (current, last) => (current <= 0 ? last : current - 1),
+  Home: () => 0,
+  End: (_, last) => last,
+};
 
 /**
  * Menu de ações preso abaixo de um gatilho (#135), no padrão "menu button" da WAI-ARIA.
@@ -72,7 +81,9 @@ function isNavigationKey(key: string): key is NavigationKey {
  *
  * O foco entra no menu ao abrir — no primeiro item, ou no último quando quem abriu foi a seta
  * para cima — e anda só pelas setas, `Home` e `End`: os itens têm `tabIndex={-1}`, e `Tab`
- * fecha o menu e segue para o próximo controle da página. Passar o ponteiro sobre um item
+ * fecha o menu e segue para o controle depois do gatilho. Itens desabilitados ficam de fora
+ * da navegação, como no Radix: anunciá-los um a um só atrasaria quem procura o que dá para
+ * fazer. Passar o ponteiro sobre um item
  * também o foca, para o realce do mouse e o do teclado serem o mesmo.
  *
  * O teclado é ouvido na janela, em captura, e não no próprio menu: os atalhos do quadro ouvem
@@ -91,9 +102,8 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
   const isMac = useIsMac();
   const [open, setOpen] = useState(false);
   /** Deslocamento horizontal que traz o menu para dentro da janela. */
-  const [shift, setShift] = useState(0);
-  /** Onde o foco cai ao abrir: no primeiro item ou no último. */
-  const openFocus = useRef<"first" | "last">("first");
+  const shift = useShiftInsideViewport(menuRef, open);
+  const openFocus = useRef<OpenFocus>("first");
 
   /** Os itens que aceitam foco, na ordem da tela. */
   const enabledItems = useCallback(
@@ -106,7 +116,7 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
     [],
   );
 
-  const show = useCallback((focus: "first" | "last") => {
+  const show = useCallback((focus: OpenFocus) => {
     openFocus.current = focus;
     setOpen(true);
   }, []);
@@ -116,18 +126,8 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
     if (returnFocus) triggerRef.current?.focus();
   }, []);
 
-  useLayoutEffect(() => {
-    if (!open) return;
-    const menu = menuRef.current;
-    if (menu === null) return;
-
-    // Mede sem o ajuste anterior, como o `Popover`: senão a correção se somaria a si mesma.
-    menu.style.marginLeft = "0px";
-    const { left, right } = menu.getBoundingClientRect();
-    const next = shiftInsideViewport(left, right, window.innerWidth);
-    menu.style.marginLeft = `${next}px`;
-    setShift(next);
-  }, [open]);
+  const dismiss = useCallback(() => setOpen(false), []);
+  useOutsidePointerDown(open, menuRef, triggerRef, dismiss);
 
   useEffect(() => {
     if (!open) return;
@@ -162,56 +162,30 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
       const inside = target !== null && (menuRef.current?.contains(target) ?? false);
       if (!inside) return;
 
-      // `Tab` sai do menu: fecha e deixa o navegador levar o foco adiante.
+      // `Tab` sai do menu e segue a partir do gatilho. O foco passa por ele antes de o menu
+      // desmontar: o navegador só move o foco depois deste ouvinte, e partindo de um item que
+      // sumiu ele recomeçaria do topo do documento.
       if (event.key === "Tab") {
-        close(false);
+        close(true);
         return;
       }
 
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       event.stopPropagation();
 
-      if (!isNavigationKey(event.key)) return;
+      const step = NAVIGATION[event.key];
+      if (step === undefined) return;
       event.preventDefault();
 
       const items = enabledItems();
       if (items.length === 0) return;
       const current = items.indexOf(document.activeElement as HTMLElement);
-      const last = items.length - 1;
-      const next =
-        event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? last
-            : event.key === "ArrowDown"
-              ? current >= last
-                ? 0
-                : current + 1
-              : current <= 0
-                ? last
-                : current - 1;
-      items[next]?.focus({ preventScroll: true });
+      items[step(current, items.length - 1)]?.focus({ preventScroll: true });
     }
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [close, enabledItems, open, show]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (target === null) return;
-      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-
-      const focusInside = menuRef.current?.contains(document.activeElement) ?? false;
-      close(focusInside);
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [close, open]);
 
   const triggerProps: DropdownTriggerProps = {
     ref: triggerRef,
@@ -232,8 +206,10 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
           role="menu"
           aria-labelledby={triggerId}
           // Branco com sombra suave, como no Figma (1-477): flutua sobre o quadro, ao contrário
-          // das pílulas de vidro, que encostam nele.
-          className={`absolute top-full z-30 mt-2 flex w-max min-w-48 flex-col rounded-control bg-surface p-1 shadow-control ring-1 ring-border/50 ${ALIGNMENT[align]}`}
+          // das pílulas de vidro, que encostam nele. `z-10` como o `Popover`: a camada da
+          // moldura (`z-30`, AppShell) já o põe acima do quadro, e aqui só precisa vencer os
+          // vizinhos dentro dela.
+          className={`absolute top-full z-10 mt-2 flex w-max min-w-48 flex-col rounded-control bg-surface p-1 shadow-control ring-1 ring-border/50 ${ALIGNMENT[align]}`}
           style={{ marginLeft: shift }}
         >
           {entries.map((entry, index) =>
@@ -248,6 +224,9 @@ export function Dropdown({ entries, renderTrigger, align = "start", testId }: Dr
                 aria-disabled={entry.disabled ? true : undefined}
                 aria-keyshortcuts={entry.shortcut ? ariaKeyShortcuts(entry.shortcut) : undefined}
                 className="flex items-center justify-between gap-6 rounded-sm px-2 py-1.5 text-left text-sm text-ink outline-none transition-colors focus:bg-control-active aria-disabled:opacity-40"
+                // O clique num item desabilitado não leva o foco para ele: as setas o pulam, e o
+                // ponteiro não pode deixar o foco num lugar onde o teclado não chega.
+                onMouseDown={entry.disabled ? (event) => event.preventDefault() : undefined}
                 onPointerMove={(event) => {
                   if (!entry.disabled) event.currentTarget.focus({ preventScroll: true });
                 }}
