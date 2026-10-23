@@ -49,7 +49,7 @@ describe("interface do quadro em cada idioma", () => {
       expect(screen.getByRole("button", { name: ui.history.redo })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.zoom.in })).toBeDefined();
       expect(screen.getByRole("button", { name: ui.zoom.out })).toBeDefined();
-      expect(screen.getByRole("button", { name: ui.zoom.reset })).toBeDefined();
+      expect(screen.getByRole("button", { name: ui.zoom.menu })).toBeDefined();
 
       unmount();
     }
@@ -153,7 +153,7 @@ describe("interface do quadro em cada idioma", () => {
     );
     const ui = UI.en;
 
-    for (const name of [ui.newBoard.action, ui.zoom.in, ui.zoom.out, ui.zoom.reset]) {
+    for (const name of [ui.newBoard.action, ui.zoom.in, ui.zoom.out, ui.zoom.menu]) {
       const button = screen.getByRole("button", { name });
       expect(button.getAttribute("aria-keyshortcuts")).toBeNull();
 
