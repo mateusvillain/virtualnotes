@@ -46,6 +46,10 @@ export const CLICK_SLOP = 4;
 export const MIN_SCALE = 0.25;
 export const MAX_SCALE = 4;
 
+/** Os níveis fixos do menu de zoom (#141, Figma 1-477): 50%, 100% e 200%. */
+export const ZOOM_LEVELS = [0.5, 1, 2] as const;
+export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
+
 /** Viewport inicial: origem do canvas no canto do container, sem zoom. */
 export const IDENTITY_VIEWPORT: Viewport = { x: 0, y: 0, scale: 1 };
 
@@ -247,6 +251,49 @@ export function zoomAt(viewport: Viewport, scale: number, anchor: Point): Viewpo
 /** Multiplica a escala atual, ancorando no ponto dado. Útil para roda e botões. */
 export function zoomByFactor(viewport: Viewport, factor: number, anchor: Point): Viewport {
   return zoomAt(viewport, viewport.scale * factor, anchor);
+}
+
+/**
+ * Respiro, em pixels de tela, entre o conteúdo enquadrado e a borda da área visível.
+ *
+ * A moldura flutua sobre o quadro — as pílulas do topo e a toolbar da base ocupam cerca de
+ * 70px de cada lado —, e um enquadramento colado na borda deixaria a primeira e a última
+ * nota por baixo delas.
+ */
+export const FIT_PADDING = 80;
+
+/**
+ * O viewport que enquadra `bounds` inteiro numa área visível de `size`, centrado (#136).
+ *
+ * A escala é a maior que ainda cabe com {@link FIT_PADDING} de cada lado, limitada ao
+ * intervalo navegável: um post-it sozinho não vira 4000%, e um quadro enorme para em 25% —
+ * aí o conteúdo passa da tela, mas continua centrado.
+ *
+ * Sem nada para enquadrar (`null`), volta ao viewport inicial: 100% com a origem no canto, o
+ * mesmo enquadramento de um quadro novo, que é onde o próximo post-it vai nascer.
+ */
+export function fitViewport(bounds: Rect | null, size: Size): Viewport {
+  if (bounds === null) return IDENTITY_VIEWPORT;
+
+  // Uma área menor que o respiro dos dois lados ainda enquadra alguma coisa: o espaço útil
+  // nunca fica abaixo de metade da área.
+  const room = {
+    w: Math.max(size.w - FIT_PADDING * 2, size.w / 2),
+    h: Math.max(size.h - FIT_PADDING * 2, size.h / 2),
+  };
+  // Lado zero — um traço reto — não limita a escala por aquele eixo.
+  const scale = clampScale(
+    Math.min(
+      bounds.w > 0 ? room.w / bounds.w : Infinity,
+      bounds.h > 0 ? room.h / bounds.h : Infinity,
+    ),
+  );
+
+  return {
+    scale,
+    x: size.w / 2 - (bounds.x + bounds.w / 2) * scale,
+    y: size.h / 2 - (bounds.y + bounds.h / 2) * scale,
+  };
 }
 
 /** Escala como porcentagem inteira, para exibir na interface. */

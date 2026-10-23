@@ -15,7 +15,7 @@
  */
 
 import { rectsIntersect, type Rect } from "@/lib/canvas/coords";
-import { strokeIntersectsRect } from "./stroke-geometry";
+import { strokeInkBounds, strokeIntersectsRect } from "./stroke-geometry";
 import type { Note, NoteColor, Stroke } from "./types";
 
 /** As duas espécies de coisa que o quadro tem, e que uma seleção pode misturar. */
@@ -122,6 +122,21 @@ export function selectAll(notes: readonly Note[], strokes: readonly Stroke[]): S
     notes: new Set(notes.map((note) => note.id)),
     strokes: new Set(strokes.map((stroke) => stroke.id)),
   };
+}
+
+/**
+ * As caixas de notas e traços, em coordenadas de canvas: onde cada coisa está na tela.
+ *
+ * A note já é um retângulo; o traço é medido pela tinta, e não pelos pontos (#118) — num
+ * marca-texto a tinta passa da linha do meio. Um traço sem pontos não entra: não tem forma,
+ * e um retângulo inventado na origem puxaria para o canto do canvas quem se ancora nele.
+ *
+ * Serve a barra de ações, ancorada na caixa da seleção, e o zoom to fit (#136), que
+ * enquadra o quadro inteiro.
+ */
+export function elementRects(notes: readonly Note[], strokes: readonly Stroke[]): Rect[] {
+  const inks = strokes.map(strokeInkBounds).filter((rect): rect is Rect => rect !== null);
+  return [...notes, ...inks];
 }
 
 /** As notes marcadas, na ordem em que o board as guarda. */

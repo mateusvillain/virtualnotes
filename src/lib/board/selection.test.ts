@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Rect } from "@/lib/canvas/coords";
 import {
   EMPTY_SELECTION,
+  elementRects,
   elementsInRect,
   intersects,
   isSelected,
@@ -14,7 +15,7 @@ import {
   toggle,
   union,
 } from "./selection";
-import type { Note, Stroke } from "./types";
+import { STROKE_TOOL_HIGHLIGHTER, type Note, type Stroke } from "./types";
 
 function note(overrides: Partial<Note> = {}): Note {
   return { id: "abc123", x: 0, y: 0, w: 100, h: 100, color: 0, text: "", z: 1, ...overrides };
@@ -316,5 +317,23 @@ describe("selectAll", () => {
     expect(selectionSize(tudo)).toBe(2);
     expect(isSelected(tudo, "note", "igual")).toBe(true);
     expect(isSelected(tudo, "stroke", "igual")).toBe(true);
+  });
+});
+
+describe("elementRects", () => {
+  it("devolve a caixa das notas e a da tinta dos traços", () => {
+    const rects = elementRects(
+      [note({ x: 10, y: 20, w: 100, h: 50 })],
+      [stroke({ points: [0, 0, 100, 0], tool: STROKE_TOOL_HIGHLIGHTER })],
+    );
+
+    expect(rects[0]).toMatchObject({ x: 10, y: 20, w: 100, h: 50 });
+    // A tinta do marca-texto passa da linha: o traço reto ganha altura.
+    expect(rects[1]!.h).toBeGreaterThan(0);
+    expect(rects).toHaveLength(2);
+  });
+
+  it("deixa de fora o traço sem pontos", () => {
+    expect(elementRects([], [stroke({ points: [] })])).toEqual([]);
   });
 });

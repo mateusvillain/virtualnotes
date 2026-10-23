@@ -35,6 +35,8 @@ describe("ariaKeyShortcuts", () => {
   });
 
   it("a tecla + sai pelo nome, para não se confundir com o separador", () => {
-    expect(ariaKeyShortcuts({ mod: true, key: "+" })).toBe("Control+Plus");
+    expect(ariaKeyShortcuts(SHORTCUTS.zoomIn)).toBe("Control+Plus");
+    expect(ariaKeyShortcuts(SHORTCUTS.zoomOut)).toBe("Control+-");
+    expect(ariaKeyShortcuts(SHORTCUTS.zoomReset)).toBe("Control+0");
   });
 });

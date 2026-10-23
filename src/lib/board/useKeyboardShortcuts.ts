@@ -17,6 +17,12 @@ interface KeyboardShortcutsOptions {
   onPlaceNote: () => void;
   /** Salvar o quadro — a mesma ação do botão, num atalho que todo mundo já tem no dedo. */
   onSave: () => void;
+  /** `Ctrl+=`/`Ctrl++`: um passo de zoom para perto, ancorado no centro (#136). */
+  onZoomIn: () => void;
+  /** `Ctrl+-`: um passo de zoom para longe, ancorado no centro. */
+  onZoomOut: () => void;
+  /** `Ctrl+0`: zoom em 100%, ancorado no centro. */
+  onZoomReset: () => void;
   /**
    * `Ctrl+A`: marcar tudo que existe no quadro (#85).
    *
@@ -98,6 +104,21 @@ const NUDGE_STEP = 1;
  */
 const NUDGE_STEP_WITH_SHIFT = 10;
 
+/**
+ * As teclas de zoom com o modificador (#136), e o que cada uma pede.
+ *
+ * `=` junto do `+` porque são a mesma tecla: no teclado americano e no ABNT2 o `+` é o `=`
+ * com Shift, e o atalho do navegador aceita os dois — quem aperta `⌘=` está pedindo zoom. O
+ * mesmo para `_` no `-`. O teclado numérico manda `+` e `-` direto.
+ */
+const ZOOM_KEYS: Record<string, "in" | "out" | "reset"> = {
+  "+": "in",
+  "=": "in",
+  "-": "out",
+  _: "out",
+  "0": "reset",
+};
+
 /** A direção de cada seta, em passos. Quem não está aqui não move nada. */
 const ARROW_DIRECTIONS: Readonly<Record<string, Point>> = {
   ArrowUp: { x: 0, y: -1 },
@@ -148,6 +169,9 @@ export function useKeyboardShortcuts({
   onDelete,
   onPlaceNote,
   onSave,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   onSelectAll,
   onUndo,
   onRedo,
@@ -170,6 +194,9 @@ export function useKeyboardShortcuts({
     onDelete,
     onPlaceNote,
     onSave,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
     onSelectAll,
     onUndo,
     onRedo,
@@ -187,6 +214,9 @@ export function useKeyboardShortcuts({
       onDelete,
       onPlaceNote,
       onSave,
+      onZoomIn,
+      onZoomOut,
+      onZoomReset,
       onSelectAll,
       onUndo,
       onRedo,
@@ -203,6 +233,9 @@ export function useKeyboardShortcuts({
     onDelete,
     onPlaceNote,
     onSave,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
     onSelectAll,
     onUndo,
     onRedo,
@@ -244,6 +277,22 @@ export function useKeyboardShortcuts({
         event.preventDefault();
         handlers.current.onSave();
         return;
+      }
+
+      /**
+       * Zoom pelo teclado (#136). Vale com o cursor num post-it, como salvar: não há texto
+       * disputando a tecla, e o `preventDefault` é o que impede o navegador de dar zoom na
+       * página inteira — moldura junto — por baixo do zoom do quadro.
+       */
+      if ((event.metaKey || event.ctrlKey) && !event.altKey) {
+        const zoom = ZOOM_KEYS[event.key];
+        if (zoom !== undefined) {
+          event.preventDefault();
+          if (zoom === "in") handlers.current.onZoomIn();
+          else if (zoom === "out") handlers.current.onZoomOut();
+          else handlers.current.onZoomReset();
+          return;
+        }
       }
 
       /**

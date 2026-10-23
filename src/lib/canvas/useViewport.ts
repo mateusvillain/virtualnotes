@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { IDENTITY_VIEWPORT, panBy, zoomByFactor, type Point, type Viewport } from "./coords";
+import {
+  fitViewport,
+  IDENTITY_VIEWPORT,
+  panBy,
+  zoomAt,
+  zoomByFactor,
+  type Point,
+  type Rect,
+  type Size,
+  type Viewport,
+} from "./coords";
 
 /** Passo de zoom dos botões da interface: 25% por clique. */
 export const ZOOM_STEP = 1.25;
@@ -17,8 +27,13 @@ export interface ViewportApi {
   pan: (dx: number, dy: number) => void;
   /** Multiplica a escala ancorando no ponto dado (relativo ao container). */
   zoomBy: (factor: number, anchor: Point) => void;
-  /** Volta para 100% na origem. */
-  reset: () => void;
+  /** Vai para a escala dada, mantendo fixo o ponto de âncora (relativo ao container). */
+  zoomTo: (scale: number, anchor: Point) => void;
+  /**
+   * Enquadra `bounds` (em coordenadas de canvas) numa área visível de `size`. Sem nada para
+   * enquadrar, volta ao viewport inicial. Ver `fitViewport`.
+   */
+  fitTo: (bounds: Rect | null, size: Size) => void;
 }
 
 /**
@@ -39,9 +54,13 @@ export function useViewport(initial: Viewport = IDENTITY_VIEWPORT): ViewportApi 
     setViewport((current) => zoomByFactor(current, factor, anchor));
   }, []);
 
-  const reset = useCallback(() => {
-    setViewport(IDENTITY_VIEWPORT);
+  const zoomTo = useCallback((scale: number, anchor: Point) => {
+    setViewport((current) => zoomAt(current, scale, anchor));
   }, []);
 
-  return { viewport, pan, zoomBy, reset };
+  const fitTo = useCallback((bounds: Rect | null, size: Size) => {
+    setViewport(fitViewport(bounds, size));
+  }, []);
+
+  return { viewport, pan, zoomBy, zoomTo, fitTo };
 }
