@@ -18,8 +18,8 @@ export interface ButtonShortcut {
 /**
  * As ações da moldura que têm atalho hoje.
  *
- * Os botões sem entrada aqui — novo quadro, zoom, fechar o link — não recebem `shortcut`
- * nenhum, e a dica deles continua exatamente como era.
+ * Os botões sem entrada aqui — novo quadro, fechar o link — não recebem `shortcut` nenhum,
+ * e a dica deles continua exatamente como era.
  */
 export const SHORTCUTS = {
   select: { key: "V" },
@@ -38,6 +38,14 @@ export const SHORTCUTS = {
   undo: { mod: true, key: "Z" },
   redo: { mod: true, shift: true, key: "Z" },
   save: { mod: true, key: "S" },
+  /**
+   * Zoom pelo teclado (#136), os atalhos do navegador e do Figma. O quadro os toma para si:
+   * o zoom da página escalaria a moldura junto com o quadro. `+` também chega como `=`, a
+   * mesma tecla sem Shift — ver `useKeyboardShortcuts`.
+   */
+  zoomIn: { mod: true, key: "+" },
+  zoomOut: { mod: true, key: "-" },
+  zoomReset: { mod: true, key: "0" },
 } as const satisfies Record<string, ButtonShortcut>;
 
 /**

@@ -101,6 +101,8 @@ describe("interface do quadro em cada idioma", () => {
         { name: ui.history.undo, shortcut: SHORTCUTS.undo },
         { name: ui.history.redo, shortcut: SHORTCUTS.redo },
         { name: ui.save.action, shortcut: SHORTCUTS.save },
+        { name: ui.zoom.in, shortcut: SHORTCUTS.zoomIn },
+        { name: ui.zoom.out, shortcut: SHORTCUTS.zoomOut },
       ];
 
       for (const mac of [true, false]) {
@@ -138,7 +140,7 @@ describe("interface do quadro em cada idioma", () => {
   );
 
   /**
-   * Novo quadro e zoom não têm atalho hoje — o botão de fechar o link também não, coberto à
+   * Novo quadro e o menu de zoom não têm atalho hoje — o botão de fechar o link também não, coberto à
    * parte em `ShareButton.test.tsx` porque só existe depois de salvar. A dica deles não pode
    * ganhar um atalho por engano, nem perder o nome que já tinham.
    */
@@ -153,7 +155,7 @@ describe("interface do quadro em cada idioma", () => {
     );
     const ui = UI.en;
 
-    for (const name of [ui.newBoard.action, ui.zoom.in, ui.zoom.out, ui.zoom.menu]) {
+    for (const name of [ui.newBoard.action, ui.zoom.menu]) {
       const button = screen.getByRole("button", { name });
       expect(button.getAttribute("aria-keyshortcuts")).toBeNull();
 

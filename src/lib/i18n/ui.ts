@@ -1,4 +1,5 @@
 import type { NoteColorName } from "@/lib/board/types";
+import type { ZoomLevel } from "@/lib/canvas/coords";
 import type { Locale } from "@/lib/seo/site";
 
 /**
@@ -39,10 +40,13 @@ export interface UiCopy {
   };
   zoom: {
     out: string;
-    reset: string;
     in: string;
-    /** Dica e `aria-label` do botão de porcentagem, que abre o menu de zoom (#135). */
+    /** Dica e `aria-label` do botão de porcentagem, que abre o menu de zoom (#141). */
     menu: string;
+    /** Item do menu que enquadra o quadro inteiro (#136). */
+    fit: string;
+    /** Os itens dos níveis fixos, um por nível. */
+    level: Record<ZoomLevel, string>;
   };
   /**
    * Nome da toolbar inferior de ferramentas (#137). Não há mais botão de seleção: ela é o que
@@ -152,7 +156,13 @@ export const UI: Record<Locale, UiCopy> = {
       startWithoutSaving: "Start without saving",
       cancel: "Cancel",
     },
-    zoom: { out: "Zoom out", reset: "Reset zoom to 100%", in: "Zoom in", menu: "Zoom options" },
+    zoom: {
+      out: "Zoom out",
+      in: "Zoom in",
+      menu: "Zoom options",
+      fit: "Zoom to fit",
+      level: { 0.5: "Zoom to 50%", 1: "Zoom to 100%", 2: "Zoom to 200%" },
+    },
     toolbar: {
       label: "Tools",
       color: "Stroke colour",
@@ -234,9 +244,10 @@ export const UI: Record<Locale, UiCopy> = {
     },
     zoom: {
       out: "Diminuir zoom",
-      reset: "Voltar o zoom para 100%",
       in: "Aumentar zoom",
       menu: "Opções de zoom",
+      fit: "Ajustar à tela",
+      level: { 0.5: "Zoom de 50%", 1: "Zoom de 100%", 2: "Zoom de 200%" },
     },
     toolbar: {
       label: "Ferramentas",

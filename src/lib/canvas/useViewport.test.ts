@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { IDENTITY_VIEWPORT, MAX_SCALE, screenToCanvas } from "./coords";
-import { ZOOM_STEP, useViewport } from "./useViewport";
+import { IDENTITY_VIEWPORT, MAX_SCALE, screenToCanvas, ZOOM_STEP } from "./coords";
+import { useViewport } from "./useViewport";
 
 describe("useViewport", () => {
   it("começa em 100% na origem", () => {
@@ -54,13 +54,41 @@ describe("useViewport", () => {
     expect(Object.keys(window.sessionStorage)).toHaveLength(0);
   });
 
-  it("reset volta para 100% na origem depois de pan e zoom", () => {
+  it("zoomTo vai para a escala pedida mantendo o ponto ancorado", () => {
+    const anchor = { x: 400, y: 300 };
+    const { result } = renderHook(() => useViewport());
+    act(() => result.current.pan(120, -80));
+    const antes = screenToCanvas(anchor, result.current.viewport);
+
+    act(() => result.current.zoomTo(2, anchor));
+
+    expect(result.current.viewport.scale).toBe(2);
+    expect(screenToCanvas(anchor, result.current.viewport)).toEqual(antes);
+  });
+
+  it("zoomTo respeita os limites de escala", () => {
+    const { result } = renderHook(() => useViewport());
+
+    act(() => result.current.zoomTo(100, { x: 0, y: 0 }));
+
+    expect(result.current.viewport.scale).toBe(MAX_SCALE);
+  });
+
+  it("fitTo enquadra o conteúdo na área", () => {
+    const { result } = renderHook(() => useViewport());
+
+    act(() => result.current.fitTo({ x: 100, y: 50, w: 420, h: 160 }, { w: 1000, h: 800 }));
+
+    expect(result.current.viewport.scale).toBe(2);
+  });
+
+  it("fitTo sem conteúdo volta para 100%, com a origem no centro, depois de pan e zoom", () => {
     const { result } = renderHook(() => useViewport());
 
     act(() => result.current.pan(120, -80));
     act(() => result.current.zoomBy(2.5, { x: 10, y: 10 }));
-    act(() => result.current.reset());
+    act(() => result.current.fitTo(null, { w: 1000, h: 800 }));
 
-    expect(result.current.viewport).toEqual(IDENTITY_VIEWPORT);
+    expect(result.current.viewport).toEqual({ scale: 1, x: 500, y: 400 });
   });
 });

@@ -5,6 +5,7 @@ import { topLeftCenteredAt, type Point, type Rect, type Size } from "@/lib/canva
 import { simplify } from "@/lib/canvas/simplify";
 import {
   EMPTY_SELECTION,
+  elementRects,
   elementsInRect,
   isEmpty,
   isSelected,
@@ -26,7 +27,6 @@ import {
   scaleStrokePoints,
   splitPolylineBySegment,
   strokeBounds,
-  strokeInkBounds,
   strokePoints,
   translateStrokePoints,
 } from "./stroke-geometry";
@@ -732,22 +732,11 @@ export function useBoard({ initialBoard, autosave = true }: UseBoardOptions = {}
    */
   const selected = useMemo(() => selectedNotes(board.notes, selection), [board.notes, selection]);
 
-  /**
-   * As caixas de tudo que está marcado, para a barra de ações se ancorar.
-   *
-   * A note já é um retângulo; o traço precisa ser medido. Um traço sem forma — sem pontos —
-   * não entra: ele não tem onde ancorar nada, e um retângulo inventado na origem puxaria a
-   * barra para o canto do canvas.
-   */
-  const selectedRects = useMemo((): Rect[] => {
-    // A caixa da tinta, e não a dos pontos (#118): a barra se ancora fora do que se vê, e
-    // num marca-texto a tinta passa da linha do meio.
-    const strokes = selectedStrokes(board.strokes, selection)
-      .map(strokeInkBounds)
-      .filter((rect): rect is Rect => rect !== null);
-
-    return [...selected, ...strokes];
-  }, [board.strokes, selected, selection]);
+  /** As caixas de tudo que está marcado, para a barra de ações se ancorar. */
+  const selectedRects = useMemo(
+    (): Rect[] => elementRects(selected, selectedStrokes(board.strokes, selection)),
+    [board.strokes, selected, selection],
+  );
 
   const selectionColor = useMemo(() => sharedColor(selected), [selected]);
 

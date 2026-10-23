@@ -30,6 +30,9 @@ function opcoes(overrides: Partial<Parameters<typeof useKeyboardShortcuts>[0]>) 
     onDelete: vi.fn(),
     onPlaceNote: vi.fn(),
     onSave: vi.fn(),
+    onZoomIn: vi.fn(),
+    onZoomOut: vi.fn(),
+    onZoomReset: vi.fn(),
     onSelectAll: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
@@ -679,6 +682,63 @@ describe("useKeyboardShortcuts — salvar com Ctrl/⌘+S", () => {
     tecla("ArrowRight");
 
     expect(onNudge).toHaveBeenLastCalledWith({ x: 1, y: 0 });
+  });
+});
+
+describe("useKeyboardShortcuts — zoom com Ctrl/⌘ (#136)", () => {
+  it.each([
+    ["+", "onZoomIn"],
+    ["=", "onZoomIn"],
+    ["-", "onZoomOut"],
+    ["_", "onZoomOut"],
+    ["0", "onZoomReset"],
+  ] as const)("⌘%s chama %s", (key, handler) => {
+    const spy = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ [handler]: spy })));
+
+    tecla(key, document.body, { metaKey: true });
+    tecla(key, document.body, { ctrlKey: true });
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("engole a tecla para o navegador não dar zoom na página", () => {
+    renderHook(() => useKeyboardShortcuts(opcoes({})));
+
+    expect(tecla("+", document.body, { metaKey: true })).toBe(true);
+    expect(tecla("-", document.body, { ctrlKey: true })).toBe(true);
+    expect(tecla("0", document.body, { metaKey: true })).toBe(true);
+  });
+
+  it("no AZERTY, Ctrl com a tecla do zero ainda volta a 100%, pela posição", () => {
+    const onZoomReset = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onZoomReset })));
+
+    expect(tecla("à", document.body, { ctrlKey: true, code: "Digit0" })).toBe(true);
+
+    expect(onZoomReset).toHaveBeenCalledOnce();
+  });
+
+  it("vale com o cursor dentro de um post-it", () => {
+    const onZoomIn = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onZoomIn })));
+
+    tecla("=", elemento("textarea"), { metaKey: true });
+
+    expect(onZoomIn).toHaveBeenCalledOnce();
+  });
+
+  it("sem modificador, ou com Alt, a tecla não é zoom", () => {
+    const onZoomIn = vi.fn();
+    const onZoomReset = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onZoomIn, onZoomReset })));
+
+    expect(tecla("+")).toBe(false);
+    tecla("0");
+    tecla("+", document.body, { metaKey: true, altKey: true });
+
+    expect(onZoomIn).not.toHaveBeenCalled();
+    expect(onZoomReset).not.toHaveBeenCalled();
   });
 });
 

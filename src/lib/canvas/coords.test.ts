@@ -5,6 +5,8 @@ import {
   canvasToScreen,
   clampScale,
   distance,
+  FIT_PADDING,
+  fitViewport,
   IDENTITY_VIEWPORT,
   MAX_SCALE,
   MIN_SCALE,
@@ -298,5 +300,50 @@ describe("rectToScreen", () => {
 
     const { x, y } = rectToScreen(rect, viewport);
     expect({ x, y }).toEqual(canvasToScreen(rect, viewport));
+  });
+});
+
+describe("fitViewport", () => {
+  const area = { w: 1000, h: 800 };
+
+  it("sem conteúdo, vai para 100% com a origem no centro da área", () => {
+    const fit = fitViewport(null, area);
+
+    expect(fit.scale).toBe(1);
+    expect(canvasToScreen({ x: 0, y: 0 }, fit)).toEqual({ x: 500, y: 400 });
+  });
+
+  it("enquadra o conteúdo centrado, com o respiro da moldura", () => {
+    // Útil: 840 × 640. O conteúdo de 420 × 160 cabe em 200% pela largura.
+    const fit = fitViewport({ x: 100, y: 50, w: 420, h: 160 }, area);
+
+    expect(fit.scale).toBe(2);
+    const centro = screenToCanvas({ x: area.w / 2, y: area.h / 2 }, fit);
+    expect(centro).toEqual({ x: 310, y: 130 });
+    expect(canvasToScreen({ x: 100, y: 50 }, fit).x).toBe(FIT_PADDING);
+  });
+
+  it("o lado mais apertado decide a escala", () => {
+    // Pela altura: 640 / 1280 = 50%, mesmo com largura de sobra.
+    expect(fitViewport({ x: 0, y: 0, w: 100, h: 1280 }, area).scale).toBe(0.5);
+  });
+
+  it("um post-it sozinho não passa do zoom máximo", () => {
+    expect(fitViewport({ x: 0, y: 0, w: 10, h: 10 }, area).scale).toBe(MAX_SCALE);
+  });
+
+  it("um quadro enorme para no zoom mínimo, ainda centrado", () => {
+    const fit = fitViewport({ x: -5000, y: -5000, w: 10000, h: 10000 }, area);
+
+    expect(fit.scale).toBe(MIN_SCALE);
+    expect(screenToCanvas({ x: area.w / 2, y: area.h / 2 }, fit)).toEqual({ x: 0, y: 0 });
+  });
+
+  it("um traço reto, sem altura, é limitado só pela largura", () => {
+    expect(fitViewport({ x: 0, y: 0, w: 420, h: 0 }, area).scale).toBe(2);
+  });
+
+  it("numa área menor que o respiro, ainda usa metade dela", () => {
+    expect(fitViewport({ x: 0, y: 0, w: 100, h: 100 }, { w: 120, h: 120 }).scale).toBe(0.6);
   });
 });
