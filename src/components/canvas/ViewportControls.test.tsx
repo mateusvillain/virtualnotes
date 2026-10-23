@@ -78,9 +78,9 @@ describe("ViewportControls — menu de zoom (#141)", () => {
       ui.zoom.in,
       ui.zoom.out,
       ui.zoom.fit,
-      ui.zoom.to[0.5],
-      ui.zoom.to[1],
-      ui.zoom.to[2],
+      ui.zoom.level[0.5],
+      ui.zoom.level[1],
+      ui.zoom.level[2],
     ]);
     expect(screen.getAllByRole("separator")).toHaveLength(1);
   });
@@ -96,9 +96,9 @@ describe("ViewportControls — menu de zoom (#141)", () => {
   });
 
   it.each([
-    [0.5, ui.zoom.to[0.5]],
-    [1, ui.zoom.to[1]],
-    [2, ui.zoom.to[2]],
+    [0.5, ui.zoom.level[0.5]],
+    [1, ui.zoom.level[1]],
+    [2, ui.zoom.level[2]],
   ] as const)("o item de %s vai para o nível fixo", async (level, label) => {
     const { zoomToLevel } = setup(1.5);
 
@@ -127,8 +127,8 @@ describe("ViewportControls — menu de zoom (#141)", () => {
 
     expect(item(ui.zoom.in).getAttribute("aria-keyshortcuts")).toBe("Control+Plus");
     expect(item(ui.zoom.out).getAttribute("aria-keyshortcuts")).toBe("Control+-");
-    expect(item(ui.zoom.to[1]).getAttribute("aria-keyshortcuts")).toBe("Control+0");
-    expect(item(ui.zoom.to[1]).textContent).toBe(`${ui.zoom.to[1]}Ctrl+0`);
+    expect(item(ui.zoom.level[1]).getAttribute("aria-keyshortcuts")).toBe("Control+0");
+    expect(item(ui.zoom.level[1]).textContent).toBe(`${ui.zoom.level[1]}Ctrl+0`);
     expect(item(ui.zoom.fit).getAttribute("aria-keyshortcuts")).toBeNull();
   });
 

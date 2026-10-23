@@ -710,6 +710,15 @@ describe("useKeyboardShortcuts — zoom com Ctrl/⌘ (#136)", () => {
     expect(tecla("0", document.body, { metaKey: true })).toBe(true);
   });
 
+  it("no AZERTY, Ctrl com a tecla do zero ainda volta a 100%, pela posição", () => {
+    const onZoomReset = vi.fn();
+    renderHook(() => useKeyboardShortcuts(opcoes({ onZoomReset })));
+
+    expect(tecla("à", document.body, { ctrlKey: true, code: "Digit0" })).toBe(true);
+
+    expect(onZoomReset).toHaveBeenCalledOnce();
+  });
+
   it("vale com o cursor dentro de um post-it", () => {
     const onZoomIn = vi.fn();
     renderHook(() => useKeyboardShortcuts(opcoes({ onZoomIn })));

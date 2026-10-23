@@ -5380,10 +5380,10 @@ describe("Whiteboard — menu e atalhos de zoom (#136, #141)", () => {
     areaDeTela();
     render(<Whiteboard />);
 
-    await escolheNoMenu(UI.en.zoom.to[2]);
+    await escolheNoMenu(UI.en.zoom.level[2]);
     expect(escalaAtual()).toBe("200%");
 
-    await escolheNoMenu(UI.en.zoom.to[0.5]);
+    await escolheNoMenu(UI.en.zoom.level[0.5]);
     expect(escalaAtual()).toBe("50%");
   });
 
@@ -5421,10 +5421,23 @@ describe("Whiteboard — menu e atalhos de zoom (#136, #141)", () => {
     areaDeTela();
     render(<Whiteboard />);
 
-    await escolheNoMenu(UI.en.zoom.to[2]);
+    await escolheNoMenu(UI.en.zoom.level[2]);
     await escolheNoMenu(UI.en.zoom.fit);
 
     expect(escalaAtual()).toBe("100%");
+  });
+
+  it("⌘+ amplia ancorado no centro da área", () => {
+    aparelhoDeToque(false);
+    areaDeTela();
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document.body, { key: "=", metaKey: true });
+
+    // O ponto do canvas no centro (500, 400) continua no centro: 500 - 500 × 1,25 = -125.
+    expect(screen.getByTestId("viewport-layer").style.transform).toBe(
+      "translate(-125px, -100px) scale(1.25)",
+    );
   });
 
   it("⌘+, ⌘- e ⌘0 dão zoom pelo teclado", async () => {

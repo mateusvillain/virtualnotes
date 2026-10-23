@@ -46,7 +46,7 @@ export interface UiCopy {
     /** Item do menu que enquadra o quadro inteiro (#136). */
     fit: string;
     /** Os itens dos níveis fixos, um por nível. */
-    to: Record<ZoomLevel, string>;
+    level: Record<ZoomLevel, string>;
   };
   /**
    * Nome da toolbar inferior de ferramentas (#137). Não há mais botão de seleção: ela é o que
@@ -161,7 +161,7 @@ export const UI: Record<Locale, UiCopy> = {
       in: "Zoom in",
       menu: "Zoom options",
       fit: "Zoom to fit",
-      to: { 0.5: "Zoom to 50%", 1: "Zoom to 100%", 2: "Zoom to 200%" },
+      level: { 0.5: "Zoom to 50%", 1: "Zoom to 100%", 2: "Zoom to 200%" },
     },
     toolbar: {
       label: "Tools",
@@ -247,7 +247,7 @@ export const UI: Record<Locale, UiCopy> = {
       in: "Aumentar zoom",
       menu: "Opções de zoom",
       fit: "Ajustar à tela",
-      to: { 0.5: "Zoom em 50%", 1: "Zoom em 100%", 2: "Zoom em 200%" },
+      level: { 0.5: "Zoom de 50%", 1: "Zoom de 100%", 2: "Zoom de 200%" },
     },
     toolbar: {
       label: "Ferramentas",

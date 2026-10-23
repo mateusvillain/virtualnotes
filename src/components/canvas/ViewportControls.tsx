@@ -23,7 +23,7 @@ import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
  * existe nela — o zoom to fit precisa das duas coisas —, e os atalhos de teclado chamam as
  * mesmas funções que os botões e o menu.
  */
-export interface ZoomActions {
+interface ZoomActions {
   zoomIn: () => void;
   zoomOut: () => void;
   zoomToLevel: (level: ZoomLevel) => void;
@@ -53,7 +53,7 @@ function ZoomIcon({ plus = false }: { plus?: boolean }) {
 }
 
 /**
- * Controles de zoom e reset, para quem não tem roda de mouse ou prefere clicar.
+ * Controles de zoom, para quem não tem roda de mouse ou prefere clicar.
  *
  * Uma pílula no canto superior direito, ao lado do histórico (#139, Figma 1-2): −, a
  * porcentagem e +. Os sinais são ícones, e não texto, para terem o peso e o tamanho dos
@@ -94,7 +94,7 @@ export function ViewportControls({
       { kind: "separator" },
       ...ZOOM_LEVELS.map((level): DropdownEntry => ({
         kind: "item",
-        label: ui.zoom.to[level],
+        label: ui.zoom.level[level],
         // Só o 100% tem atalho: é o `⌘0` do navegador.
         shortcut: level === 1 ? SHORTCUTS.zoomReset : undefined,
         onSelect: () => zoomToLevel(level),

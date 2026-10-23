@@ -43,6 +43,9 @@ export interface Viewport {
  */
 export const CLICK_SLOP = 4;
 
+/** Passo de zoom dos botões, do menu e do teclado: 25% por vez. */
+export const ZOOM_STEP = 1.25;
+
 export const MIN_SCALE = 0.25;
 export const MAX_SCALE = 4;
 
@@ -269,11 +272,11 @@ export const FIT_PADDING = 80;
  * intervalo navegável: um post-it sozinho não vira 4000%, e um quadro enorme para em 25% —
  * aí o conteúdo passa da tela, mas continua centrado.
  *
- * Sem nada para enquadrar (`null`), volta ao viewport inicial: 100% com a origem no canto, o
- * mesmo enquadramento de um quadro novo, que é onde o próximo post-it vai nascer.
+ * Sem nada para enquadrar (`null`), vai para 100% com a origem do canvas no centro da área:
+ * não há conteúdo para mostrar, e o meio da tela é o ponto neutro de onde voltar a escrever.
  */
 export function fitViewport(bounds: Rect | null, size: Size): Viewport {
-  if (bounds === null) return IDENTITY_VIEWPORT;
+  if (bounds === null) return { scale: 1, x: size.w / 2, y: size.h / 2 };
 
   // Uma área menor que o respiro dos dois lados ainda enquadra alguma coisa: o espaço útil
   // nunca fica abaixo de metade da área.

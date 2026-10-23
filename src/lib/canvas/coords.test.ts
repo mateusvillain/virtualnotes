@@ -306,8 +306,11 @@ describe("rectToScreen", () => {
 describe("fitViewport", () => {
   const area = { w: 1000, h: 800 };
 
-  it("sem conteúdo, volta ao viewport inicial", () => {
-    expect(fitViewport(null, area)).toEqual(IDENTITY_VIEWPORT);
+  it("sem conteúdo, vai para 100% com a origem no centro da área", () => {
+    const fit = fitViewport(null, area);
+
+    expect(fit.scale).toBe(1);
+    expect(canvasToScreen({ x: 0, y: 0 }, fit)).toEqual({ x: 500, y: 400 });
   });
 
   it("enquadra o conteúdo centrado, com o respiro da moldura", () => {

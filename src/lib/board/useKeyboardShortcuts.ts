@@ -104,19 +104,38 @@ const NUDGE_STEP = 1;
  */
 const NUDGE_STEP_WITH_SHIFT = 10;
 
+/** O tratador que cada tecla de zoom chama. */
+type ZoomHandler = "onZoomIn" | "onZoomOut" | "onZoomReset";
+
 /**
- * As teclas de zoom com o modificador (#136), e o que cada uma pede.
+ * As teclas de zoom com o modificador (#136), pelo caractere.
  *
  * `=` junto do `+` porque são a mesma tecla: no teclado americano e no ABNT2 o `+` é o `=`
  * com Shift, e o atalho do navegador aceita os dois — quem aperta `⌘=` está pedindo zoom. O
  * mesmo para `_` no `-`. O teclado numérico manda `+` e `-` direto.
  */
-const ZOOM_KEYS: Record<string, "in" | "out" | "reset"> = {
-  "+": "in",
-  "=": "in",
-  "-": "out",
-  _: "out",
-  "0": "reset",
+const ZOOM_KEYS: Readonly<Record<string, ZoomHandler>> = {
+  "+": "onZoomIn",
+  "=": "onZoomIn",
+  "-": "onZoomOut",
+  _: "onZoomOut",
+  "0": "onZoomReset",
+};
+
+/**
+ * As mesmas teclas pela posição, quando o caractere não diz nada.
+ *
+ * No AZERTY o `0` mora no Shift: `Ctrl` com a tecla do zero chega como `à`, e o navegador
+ * daria zoom na página por baixo do quadro. É a posição que o atalho do navegador também
+ * segue nesse caso.
+ */
+const ZOOM_CODES: Readonly<Record<string, ZoomHandler>> = {
+  Equal: "onZoomIn",
+  NumpadAdd: "onZoomIn",
+  Minus: "onZoomOut",
+  NumpadSubtract: "onZoomOut",
+  Digit0: "onZoomReset",
+  Numpad0: "onZoomReset",
 };
 
 /** A direção de cada seta, em passos. Quem não está aqui não move nada. */
@@ -285,12 +304,10 @@ export function useKeyboardShortcuts({
        * página inteira — moldura junto — por baixo do zoom do quadro.
        */
       if ((event.metaKey || event.ctrlKey) && !event.altKey) {
-        const zoom = ZOOM_KEYS[event.key];
+        const zoom = ZOOM_KEYS[event.key] ?? ZOOM_CODES[event.code];
         if (zoom !== undefined) {
           event.preventDefault();
-          if (zoom === "in") handlers.current.onZoomIn();
-          else if (zoom === "out") handlers.current.onZoomOut();
-          else handlers.current.onZoomReset();
+          handlers.current[zoom]();
           return;
         }
       }

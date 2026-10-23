@@ -13,8 +13,14 @@ import type { BoardMode, ToolMode } from "@/lib/board/modes";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
 import { elementRects } from "@/lib/board/selection";
-import { boundingRect, type Point, type Size, type ZoomLevel } from "@/lib/canvas/coords";
-import { useViewport, ZOOM_STEP } from "@/lib/canvas/useViewport";
+import {
+  boundingRect,
+  ZOOM_STEP,
+  type Point,
+  type Size,
+  type ZoomLevel,
+} from "@/lib/canvas/coords";
+import { useViewport } from "@/lib/canvas/useViewport";
 import { useTouchPrimary } from "@/lib/dom/useTouchPrimary";
 import { useCopy, usePaste } from "@/lib/dom/useClipboard";
 import { ColorPicker } from "@/components/postit/ColorPicker";

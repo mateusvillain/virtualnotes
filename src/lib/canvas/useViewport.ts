@@ -13,9 +13,6 @@ import {
   type Viewport,
 } from "./coords";
 
-/** Passo de zoom dos botões da interface: 25% por clique. */
-export const ZOOM_STEP = 1.25;
-
 /**
  * Ações de viewport expostas pelo hook.
  *
@@ -31,7 +28,7 @@ export interface ViewportApi {
   zoomTo: (scale: number, anchor: Point) => void;
   /**
    * Enquadra `bounds` (em coordenadas de canvas) numa área visível de `size`. Sem nada para
-   * enquadrar, volta ao viewport inicial. Ver `fitViewport`.
+   * enquadrar, vai para 100% com a origem no centro. Ver `fitViewport`.
    */
   fitTo: (bounds: Rect | null, size: Size) => void;
 }
