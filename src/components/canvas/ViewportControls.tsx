@@ -1,20 +1,37 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { MAX_SCALE, MIN_SCALE, scaleAsPercent, type Point } from "@/lib/canvas/coords";
-import { ZOOM_STEP, type ViewportApi } from "@/lib/canvas/useViewport";
+import { useMemo } from "react";
+import {
+  MAX_SCALE,
+  MIN_SCALE,
+  scaleAsPercent,
+  ZOOM_LEVELS,
+  type Viewport,
+  type ZoomLevel,
+} from "@/lib/canvas/coords";
 import { Dropdown, type DropdownEntry } from "@/components/ui/Dropdown";
 import { iconButtonClass, pillSurfaceClass } from "@/components/ui/iconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useUi } from "@/lib/i18n/LocaleProvider";
+import { useIsMac } from "@/lib/dom/useIsMac";
+import { ariaKeyShortcuts, shortcutLabel, SHORTCUTS } from "@/lib/shortcuts";
 
-interface ViewportControlsProps extends Pick<ViewportApi, "viewport" | "zoomBy" | "reset"> {
-  /**
-   * Ponto de ancoragem do zoom por botão — o centro da área visível. É função, e não um
-   * ponto pronto, porque depende do tamanho atual do container: medir na hora do clique
-   * evita guardar em estado uma medida que o resize invalida.
-   */
-  anchor: () => Point;
+/**
+ * As ações de zoom já ancoradas no centro da área visível.
+ *
+ * Prontas, e não `zoomBy` mais uma âncora: o quadro é quem sabe o tamanho da área e o que
+ * existe nela — o zoom to fit precisa das duas coisas —, e os atalhos de teclado chamam as
+ * mesmas funções que os botões e o menu.
+ */
+export interface ZoomActions {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomToLevel: (level: ZoomLevel) => void;
+  zoomToFit: () => void;
+}
+
+interface ViewportControlsProps extends ZoomActions {
+  viewport: Viewport;
 }
 
 /** Traço de 20px, no mesmo peso dos outros ícones da moldura. `plus` soma o traço vertical. */
@@ -39,39 +56,63 @@ function ZoomIcon({ plus = false }: { plus?: boolean }) {
  * Controles de zoom e reset, para quem não tem roda de mouse ou prefere clicar.
  *
  * Uma pílula no canto superior direito, ao lado do histórico (#139, Figma 1-2): −, a
- * porcentagem e +. A porcentagem abre o menu de zoom (#135); por ora só com as ações que o
- * viewport já tem — zoom to fit, os níveis fixos e os atalhos chegam com a #136 e a #141. Os sinais são ícones, e não texto, para terem o peso
- * e o tamanho dos outros botões da moldura. Dicas abaixo, porque a pílula encosta no topo.
+ * porcentagem e +. Os sinais são ícones, e não texto, para terem o peso e o tamanho dos
+ * outros botões da moldura. Dicas abaixo, porque a pílula encosta no topo.
+ *
+ * A porcentagem abre o menu de zoom (#141, Figma 1-477): ampliar e reduzir, enquadrar tudo
+ * e os níveis fixos, cada um com o atalho à direita quando tem.
  */
-export function ViewportControls({ viewport, zoomBy, reset, anchor }: ViewportControlsProps) {
+export function ViewportControls({
+  viewport,
+  zoomIn,
+  zoomOut,
+  zoomToLevel,
+  zoomToFit,
+}: ViewportControlsProps) {
   const ui = useUi();
-  const zoomOut = useCallback(() => zoomBy(1 / ZOOM_STEP, anchor()), [zoomBy, anchor]);
-  const zoomIn = useCallback(() => zoomBy(ZOOM_STEP, anchor()), [zoomBy, anchor]);
+  const isMac = useIsMac();
+  const atMax = viewport.scale >= MAX_SCALE;
+  const atMin = viewport.scale <= MIN_SCALE;
 
   const entries = useMemo<DropdownEntry[]>(
     () => [
-      { kind: "item", label: ui.zoom.in, disabled: viewport.scale >= MAX_SCALE, onSelect: zoomIn },
+      {
+        kind: "item",
+        label: ui.zoom.in,
+        shortcut: SHORTCUTS.zoomIn,
+        disabled: atMax,
+        onSelect: zoomIn,
+      },
       {
         kind: "item",
         label: ui.zoom.out,
-        disabled: viewport.scale <= MIN_SCALE,
+        shortcut: SHORTCUTS.zoomOut,
+        disabled: atMin,
         onSelect: zoomOut,
       },
+      { kind: "item", label: ui.zoom.fit, onSelect: zoomToFit },
       { kind: "separator" },
-      { kind: "item", label: ui.zoom.reset, onSelect: reset },
+      ...ZOOM_LEVELS.map((level): DropdownEntry => ({
+        kind: "item",
+        label: ui.zoom.to[level],
+        // Só o 100% tem atalho: é o `⌘0` do navegador.
+        shortcut: level === 1 ? SHORTCUTS.zoomReset : undefined,
+        onSelect: () => zoomToLevel(level),
+      })),
     ],
-    [reset, ui, viewport.scale, zoomIn, zoomOut],
+    [atMax, atMin, ui, zoomIn, zoomOut, zoomToFit, zoomToLevel],
   );
 
   return (
     <div className={`flex items-center gap-1 p-1 ${pillSurfaceClass}`} data-testid="zoom-pill">
-      <Tooltip label={ui.zoom.out}>
+      <Tooltip label={ui.zoom.out} shortcut={shortcutLabel(SHORTCUTS.zoomOut, isMac)}>
         <button
           type="button"
           className={iconButtonClass}
           onClick={zoomOut}
-          disabled={viewport.scale <= MIN_SCALE}
+          disabled={atMin}
           aria-label={ui.zoom.out}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.zoomOut)}
         >
           <ZoomIcon />
         </button>
@@ -97,13 +138,14 @@ export function ViewportControls({ viewport, zoomBy, reset, anchor }: ViewportCo
         )}
       />
       {/* Na ponta da tela: a dica se alinha pela direita para não sair cortada. */}
-      <Tooltip label={ui.zoom.in} align="end">
+      <Tooltip label={ui.zoom.in} shortcut={shortcutLabel(SHORTCUTS.zoomIn, isMac)} align="end">
         <button
           type="button"
           className={iconButtonClass}
           onClick={zoomIn}
-          disabled={viewport.scale >= MAX_SCALE}
+          disabled={atMax}
           aria-label={ui.zoom.in}
+          aria-keyshortcuts={ariaKeyShortcuts(SHORTCUTS.zoomIn)}
         >
           <ZoomIcon plus />
         </button>

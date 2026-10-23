@@ -12,8 +12,9 @@ import {
 import type { BoardMode, ToolMode } from "@/lib/board/modes";
 import { useBoard, type UseBoardOptions } from "@/lib/board/useBoard";
 import { useKeyboardShortcuts } from "@/lib/board/useKeyboardShortcuts";
-import type { Point } from "@/lib/canvas/coords";
-import { useViewport } from "@/lib/canvas/useViewport";
+import { elementRects } from "@/lib/board/selection";
+import { boundingRect, type Point, type Size, type ZoomLevel } from "@/lib/canvas/coords";
+import { useViewport, ZOOM_STEP } from "@/lib/canvas/useViewport";
 import { useTouchPrimary } from "@/lib/dom/useTouchPrimary";
 import { useCopy, usePaste } from "@/lib/dom/useClipboard";
 import { ColorPicker } from "@/components/postit/ColorPicker";
@@ -110,12 +111,31 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
   /** Um gesto de ponteiro em curso sobre um post-it: arrastar ou redimensionar. */
   const inGesture = board.dragOffset !== null || board.resizing !== null;
 
-  /** Centro da área visível, usado como âncora do zoom por botão. */
-  const center = useCallback((): Point => {
+  /**
+   * Tamanho da área visível, medido na hora. Função, e não estado: depende do container, e
+   * guardar a medida em estado seria guardar algo que o resize invalida.
+   */
+  const areaSize = useCallback((): Size => {
     const rect = areaRef.current?.getBoundingClientRect();
-    if (rect === undefined) return { x: 0, y: 0 };
-    return { x: rect.width / 2, y: rect.height / 2 };
+    return { w: rect?.width ?? 0, h: rect?.height ?? 0 };
   }, []);
+
+  /** Centro da área visível, usado como âncora do zoom por botão, menu e teclado. */
+  const center = useCallback((): Point => {
+    const { w, h } = areaSize();
+    return { x: w / 2, y: h / 2 };
+  }, [areaSize]);
+
+  // As ações de zoom da moldura (#136, #141): a pílula, o menu e os atalhos chamam as mesmas.
+  const { zoomBy, zoomTo, fitTo } = controls;
+  const zoomIn = useCallback(() => zoomBy(ZOOM_STEP, center()), [center, zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(1 / ZOOM_STEP, center()), [center, zoomBy]);
+  const zoomToLevel = useCallback((level: ZoomLevel) => zoomTo(level, center()), [center, zoomTo]);
+  const zoomReset = useCallback(() => zoomToLevel(1), [zoomToLevel]);
+  const zoomToFit = useCallback(
+    () => fitTo(boundingRect(elementRects(board.notes, board.strokes)), areaSize()),
+    [areaSize, board.notes, board.strokes, fitTo],
+  );
 
   const save = useCallback(() => void share.share(), [share]);
 
@@ -264,6 +284,9 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
     onDelete: board.deleteSelection,
     onPlaceNote: togglePlacing,
     onSave: save,
+    onZoomIn: zoomIn,
+    onZoomOut: zoomOut,
+    onZoomReset: zoomReset,
     onSelectAll: board.selectEverything,
     onUndo: board.undo,
     onRedo: board.redo,
@@ -378,9 +401,10 @@ export function Whiteboard({ initialBoard, autosave }: WhiteboardProps) {
           {touchPrimary ? null : (
             <ViewportControls
               viewport={controls.viewport}
-              zoomBy={controls.zoomBy}
-              reset={controls.reset}
-              anchor={center}
+              zoomIn={zoomIn}
+              zoomOut={zoomOut}
+              zoomToLevel={zoomToLevel}
+              zoomToFit={zoomToFit}
             />
           )}
         </div>

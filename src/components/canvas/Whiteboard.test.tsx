@@ -5356,3 +5356,89 @@ describe("Whiteboard — canto superior direito (#139)", () => {
     expect(container.querySelector(".bottom-0.justify-end")).toBeNull();
   });
 });
+
+describe("Whiteboard — menu e atalhos de zoom (#136, #141)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** A área do quadro com tamanho de tela: no jsdom ela mede zero. */
+  function areaDeTela(): void {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: 0, width: 1000, height: 800 }),
+    );
+  }
+
+  async function escolheNoMenu(nome: string): Promise<void> {
+    await userEvent.click(screen.getByRole("button", { name: UI.en.zoom.menu }));
+    await userEvent.click(screen.getByRole("menuitem", { name: nome }));
+  }
+
+  it("Zoom to 200% e Zoom to 50% vão para o nível pedido", async () => {
+    aparelhoDeToque(false);
+    areaDeTela();
+    render(<Whiteboard />);
+
+    await escolheNoMenu(UI.en.zoom.to[2]);
+    expect(escalaAtual()).toBe("200%");
+
+    await escolheNoMenu(UI.en.zoom.to[0.5]);
+    expect(escalaAtual()).toBe("50%");
+  });
+
+  it("Zoom to fit enquadra todos os post-its", async () => {
+    aparelhoDeToque(false);
+    areaDeTela();
+    const nota = (id: string, x: number, y: number) => ({
+      id,
+      x,
+      y,
+      w: 100,
+      h: 100,
+      color: 0 as const,
+      text: "",
+      z: 1,
+    });
+    render(
+      <Whiteboard
+        initialBoard={{
+          version: SCHEMA_VERSION,
+          // Caixa de 2000 × 300: pela largura útil (840), cabe em 42%.
+          notes: [nota("a1b2c3", 0, 0), nota("d4e5f6", 1900, 200)],
+          strokes: [],
+        }}
+      />,
+    );
+
+    await escolheNoMenu(UI.en.zoom.fit);
+
+    expect(escalaAtual()).toBe("42%");
+  });
+
+  it("Zoom to fit num quadro vazio volta para 100%", async () => {
+    aparelhoDeToque(false);
+    areaDeTela();
+    render(<Whiteboard />);
+
+    await escolheNoMenu(UI.en.zoom.to[2]);
+    await escolheNoMenu(UI.en.zoom.fit);
+
+    expect(escalaAtual()).toBe("100%");
+  });
+
+  it("⌘+, ⌘- e ⌘0 dão zoom pelo teclado", async () => {
+    aparelhoDeToque(false);
+    areaDeTela();
+    render(<Whiteboard />);
+
+    fireEvent.keyDown(document.body, { key: "=", metaKey: true });
+    expect(escalaAtual()).toBe("125%");
+
+    fireEvent.keyDown(document.body, { key: "0", ctrlKey: true });
+    expect(escalaAtual()).toBe("100%");
+
+    fireEvent.keyDown(document.body, { key: "-", metaKey: true });
+    expect(escalaAtual()).toBe("80%");
+  });
+});
